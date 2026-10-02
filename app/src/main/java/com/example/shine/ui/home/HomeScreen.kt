@@ -90,7 +90,7 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(uiState.errorMessage, color = MaterialTheme.colorScheme.error)
+                    Text(uiState.errorMessage.asString(), color = MaterialTheme.colorScheme.error)
                     OutlinedButton(onClick = onRetry) { Text("Retry") }
                 }
                 uiState.channels.isEmpty() -> Text("No channels yet")

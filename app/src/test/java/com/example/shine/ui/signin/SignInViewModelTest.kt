@@ -1,9 +1,10 @@
 package com.example.shine.ui.signin
 
-import com.example.shine.domain.model.AuthException
+import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Session
 import com.example.shine.domain.repository.AuthRepository
-import com.example.shine.domain.usecase.SignInUseCase
+import com.example.shine.ui.common.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -28,7 +29,7 @@ class SignInViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        viewModel = SignInViewModel(SignInUseCase(repository))
+        viewModel = SignInViewModel(repository)
     }
 
     @After
@@ -48,17 +49,17 @@ class SignInViewModelTest {
 
     @Test
     fun signIn_failure_showsServerMessage() = runTest {
-        repository.nextResult = Result.failure(AuthException.Server("Wrong password"))
+        repository.nextError = AppException(AppError.SERVER, serverMessage = "Wrong password")
 
         viewModel.signIn("a@b.com")
 
-        assertEquals("Wrong password", viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.Raw("Wrong password"), viewModel.uiState.value.errorMessage)
         assertFalse(viewModel.uiState.value.isLoading)
     }
 
     @Test
     fun editingInput_clearsError() = runTest {
-        repository.nextResult = Result.failure(AuthException.Network())
+        repository.nextError = AppException(AppError.NO_INTERNET)
         viewModel.signIn("a@b.com")
 
         viewModel.onPasswordChange("other")
@@ -75,14 +76,13 @@ class SignInViewModelTest {
 
 private class FakeAuthRepository : AuthRepository {
     override val session = MutableStateFlow<Session?>(null)
-    var nextResult: Result<Session>? = null
+    var nextError: AppException? = null
     var lastEmail: String? = null
 
-    override suspend fun signIn(email: String, password: String): Result<Session> {
+    override suspend fun signIn(email: String, password: String): Session {
         lastEmail = email
-        val result = nextResult ?: Result.success(Session("token", null, null, null))
-        result.onSuccess { session.value = it }
-        return result
+        nextError?.let { throw it }
+        return Session("token", null, null, null).also { session.value = it }
     }
 
     override suspend fun signOut() {

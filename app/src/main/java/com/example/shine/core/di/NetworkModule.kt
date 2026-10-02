@@ -5,6 +5,7 @@ import com.example.shine.BuildConfig
 import com.example.shine.data.remote.AuthApi
 import com.example.shine.data.remote.AuthInterceptor
 import com.example.shine.data.remote.ChatApi
+import com.example.shine.data.remote.ErrorMappingCallAdapterFactory
 import com.example.shine.data.remote.TokenRefreshApi
 import dagger.Module
 import dagger.Provides
@@ -64,6 +65,9 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideRetrofit(client: OkHttpClient, json: Json): Retrofit = buildRetrofit(client, json)
+        .newBuilder()
+        .addCallAdapterFactory(ErrorMappingCallAdapterFactory(json))
+        .build()
 
     @Provides
     @Singleton

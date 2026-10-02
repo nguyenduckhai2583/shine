@@ -24,10 +24,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.shine.R
 import com.example.shine.domain.model.Channel
 import com.example.shine.ui.theme.ShineTheme
 import java.text.DateFormat
@@ -82,7 +84,7 @@ fun ChannelDetailScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        uiState.errorMessage ?: "Something went wrong",
+                        uiState.errorMessage?.asString() ?: stringResource(R.string.error_unknown),
                         color = MaterialTheme.colorScheme.error,
                     )
                     OutlinedButton(onClick = onRetry) { Text("Retry") }

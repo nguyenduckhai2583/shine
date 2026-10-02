@@ -40,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.shine.ui.common.UiText
 import com.example.shine.ui.theme.ShineTheme
 
 @Composable
@@ -147,7 +148,7 @@ fun SignInScreen(
 
                 uiState.errorMessage?.let { message ->
                     Text(
-                        text = message,
+                        text = message.asString(),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -182,7 +183,7 @@ fun SignInScreen(
 private fun SignInScreenPreview() {
     ShineTheme(dynamicColor = false) {
         SignInScreen(
-            uiState = SignInUiState(email = "user@hplix.com", errorMessage = "Incorrect password"),
+            uiState = SignInUiState(email = "user@hplix.com", errorMessage = UiText.Raw("Incorrect password")),
             onEmailChange = {},
             onPasswordChange = {},
             onTogglePasswordVisibility = {},

@@ -2,10 +2,12 @@ package com.example.shine.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Channel
-import com.example.shine.domain.usecase.GetChannelsUseCase
-import com.example.shine.domain.usecase.ObserveSessionUseCase
-import com.example.shine.domain.usecase.SignOutUseCase
+import com.example.shine.domain.repository.AuthRepository
+import com.example.shine.domain.repository.ChannelRepository
+import com.example.shine.ui.common.UiText
+import com.example.shine.ui.common.toUiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,19 +22,18 @@ data class HomeUiState(
     val displayName: String = "",
     val channels: List<Channel> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    observeSession: ObserveSessionUseCase,
-    private val getChannels: GetChannelsUseCase,
-    private val signOutUseCase: SignOutUseCase,
+    private val authRepository: AuthRepository,
+    private val channelRepository: ChannelRepository,
 ) : ViewModel() {
 
     private val channelsState = MutableStateFlow(HomeUiState(isLoading = true))
 
-    val uiState: StateFlow<HomeUiState> = combine(observeSession(), channelsState) { session, state ->
+    val uiState: StateFlow<HomeUiState> = combine(authRepository.session, channelsState) { session, state ->
         state.copy(displayName = session?.user?.displayName.orEmpty())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(isLoading = true))
 
@@ -43,17 +44,16 @@ class HomeViewModel @Inject constructor(
     fun loadChannels() {
         channelsState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            getChannels()
-                .onSuccess { channels ->
-                    channelsState.update { it.copy(channels = channels, isLoading = false) }
-                }
-                .onFailure { error ->
-                    channelsState.update { it.copy(isLoading = false, errorMessage = error.message) }
-                }
+            try {
+                val channels = channelRepository.getChannels()
+                channelsState.update { it.copy(channels = channels, isLoading = false) }
+            } catch (e: AppException) {
+                channelsState.update { it.copy(isLoading = false, errorMessage = e.toUiText()) }
+            }
         }
     }
 
     fun signOut() {
-        viewModelScope.launch { signOutUseCase() }
+        viewModelScope.launch { authRepository.signOut() }
     }
 }

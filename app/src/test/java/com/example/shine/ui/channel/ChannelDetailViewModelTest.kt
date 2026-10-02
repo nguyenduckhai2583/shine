@@ -1,9 +1,11 @@
 package com.example.shine.ui.channel
 
-import com.example.shine.domain.model.AuthException
+import com.example.shine.R
+import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Channel
 import com.example.shine.domain.repository.ChannelRepository
-import com.example.shine.domain.usecase.GetChannelUseCase
+import com.example.shine.ui.common.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -29,9 +31,9 @@ class ChannelDetailViewModelTest {
 
     @Test
     fun load_success_showsChannel() {
-        repository.result = Result.success(CHANNEL)
+        repository.error = null
 
-        val viewModel = ChannelDetailViewModel("1", GetChannelUseCase(repository))
+        val viewModel = ChannelDetailViewModel("1", repository)
 
         assertEquals("1", repository.lastId)
         assertEquals(CHANNEL, viewModel.uiState.value.channel)
@@ -40,11 +42,11 @@ class ChannelDetailViewModelTest {
 
     @Test
     fun load_failure_showsErrorThenRetrySucceeds() {
-        repository.result = Result.failure(AuthException.Network())
-        val viewModel = ChannelDetailViewModel("1", GetChannelUseCase(repository))
-        assertEquals("No internet connection", viewModel.uiState.value.errorMessage)
+        repository.error = AppException(AppError.NO_INTERNET)
+        val viewModel = ChannelDetailViewModel("1", repository)
+        assertEquals(UiText.Resource(R.string.error_no_internet), viewModel.uiState.value.errorMessage)
 
-        repository.result = Result.success(CHANNEL)
+        repository.error = null
         viewModel.load()
 
         assertNull(viewModel.uiState.value.errorMessage)
@@ -52,14 +54,15 @@ class ChannelDetailViewModelTest {
     }
 
     private class FakeChannelRepository : ChannelRepository {
-        var result: Result<Channel> = Result.success(CHANNEL)
+        var error: AppException? = null
         var lastId: String? = null
 
-        override suspend fun getChannels(): Result<List<Channel>> = Result.success(listOf(CHANNEL))
+        override suspend fun getChannels(): List<Channel> = listOf(CHANNEL)
 
-        override suspend fun getChannel(id: String): Result<Channel> {
+        override suspend fun getChannel(id: String): Channel {
             lastId = id
-            return result
+            error?.let { throw it }
+            return CHANNEL
         }
     }
 

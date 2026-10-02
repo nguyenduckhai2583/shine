@@ -7,8 +7,6 @@ data class Channel(
     val isEncrypted: Boolean,
     val isDefault: Boolean,
     val categoryName: String?,
-    /** Epoch seconds. */
     val createdAt: Long?,
-    /** Epoch seconds. */
     val lastActivityAt: Long?,
 )
