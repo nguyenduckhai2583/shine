@@ -24,9 +24,8 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun signIn(email: String, password: String): Result<Session> {
         val dto = safeApiCall {
-            api.signIn(SignInRequest(email = email, password = passwordHasher.sha1(password))).data
+            api.signIn(SignInRequest(email = email, password = passwordHasher.sha1(password)))
         }.getOrElse { return Result.failure(it) }
-            ?: return Result.failure(AuthException.Unknown("Empty response"))
 
         if (dto.isTmpToken == true) return Result.failure(AuthException.TwoFactorRequired())
 

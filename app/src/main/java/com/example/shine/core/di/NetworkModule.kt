@@ -1,5 +1,6 @@
 package com.example.shine.core.di
 
+import android.util.Log
 import com.example.shine.BuildConfig
 import com.example.shine.data.remote.AuthApi
 import com.example.shine.data.remote.AuthInterceptor
@@ -44,7 +45,8 @@ object NetworkModule {
         .apply {
             if (BuildConfig.DEBUG) {
                 addInterceptor(
-                    HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY },
+                    HttpLoggingInterceptor { message -> Log.d("HTTP", message) }
+                        .apply { level = HttpLoggingInterceptor.Level.BODY },
                 )
             }
         }
