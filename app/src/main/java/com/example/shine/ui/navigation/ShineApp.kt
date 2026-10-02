@@ -14,6 +14,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.example.shine.ui.channel.ChannelDetailRoute
 import com.example.shine.ui.home.HomeRoute
 import com.example.shine.ui.signin.SignInRoute
 
@@ -62,7 +63,15 @@ private fun MainNavigation() {
             rememberViewModelStoreNavEntryDecorator(),
         ),
         entryProvider = entryProvider {
-            entry<Home> { HomeRoute() }
+            entry<Home> {
+                HomeRoute(onChannelClick = { channel -> backStack.add(ChannelDetail(channel.id)) })
+            }
+            entry<ChannelDetail> { key ->
+                ChannelDetailRoute(
+                    channelId = key.channelId,
+                    onBack = { backStack.removeLastOrNull() },
+                )
+            }
         },
     )
 }

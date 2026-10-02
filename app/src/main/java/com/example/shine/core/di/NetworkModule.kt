@@ -3,6 +3,7 @@ package com.example.shine.core.di
 import com.example.shine.BuildConfig
 import com.example.shine.data.remote.AuthApi
 import com.example.shine.data.remote.AuthInterceptor
+import com.example.shine.data.remote.ChatApi
 import com.example.shine.data.remote.TokenRefreshApi
 import dagger.Module
 import dagger.Provides
@@ -73,6 +74,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideChatApi(retrofit: Retrofit): ChatApi = retrofit.create(ChatApi::class.java)
 
     @Provides
     @Singleton

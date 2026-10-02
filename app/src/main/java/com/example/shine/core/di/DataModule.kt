@@ -6,7 +6,9 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.example.shine.data.repository.AuthRepositoryImpl
+import com.example.shine.data.repository.ChannelRepositoryImpl
 import com.example.shine.domain.repository.AuthRepository
+import com.example.shine.domain.repository.ChannelRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -21,6 +23,9 @@ abstract class DataModule {
 
     @Binds
     abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
+
+    @Binds
+    abstract fun bindChannelRepository(impl: ChannelRepositoryImpl): ChannelRepository
 
     companion object {
         @Provides
