@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -31,24 +30,41 @@ class HomeViewModel @Inject constructor(
     private val channelRepository: ChannelRepository,
 ) : ViewModel() {
 
-    private val channelsState = MutableStateFlow(HomeUiState(isLoading = true))
+    private val isLoading = MutableStateFlow(true)
+    private val errorMessage = MutableStateFlow<UiText?>(null)
 
-    val uiState: StateFlow<HomeUiState> = combine(authRepository.session, channelsState) { session, state ->
-        state.copy(displayName = session?.user?.displayName.orEmpty())
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(isLoading = true))
+    val uiState: StateFlow<HomeUiState> = combine(
+        authRepository.session,
+        channelRepository.getChannelsFlow(),
+        isLoading,
+        errorMessage,
+    ) { session, channels, loading, error ->
+        HomeUiState(
+            displayName = session?.user?.displayName.orEmpty(),
+            channels = channels,
+            isLoading = loading && channels.isEmpty(),
+            errorMessage = error,
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        HomeUiState(isLoading = true),
+    )
 
     init {
         loadChannels()
     }
 
     fun loadChannels() {
-        channelsState.update { it.copy(isLoading = true, errorMessage = null) }
+        isLoading.value = true
+        errorMessage.value = null
         viewModelScope.launch {
             try {
-                val channels = channelRepository.getChannels()
-                channelsState.update { it.copy(channels = channels, isLoading = false) }
+                channelRepository.getChannels()
             } catch (e: AppException) {
-                channelsState.update { it.copy(isLoading = false, errorMessage = e.toUiText()) }
+                errorMessage.value = e.toUiText()
+            } finally {
+                isLoading.value = false
             }
         }
     }
