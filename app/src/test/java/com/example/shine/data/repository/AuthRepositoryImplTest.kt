@@ -3,7 +3,8 @@ package com.example.shine.data.repository
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.example.shine.data.local.ChannelDataStore
 import com.example.shine.data.local.SessionLocalDataSource
-import com.example.shine.data.local.WorkspaceDataStore
+import com.example.shine.data.local.dao.WorkspaceDao
+import com.example.shine.data.local.entity.WorkspaceEntity
 import com.example.shine.data.remote.AuthApi
 import com.example.shine.data.remote.ChatApi
 import com.example.shine.data.remote.WorkspaceApi
@@ -16,6 +17,8 @@ import com.example.shine.data.security.PasswordHasher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -37,6 +40,7 @@ class AuthRepositoryImplTest {
     private lateinit var local: SessionLocalDataSource
     private lateinit var fakeAuthApi: FakeAuthApi
     private lateinit var fakeWorkspaceApi: FakeWorkspaceApi
+    private lateinit var fakeWorkspaceDao: FakeWorkspaceDao
     private lateinit var workspaceRepository: WorkspaceRepositoryImpl
     private lateinit var channelRepository: ChannelRepositoryImpl
     private lateinit var repository: AuthRepositoryImpl
@@ -50,7 +54,8 @@ class AuthRepositoryImplTest {
         )
         fakeAuthApi = FakeAuthApi()
         fakeWorkspaceApi = FakeWorkspaceApi()
-        workspaceRepository = WorkspaceRepositoryImpl(fakeWorkspaceApi, local, WorkspaceDataStore())
+        fakeWorkspaceDao = FakeWorkspaceDao()
+        workspaceRepository = WorkspaceRepositoryImpl(fakeWorkspaceApi, local, fakeWorkspaceDao)
         channelRepository = ChannelRepositoryImpl(FakeChatApi(), ChannelDataStore())
         repository = AuthRepositoryImpl(
             api = fakeAuthApi,
@@ -124,5 +129,27 @@ class AuthRepositoryImplTest {
     private class FakeChatApi : ChatApi {
         override suspend fun getChannels(): List<ChannelDto> = emptyList()
         override suspend fun getConversation(id: String): ChannelDto = throw NotImplementedError()
+    }
+
+    private class FakeWorkspaceDao : WorkspaceDao {
+        private val workspacesFlow = MutableStateFlow<List<WorkspaceEntity>>(emptyList())
+
+        override fun observeWorkspaces(): Flow<List<WorkspaceEntity>> = workspacesFlow
+        override suspend fun getWorkspaces(): List<WorkspaceEntity> = workspacesFlow.value
+        override suspend fun getWorkspace(id: String): WorkspaceEntity? =
+            workspacesFlow.value.firstOrNull { it.id == id }
+
+        override suspend fun upsertWorkspaces(workspaces: List<WorkspaceEntity>) {
+            val current = workspacesFlow.value.toMutableList()
+            workspaces.forEach { entity ->
+                val idx = current.indexOfFirst { it.id == entity.id }
+                if (idx >= 0) current[idx] = entity else current.add(entity)
+            }
+            workspacesFlow.value = current
+        }
+
+        override suspend fun clear() {
+            workspacesFlow.value = emptyList()
+        }
     }
 }

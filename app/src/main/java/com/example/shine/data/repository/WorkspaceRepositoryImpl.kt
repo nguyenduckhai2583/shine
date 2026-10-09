@@ -1,7 +1,9 @@
 package com.example.shine.data.repository
 
 import com.example.shine.data.local.SessionLocalDataSource
-import com.example.shine.data.local.WorkspaceDataStore
+import com.example.shine.data.local.dao.WorkspaceDao
+import com.example.shine.data.local.entity.toDomain
+import com.example.shine.data.local.entity.toEntity
 import com.example.shine.data.remote.WorkspaceApi
 import com.example.shine.data.remote.dto.toDomain
 import com.example.shine.domain.model.Workspace
@@ -15,20 +17,22 @@ import javax.inject.Singleton
 class WorkspaceRepositoryImpl @Inject constructor(
     private val api: WorkspaceApi,
     private val local: SessionLocalDataSource,
-    private val workspaceDataStore: WorkspaceDataStore,
+    private val workspaceDao: WorkspaceDao,
 ) : WorkspaceRepository {
 
-    override val workspaces: Flow<List<Workspace>> = workspaceDataStore.workspacesFlow
+    override val workspaces: Flow<List<Workspace>> = workspaceDao.observeWorkspaces()
+        .map { entities -> entities.map { it.toDomain() } }
 
     override val selectedWorkspaceId: Flow<String?> = local.session.map { it?.workspaceId }
 
     override suspend fun fetchWorkspaces(): List<Workspace> {
         return try {
-            val workspaces = api.getWorkspaces().map { it.toDomain() }
-            workspaceDataStore.replaceWorkspaces(workspaces)
-            workspaces
+            val remoteWorkspaces = api.getWorkspaces().map { it.toDomain() }
+            workspaceDao.replaceWorkspaces(remoteWorkspaces.map { it.toEntity() })
+            remoteWorkspaces
         } catch (e: Exception) {
-            workspaceDataStore.getWorkspaces().ifEmpty { throw e }
+            val localWorkspaces = workspaceDao.getWorkspaces().map { it.toDomain() }
+            localWorkspaces.ifEmpty { throw e }
         }
     }
 
@@ -37,6 +41,6 @@ class WorkspaceRepositoryImpl @Inject constructor(
     }
 
     override suspend fun clear() {
-        workspaceDataStore.clear()
+        workspaceDao.clear()
     }
 }
