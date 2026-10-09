@@ -38,6 +38,7 @@ class PlanixListViewModelTest {
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
+        testScheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals(1, state.projects.size)
@@ -54,6 +55,7 @@ class PlanixListViewModelTest {
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
+        testScheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals(0, state.projects.size)
