@@ -9,6 +9,8 @@ import com.example.shine.domain.model.AppError
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Session
 import com.example.shine.domain.repository.AuthRepository
+import com.example.shine.domain.repository.ChannelRepository
+import com.example.shine.domain.repository.WorkspaceRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,6 +19,8 @@ import javax.inject.Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val api: AuthApi,
     private val local: SessionLocalDataSource,
+    private val workspaceRepository: WorkspaceRepository,
+    private val channelRepository: ChannelRepository,
     private val passwordHasher: PasswordHasher,
 ) : AuthRepository {
 
@@ -29,8 +33,25 @@ class AuthRepositoryImpl @Inject constructor(
 
         val session = dto.toDomain()
         local.save(session)
+
+        val workspaces = try {
+            workspaceRepository.fetchWorkspaces()
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+        if (workspaces.size == 1) {
+            val single = workspaces.first()
+            local.setWorkspaceId(single.id)
+            return session.copy(workspaceId = single.id)
+        }
+
         return session
     }
 
-    override suspend fun signOut() = local.clear()
+    override suspend fun signOut() {
+        local.clear()
+        workspaceRepository.clear()
+        channelRepository.clear()
+    }
 }

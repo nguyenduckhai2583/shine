@@ -8,9 +8,11 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import com.example.shine.data.repository.AuthRepositoryImpl
 import com.example.shine.data.repository.ChannelRepositoryImpl
 import com.example.shine.data.repository.PlanixRepositoryImpl
+import com.example.shine.data.repository.WorkspaceRepositoryImpl
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.ChannelRepository
 import com.example.shine.domain.repository.PlanixRepository
+import com.example.shine.domain.repository.WorkspaceRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -31,6 +33,9 @@ abstract class DataModule {
 
     @Binds
     abstract fun bindPlanixRepository(impl: PlanixRepositoryImpl): PlanixRepository
+
+    @Binds
+    abstract fun bindWorkspaceRepository(impl: WorkspaceRepositoryImpl): WorkspaceRepository
 
     companion object {
         @Provides

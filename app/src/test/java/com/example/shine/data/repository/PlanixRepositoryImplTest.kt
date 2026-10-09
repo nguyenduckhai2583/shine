@@ -86,9 +86,5 @@ class PlanixRepositoryImplTest {
             )
         }
 
-        override suspend fun getProjectsList(): List<ProjectDto> {
-            if (shouldFail) throw AppException(AppError.NO_INTERNET)
-            return projectsToReturn
-        }
     }
 }

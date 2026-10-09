@@ -30,6 +30,7 @@ class SessionLocalDataSource @Inject constructor(
                     lastName = prefs[USER_LAST_NAME],
                 )
             },
+            workspaceId = prefs[WORKSPACE_ID],
         )
     }
 
@@ -39,12 +40,19 @@ class SessionLocalDataSource @Inject constructor(
             prefs[TOKEN] = session.token
             session.refreshToken?.let { prefs[REFRESH_TOKEN] = it }
             session.expireAt?.let { prefs[EXPIRE_AT] = it }
+            session.workspaceId?.let { prefs[WORKSPACE_ID] = it }
             session.user?.let { user ->
                 prefs[USER_ID] = user.id
                 user.email?.let { prefs[USER_EMAIL] = it }
                 user.firstName?.let { prefs[USER_FIRST_NAME] = it }
                 user.lastName?.let { prefs[USER_LAST_NAME] = it }
             }
+        }
+    }
+
+    suspend fun setWorkspaceId(workspaceId: String) {
+        dataStore.edit { prefs ->
+            prefs[WORKSPACE_ID] = workspaceId
         }
     }
 
@@ -56,6 +64,7 @@ class SessionLocalDataSource @Inject constructor(
         val TOKEN = stringPreferencesKey("token")
         val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
         val EXPIRE_AT = longPreferencesKey("expire_at")
+        val WORKSPACE_ID = stringPreferencesKey("workspace_id")
         val USER_ID = stringPreferencesKey("user_id")
         val USER_EMAIL = stringPreferencesKey("user_email")
         val USER_FIRST_NAME = stringPreferencesKey("user_first_name")

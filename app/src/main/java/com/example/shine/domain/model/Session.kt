@@ -5,6 +5,7 @@ data class Session(
     val refreshToken: String?,
     val expireAt: Long?,
     val user: User?,
+    val workspaceId: String? = null,
 )
 
 data class User(

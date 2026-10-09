@@ -18,11 +18,13 @@ import com.example.shine.ui.channel.ChannelDetailRoute
 import com.example.shine.ui.home.HomeRoute
 import com.example.shine.ui.planix.PlanixListRoute
 import com.example.shine.ui.signin.SignInRoute
+import com.example.shine.ui.workspace.WorkspaceListRoute
 
 /**
  * Login is mandatory, so signed-out and signed-in flows are separate back stacks.
- * A successful sign-in persists the session, [AppViewModel] observes it and swaps to Home,
- * so Back from Home exits the app instead of returning to Sign in.
+ * A successful sign-in persists the session. If user has multiple workspaces,
+ * [AppViewModel] transitions to [AuthState.SelectWorkspace]. Once selected,
+ * it transitions to [AuthState.SignedIn] (Home).
  */
 @Composable
 fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
@@ -33,6 +35,7 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
             CircularProgressIndicator()
         }
         AuthState.SignedOut -> AuthNavigation()
+        AuthState.SelectWorkspace -> WorkspaceNavigation()
         AuthState.SignedIn -> MainNavigation()
     }
 }
@@ -49,6 +52,22 @@ private fun AuthNavigation() {
         ),
         entryProvider = entryProvider {
             entry<SignIn> { SignInRoute() }
+        },
+    )
+}
+
+@Composable
+private fun WorkspaceNavigation() {
+    val backStack = rememberNavBackStack(WorkspaceList)
+    NavDisplay(
+        backStack = backStack,
+        onBack = { backStack.removeLastOrNull() },
+        entryDecorators = listOf(
+            rememberSaveableStateHolderNavEntryDecorator(),
+            rememberViewModelStoreNavEntryDecorator(),
+        ),
+        entryProvider = entryProvider {
+            entry<WorkspaceList> { WorkspaceListRoute() }
         },
     )
 }

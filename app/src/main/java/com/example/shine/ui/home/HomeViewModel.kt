@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Channel
+import com.example.shine.domain.model.Workspace
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.ChannelRepository
+import com.example.shine.domain.repository.WorkspaceRepository
 import com.example.shine.ui.common.UiText
 import com.example.shine.ui.common.toUiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,15 +21,22 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val displayName: String = "",
+    val userEmail: String = "",
     val channels: List<Channel> = emptyList(),
+    val workspaces: List<Workspace> = emptyList(),
+    val selectedWorkspaceId: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: UiText? = null,
-)
+) {
+    val currentWorkspaceName: String
+        get() = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name.orEmpty()
+}
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val channelRepository: ChannelRepository,
+    private val workspaceRepository: WorkspaceRepository,
 ) : ViewModel() {
 
     private val isLoading = MutableStateFlow(true)
@@ -36,12 +45,16 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = combine(
         authRepository.session,
         channelRepository.getChannelsFlow(),
+        workspaceRepository.workspaces,
         isLoading,
         errorMessage,
-    ) { session, channels, loading, error ->
+    ) { session, channels, workspaces, loading, error ->
         HomeUiState(
             displayName = session?.user?.displayName.orEmpty(),
+            userEmail = session?.user?.email.orEmpty(),
             channels = channels,
+            workspaces = workspaces,
+            selectedWorkspaceId = session?.workspaceId,
             isLoading = loading && channels.isEmpty(),
             errorMessage = error,
         )
@@ -52,7 +65,16 @@ class HomeViewModel @Inject constructor(
     )
 
     init {
+        loadWorkspaces()
         loadChannels()
+    }
+
+    fun loadWorkspaces() {
+        viewModelScope.launch {
+            try {
+                workspaceRepository.fetchWorkspaces()
+            } catch (_: Exception) {}
+        }
     }
 
     fun loadChannels() {
@@ -66,6 +88,15 @@ class HomeViewModel @Inject constructor(
             } finally {
                 isLoading.value = false
             }
+        }
+    }
+
+    fun selectWorkspace(workspaceId: String) {
+        if (workspaceId == uiState.value.selectedWorkspaceId) return
+        viewModelScope.launch {
+            channelRepository.clear()
+            workspaceRepository.selectWorkspace(workspaceId)
+            loadChannels()
         }
     }
 

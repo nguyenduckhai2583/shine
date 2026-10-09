@@ -12,4 +12,6 @@ interface ChannelRepository {
     fun getChannelsFlow(): Flow<List<Channel>> = emptyFlow()
 
     fun getChannelFlow(id: String): Flow<Channel?> = emptyFlow()
+
+    fun clear() {}
 }

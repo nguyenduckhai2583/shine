@@ -13,6 +13,7 @@ import javax.inject.Inject
 sealed interface AuthState {
     data object Loading : AuthState
     data object SignedOut : AuthState
+    data object SelectWorkspace : AuthState
     data object SignedIn : AuthState
 }
 
@@ -22,6 +23,12 @@ class AppViewModel @Inject constructor(
 ) : ViewModel() {
 
     val authState: StateFlow<AuthState> = authRepository.session
-        .map { session -> if (session == null) AuthState.SignedOut else AuthState.SignedIn }
+        .map { session ->
+            when {
+                session == null -> AuthState.SignedOut
+                session.workspaceId.isNullOrEmpty() -> AuthState.SelectWorkspace
+                else -> AuthState.SignedIn
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AuthState.Loading)
 }

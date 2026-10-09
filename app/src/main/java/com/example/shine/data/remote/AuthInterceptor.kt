@@ -1,6 +1,7 @@
 package com.example.shine.data.remote
 
 import com.example.shine.data.local.TokenProvider
+import com.example.shine.data.local.WorkspaceProvider
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
@@ -9,6 +10,7 @@ import javax.inject.Inject
 
 class AuthInterceptor @Inject constructor(
     private val tokenProvider: TokenProvider,
+    private val workspaceProvider: WorkspaceProvider,
     private val tokenRefresher: TokenRefresher,
 ) : Interceptor {
 
@@ -19,12 +21,13 @@ class AuthInterceptor @Inject constructor(
             return chain.proceed(request)
         }
 
-        val response = chain.proceed(request.withToken(token))
+        val workspaceId = workspaceProvider.current()
+        val response = chain.proceed(request.withAuth(token, workspaceId))
         return when (response.code) {
             HTTP_TOKEN_EXPIRED -> {
                 val newToken = tokenRefresher.refresh(token) ?: return response
                 response.close()
-                chain.proceed(request.withToken(newToken))
+                chain.proceed(request.withAuth(newToken, workspaceId))
             }
             HTTP_UNAUTHORIZED -> {
                 tokenRefresher.signOut(token)
@@ -34,11 +37,21 @@ class AuthInterceptor @Inject constructor(
         }
     }
 
-    private fun Request.withToken(token: String) =
-        newBuilder().header(AUTHORIZATION, "Bearer $token").build()
+    private fun Request.withAuth(token: String, workspaceId: String?): Request {
+        val builder = newBuilder().header(AUTHORIZATION, "Bearer $token")
+        if (workspaceId != null && header(WORKSPACE_ID) == null) {
+            builder.header(WORKSPACE_ID, workspaceId)
+        }
+        if (workspaceId != null && header(X_WORKSPACE_ID) == null) {
+            builder.header(X_WORKSPACE_ID, workspaceId)
+        }
+        return builder.build()
+    }
 
     private companion object {
         const val AUTHORIZATION = "Authorization"
+        const val WORKSPACE_ID = "workspace-id"
+        const val X_WORKSPACE_ID = "x-workspace-id"
         const val HTTP_TOKEN_EXPIRED = 440
     }
 }

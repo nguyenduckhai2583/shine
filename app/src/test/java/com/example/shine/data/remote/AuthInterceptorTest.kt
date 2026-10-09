@@ -30,6 +30,8 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.example.shine.data.local.WorkspaceProvider
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthInterceptorTest {
 
@@ -75,7 +77,11 @@ class AuthInterceptorTest {
             .create(TokenRefreshApi::class.java)
         client = OkHttpClient.Builder()
             .addInterceptor(
-                AuthInterceptor(TokenProvider(local, scope), TokenRefresher(refreshApi, local, json)),
+                AuthInterceptor(
+                    TokenProvider(local, scope),
+                    WorkspaceProvider(local, scope),
+                    TokenRefresher(refreshApi, local, json),
+                ),
             )
             .build()
     }
@@ -97,8 +103,22 @@ class AuthInterceptorTest {
         saveSession(token = "new")
 
         assertEquals(200, call())
-        assertEquals("Bearer new", server.takeRequest().headers["Authorization"])
+        val recorded = server.takeRequest()
+        assertEquals("Bearer new", recorded.headers["Authorization"])
+        assertNull(recorded.headers["workspace-id"])
+        assertNull(recorded.headers["x-workspace-id"])
         assertEquals(0, refreshCalls.get())
+    }
+
+    @Test
+    fun validTokenWithWorkspace_addsWorkspaceHeaders() {
+        saveSession(token = "new", workspaceId = "ws-123")
+
+        assertEquals(200, call())
+        val recorded = server.takeRequest()
+        assertEquals("Bearer new", recorded.headers["Authorization"])
+        assertEquals("ws-123", recorded.headers["workspace-id"])
+        assertEquals("ws-123", recorded.headers["x-workspace-id"])
     }
 
     @Test
@@ -162,8 +182,8 @@ class AuthInterceptorTest {
     private fun call(): Int =
         client.newCall(Request(server.url("/api"))).execute().use { it.code }
 
-    private fun saveSession(token: String) = runBlocking {
-        local.save(Session(token = token, refreshToken = "r1", expireAt = null, user = null))
+    private fun saveSession(token: String, workspaceId: String? = null) = runBlocking {
+        local.save(Session(token = token, refreshToken = "r1", expireAt = null, user = null, workspaceId = workspaceId))
     }
 
     private fun currentSession() = runBlocking { local.session.first() }
