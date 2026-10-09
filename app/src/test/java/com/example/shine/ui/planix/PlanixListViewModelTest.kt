@@ -1,15 +1,12 @@
 package com.example.shine.ui.planix
 
-import com.example.shine.R
-import com.example.shine.domain.model.AppError
-import com.example.shine.domain.model.AppException
+import androidx.paging.PagingData
 import com.example.shine.domain.model.Project
 import com.example.shine.domain.repository.PlanixRepository
-import com.example.shine.ui.common.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -17,7 +14,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 
@@ -33,47 +29,51 @@ class PlanixListViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
-    fun init_observesProjectsFromFlowAndLoadsRemote() = runTest {
+    fun init_initialStateHasEmptySearchQuery() = runTest {
         val viewModel = PlanixListViewModel(planixRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
-        }
-        testScheduler.advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertEquals(1, state.projects.size)
-        assertEquals("Shine App", state.projects[0].name)
-        assertFalse(state.isLoading)
+        assertEquals("", viewModel.uiState.value.searchQuery)
     }
 
     @Test
-    fun loadProjects_error_updatesErrorMessage() = runTest {
-        planixRepository.shouldFail = true
-        planixRepository.projectsFlow.value = emptyList()
+    fun onSearchQueryChanged_updatesSearchQuery() = runTest {
+        val viewModel = PlanixListViewModel(planixRepository)
+        viewModel.onSearchQueryChanged("Test")
+        assertEquals("Test", viewModel.uiState.value.searchQuery)
+    }
 
+    @Test
+    fun projectsPagingFlow_initialLoadQueriesRepositoryWithNull() = runTest {
         val viewModel = PlanixListViewModel(planixRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+            viewModel.projectsPagingFlow.collect {}
         }
         testScheduler.advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertEquals(0, state.projects.size)
-        assertEquals(UiText.Resource(R.string.error_no_internet), state.errorMessage)
-        assertFalse(state.isLoading)
+        assertEquals(null, planixRepository.lastSearchKey)
+    }
+
+    @Test
+    fun projectsPagingFlow_debouncesAndQueriesRepositoryWithKeyword() = runTest {
+        val viewModel = PlanixListViewModel(planixRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.projectsPagingFlow.collect {}
+        }
+        testScheduler.advanceUntilIdle()
+        assertEquals(null, planixRepository.lastSearchKey)
+
+        viewModel.onSearchQueryChanged("shine")
+        testScheduler.advanceTimeBy(350)
+        testScheduler.runCurrent()
+
+        assertEquals("shine", planixRepository.lastSearchKey)
     }
 
     private class FakePlanixRepository : PlanixRepository {
-        val projectsFlow = MutableStateFlow(
-            listOf(Project("1", "Shine App", "SA", "ACTIVE", null, "John"))
-        )
-        var shouldFail = false
+        var lastSearchKey: String? = "UNSET"
 
-        override fun getProjectsFlow(): Flow<List<Project>> = projectsFlow
-
-        override suspend fun getProjects(searchKey: String?, status: String?): List<Project> {
-            if (shouldFail) throw AppException(AppError.NO_INTERNET)
-            return projectsFlow.value
+        override fun getProjectsPagingFlow(searchKey: String?): Flow<PagingData<Project>> {
+            lastSearchKey = searchKey
+            return emptyFlow()
         }
     }
 }
