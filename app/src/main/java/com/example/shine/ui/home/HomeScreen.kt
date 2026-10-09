@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Tag
@@ -37,12 +38,14 @@ import com.example.shine.ui.theme.ShineTheme
 @Composable
 fun HomeRoute(
     onChannelClick: (Channel) -> Unit,
+    onPlanixClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     HomeScreen(
         uiState = uiState,
         onChannelClick = onChannelClick,
+        onPlanixClick = onPlanixClick,
         onRetry = viewModel::loadChannels,
         onSignOut = viewModel::signOut,
     )
@@ -53,6 +56,7 @@ fun HomeRoute(
 fun HomeScreen(
     uiState: HomeUiState,
     onChannelClick: (Channel) -> Unit,
+    onPlanixClick: () -> Unit,
     onRetry: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -70,6 +74,9 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onPlanixClick) {
+                        Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = "Planix Projects")
+                    }
                     IconButton(onClick = onSignOut) {
                         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sign out")
                     }
@@ -133,6 +140,7 @@ private fun HomeScreenPreview() {
                 ),
             ),
             onChannelClick = {},
+            onPlanixClick = {},
             onRetry = {},
             onSignOut = {},
         )

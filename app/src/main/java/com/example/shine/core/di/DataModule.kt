@@ -7,8 +7,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.example.shine.data.repository.AuthRepositoryImpl
 import com.example.shine.data.repository.ChannelRepositoryImpl
+import com.example.shine.data.repository.PlanixRepositoryImpl
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.ChannelRepository
+import com.example.shine.domain.repository.PlanixRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -26,6 +28,9 @@ abstract class DataModule {
 
     @Binds
     abstract fun bindChannelRepository(impl: ChannelRepositoryImpl): ChannelRepository
+
+    @Binds
+    abstract fun bindPlanixRepository(impl: PlanixRepositoryImpl): PlanixRepository
 
     companion object {
         @Provides

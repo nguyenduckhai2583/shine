@@ -11,3 +11,6 @@ data object Home : NavKey
 
 @Serializable
 data class ChannelDetail(val channelId: String) : NavKey
+
+@Serializable
+data object PlanixList : NavKey
