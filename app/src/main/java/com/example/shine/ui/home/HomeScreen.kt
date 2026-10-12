@@ -1,58 +1,37 @@
 package com.example.shine.ui.home
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tag
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.domain.model.Channel
 import com.example.shine.domain.model.Workspace
+import com.example.shine.ui.home.components.ChannelsContent
+import com.example.shine.ui.home.components.DmsContent
+import com.example.shine.ui.home.components.HomeDrawerContent
+import com.example.shine.ui.home.components.SettingsContent
 import com.example.shine.ui.theme.ShineTheme
-import kotlinx.coroutines.launch
 
 @Composable
 fun HomeRoute(
@@ -65,168 +44,50 @@ fun HomeRoute(
         uiState = uiState,
         onChannelClick = onChannelClick,
         onPlanixClick = onPlanixClick,
-        onRetry = viewModel::loadChannels,
         onSignOut = viewModel::signOut,
         onSelectWorkspace = viewModel::selectWorkspace,
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
     onChannelClick: (Channel) -> Unit,
     onPlanixClick: () -> Unit,
-    onRetry: () -> Unit,
     onSignOut: () -> Unit,
     onSelectWorkspace: (String) -> Unit,
     modifier: Modifier = Modifier,
+    state: HomeScreenState = rememberHomeScreenState(),
 ) {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-
     ModalNavigationDrawer(
-        drawerState = drawerState,
+        drawerState = state.drawerState,
         modifier = modifier,
         drawerContent = {
-            ModalDrawerSheet {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = uiState.displayName.take(1).uppercase().ifEmpty { "U" },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = uiState.displayName.ifEmpty { "User" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    if (uiState.userEmail.isNotEmpty()) {
-                        Text(
-                            text = uiState.userEmail,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                HorizontalDivider()
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Workspaces",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                )
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(uiState.workspaces, key = { it.id }) { workspace ->
-                        val isSelected = workspace.id == uiState.selectedWorkspaceId
-                        NavigationDrawerItem(
-                            icon = {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(
-                                            if (isSelected) MaterialTheme.colorScheme.primary
-                                             else MaterialTheme.colorScheme.surfaceVariant,
-                                        ),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        text = workspace.name.take(1).uppercase(),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            },
-                            label = {
-                                Column {
-                                    Text(
-                                        text = workspace.name,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    )
-                                    if (!workspace.subdomain.isNullOrBlank()) {
-                                        Text(
-                                            text = workspace.subdomain,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            },
-                            badge = {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Active workspace",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                            },
-                            selected = isSelected,
-                            onClick = {
-                                scope.launch { drawerState.close() }
-                                onSelectWorkspace(workspace.id)
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        )
-                    }
-                }
-                HorizontalDivider()
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
-                    label = { Text("Sign out") },
-                    selected = false,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        onSignOut()
-                    },
-                    modifier = Modifier.padding(12.dp),
-                )
-            }
+            HomeDrawerContent(
+                uiState = uiState,
+                onSelectWorkspace = { workspaceId ->
+                    state.closeDrawer()
+                    onSelectWorkspace(workspaceId)
+                },
+                onSignOut = {
+                    state.closeDrawer()
+                    onSignOut()
+                },
+            )
         },
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = "Open workspaces drawer")
-                        }
-                    },
-                    title = {
-                        Column {
-                            Text("Channels")
-                            val subtitle = uiState.currentWorkspaceName.ifEmpty { uiState.displayName }
-                            if (subtitle.isNotEmpty()) {
-                                Text(subtitle, style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = onPlanixClick) {
-                            Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = "Planix Projects")
-                        }
-                        IconButton(onClick = onSignOut) {
-                            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sign out")
-                        }
-                    },
+                HomeTopAppBar(
+                    selectedTab = state.selectedTab,
+                    uiState = uiState,
+                    onOpenDrawer = state::openDrawer,
+                )
+            },
+            bottomBar = {
+                HomeBottomBar(
+                    selectedTab = state.selectedTab,
+                    onSelectTab = { state.selectedTab = it },
                 )
             },
         ) { innerPadding ->
@@ -234,44 +95,80 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                contentAlignment = Alignment.Center,
             ) {
-                when {
-                    uiState.isLoading && uiState.channels.isEmpty() -> CircularProgressIndicator()
-                    uiState.errorMessage != null && uiState.channels.isEmpty() -> Column(
-                        modifier = Modifier.padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(uiState.errorMessage.asString(), color = MaterialTheme.colorScheme.error)
-                        OutlinedButton(onClick = onRetry) { Text("Retry") }
-                    }
-                    uiState.channels.isEmpty() -> Text("No channels yet")
-                    else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(uiState.channels, key = { it.id }) { channel ->
-                            ChannelItem(channel = channel, onClick = { onChannelClick(channel) })
-                            HorizontalDivider()
-                        }
-                    }
+                when (state.selectedTab) {
+                    HomeTab.Channels -> ChannelsContent(
+                        uiState = uiState,
+                        onChannelClick = onChannelClick,
+                    )
+                    HomeTab.Dms -> DmsContent()
+                    HomeTab.Settings -> SettingsContent(
+                        uiState = uiState,
+                        onPlanixClick = onPlanixClick,
+                        onSignOut = onSignOut,
+                    )
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChannelItem(channel: Channel, onClick: () -> Unit) {
-    ListItem(
-        modifier = Modifier.clickable(onClick = onClick),
-        leadingContent = {
-            Icon(
-                imageVector = if (channel.isPrivate) Icons.Filled.Lock else Icons.Filled.Tag,
-                contentDescription = if (channel.isPrivate) "Private channel" else "Public channel",
-            )
+private fun HomeTopAppBar(
+    selectedTab: HomeTab,
+    uiState: HomeUiState,
+    onOpenDrawer: () -> Unit,
+) {
+    TopAppBar(
+        navigationIcon = {
+            IconButton(onClick = onOpenDrawer) {
+                Icon(Icons.Filled.Menu, contentDescription = "Open workspaces drawer")
+            }
         },
-        headlineContent = { Text(channel.name) },
-        supportingContent = channel.categoryName?.let { category -> { Text(category) } },
+        title = {
+            Column {
+                when (selectedTab) {
+                    HomeTab.Channels -> {
+                        Text("Channels")
+                        val subtitle = uiState.currentWorkspaceName.ifEmpty { uiState.displayName }
+                        if (subtitle.isNotEmpty()) {
+                            Text(subtitle, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    HomeTab.Dms -> Text("DMs")
+                    HomeTab.Settings -> Text("Settings")
+                }
+            }
+        },
     )
+}
+
+@Composable
+private fun HomeBottomBar(
+    selectedTab: HomeTab,
+    onSelectTab: (HomeTab) -> Unit,
+) {
+    NavigationBar {
+        NavigationBarItem(
+            selected = selectedTab == HomeTab.Channels,
+            onClick = { onSelectTab(HomeTab.Channels) },
+            icon = { Icon(Icons.Filled.Tag, contentDescription = "Channels") },
+            label = { Text("Channels") },
+        )
+        NavigationBarItem(
+            selected = selectedTab == HomeTab.Dms,
+            onClick = { onSelectTab(HomeTab.Dms) },
+            icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "DMs") },
+            label = { Text("DMs") },
+        )
+        NavigationBarItem(
+            selected = selectedTab == HomeTab.Settings,
+            onClick = { onSelectTab(HomeTab.Settings) },
+            icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
+            label = { Text("Settings") },
+        )
+    }
 }
 
 @Preview(showBackground = true)
@@ -292,7 +189,6 @@ private fun HomeScreenPreview() {
             ),
             onChannelClick = {},
             onPlanixClick = {},
-            onRetry = {},
             onSignOut = {},
             onSelectWorkspace = {},
         )
