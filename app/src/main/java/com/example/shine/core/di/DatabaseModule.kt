@@ -3,6 +3,8 @@ package com.example.shine.core.di
 import android.content.Context
 import androidx.room.Room
 import com.example.shine.data.local.ShineDatabase
+import com.example.shine.data.local.dao.ProjectDao
+import com.example.shine.data.local.dao.ProjectRemoteKeyDao
 import com.example.shine.data.local.dao.WorkspaceDao
 import dagger.Module
 import dagger.Provides
@@ -29,4 +31,14 @@ object DatabaseModule {
     fun provideWorkspaceDao(
         database: ShineDatabase,
     ): WorkspaceDao = database.workspaceDao()
+
+    @Provides
+    fun provideProjectDao(
+        database: ShineDatabase,
+    ): ProjectDao = database.projectDao()
+
+    @Provides
+    fun provideProjectRemoteKeyDao(
+        database: ShineDatabase,
+    ): ProjectRemoteKeyDao = database.projectRemoteKeyDao()
 }

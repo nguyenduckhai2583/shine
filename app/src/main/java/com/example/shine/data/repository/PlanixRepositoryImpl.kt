@@ -1,20 +1,25 @@
 package com.example.shine.data.repository
 
+import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import com.example.shine.data.local.PlanixDataStore
+import androidx.paging.map
+import com.example.shine.data.local.ShineDatabase
+import com.example.shine.data.local.entity.toDomain
 import com.example.shine.data.remote.PlanixApi
 import com.example.shine.domain.model.Project
 import com.example.shine.domain.repository.PlanixRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class PlanixRepositoryImpl @Inject constructor(
     private val planixApi: PlanixApi,
-    private val planixDataStore: PlanixDataStore,
+    private val database: ShineDatabase,
 ) : PlanixRepository {
 
+    @OptIn(ExperimentalPagingApi::class)
     override fun getProjectsPagingFlow(searchKey: String?): Flow<PagingData<Project>> {
         return Pager(
             config = PagingConfig(
@@ -22,13 +27,16 @@ class PlanixRepositoryImpl @Inject constructor(
                 initialLoadSize = 5,
                 enablePlaceholders = false,
             ),
+            remoteMediator = PlanixRemoteMediator(
+                planixApi = planixApi,
+                database = database,
+                searchKey = searchKey,
+            ),
             pagingSourceFactory = {
-                PlanixPagingSource(
-                    planixApi = planixApi,
-                    planixDataStore = planixDataStore,
-                    searchKey = searchKey,
-                )
+                database.projectDao().getProjectsPagingSource()
             },
-        ).flow
+        ).flow.map { pagingData ->
+            pagingData.map { it.toDomain() }
+        }
     }
 }
