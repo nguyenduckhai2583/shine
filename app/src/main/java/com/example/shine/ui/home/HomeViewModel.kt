@@ -12,10 +12,11 @@ import com.example.shine.ui.common.UiText
 import com.example.shine.ui.common.toUiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -40,41 +41,38 @@ class HomeViewModel @Inject constructor(
     private val workspaceRepository: WorkspaceRepository,
 ) : ViewModel() {
 
-    private val selectedTab = MutableStateFlow(HomeTab.Channels)
-    private val isLoading = MutableStateFlow(true)
-    private val errorMessage = MutableStateFlow<UiText?>(null)
-
-    val uiState: StateFlow<HomeUiState> = combine(
-        combine(
-            authRepository.session,
-            channelRepository.getChannelsFlow(),
-            workspaceRepository.workspaces,
-        ) { session, channels, workspaces ->
-            Triple(session, channels, workspaces)
-        },
-        selectedTab,
-        isLoading,
-        errorMessage,
-    ) { (session, channels, workspaces), tab, loading, error ->
-        HomeUiState(
-            displayName = session?.user?.displayName.orEmpty(),
-            userEmail = session?.user?.email.orEmpty(),
-            channels = channels,
-            workspaces = workspaces,
-            selectedWorkspaceId = session?.workspaceId,
-            selectedTab = tab,
-            isLoading = loading && channels.isEmpty(),
-            errorMessage = error,
-        )
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5_000),
-        HomeUiState(isLoading = true),
-    )
+    private val _uiState = MutableStateFlow(HomeUiState(isLoading = true))
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
+        observeData()
         loadWorkspaces()
         loadChannels()
+    }
+
+    private fun observeData() {
+        viewModelScope.launch {
+            combine(
+                authRepository.session,
+                channelRepository.getChannelsFlow(),
+                workspaceRepository.workspaces,
+            ) { session, channels, workspaces ->
+                _uiState.update { current ->
+                    current.copy(
+                        displayName = session?.user?.displayName.orEmpty(),
+                        userEmail = session?.user?.email.orEmpty(),
+                        channels = channels,
+                        workspaces = workspaces,
+                        selectedWorkspaceId = session?.workspaceId,
+                        isLoading = current.isLoading && channels.isEmpty(),
+                    )
+                }
+            }.collectLatest {}
+        }
+    }
+
+    fun selectTab(tab: HomeTab) {
+        _uiState.update { it.copy(selectedTab = tab) }
     }
 
     fun loadWorkspaces() {
@@ -86,30 +84,25 @@ class HomeViewModel @Inject constructor(
     }
 
     fun loadChannels() {
-        isLoading.value = true
-        errorMessage.value = null
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             try {
                 channelRepository.getChannels()
             } catch (e: AppException) {
-                errorMessage.value = e.toUiText()
+                _uiState.update { it.copy(errorMessage = e.toUiText()) }
             } finally {
-                isLoading.value = false
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
 
     fun selectWorkspace(workspaceId: String) {
-        if (workspaceId == uiState.value.selectedWorkspaceId) return
+        if (workspaceId == _uiState.value.selectedWorkspaceId) return
         viewModelScope.launch {
             channelRepository.clear()
             workspaceRepository.selectWorkspace(workspaceId)
             loadChannels()
         }
-    }
-
-    fun selectTab(tab: HomeTab) {
-        selectedTab.value = tab
     }
 
     fun signOut() {
