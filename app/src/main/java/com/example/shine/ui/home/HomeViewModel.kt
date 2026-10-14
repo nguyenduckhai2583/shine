@@ -25,6 +25,7 @@ data class HomeUiState(
     val channels: List<Channel> = emptyList(),
     val workspaces: List<Workspace> = emptyList(),
     val selectedWorkspaceId: String? = null,
+    val selectedTab: HomeTab = HomeTab.Channels,
     val isLoading: Boolean = false,
     val errorMessage: UiText? = null,
 ) {
@@ -39,22 +40,29 @@ class HomeViewModel @Inject constructor(
     private val workspaceRepository: WorkspaceRepository,
 ) : ViewModel() {
 
+    private val selectedTab = MutableStateFlow(HomeTab.Channels)
     private val isLoading = MutableStateFlow(true)
     private val errorMessage = MutableStateFlow<UiText?>(null)
 
     val uiState: StateFlow<HomeUiState> = combine(
-        authRepository.session,
-        channelRepository.getChannelsFlow(),
-        workspaceRepository.workspaces,
+        combine(
+            authRepository.session,
+            channelRepository.getChannelsFlow(),
+            workspaceRepository.workspaces,
+        ) { session, channels, workspaces ->
+            Triple(session, channels, workspaces)
+        },
+        selectedTab,
         isLoading,
         errorMessage,
-    ) { session, channels, workspaces, loading, error ->
+    ) { (session, channels, workspaces), tab, loading, error ->
         HomeUiState(
             displayName = session?.user?.displayName.orEmpty(),
             userEmail = session?.user?.email.orEmpty(),
             channels = channels,
             workspaces = workspaces,
             selectedWorkspaceId = session?.workspaceId,
+            selectedTab = tab,
             isLoading = loading && channels.isEmpty(),
             errorMessage = error,
         )
@@ -98,6 +106,10 @@ class HomeViewModel @Inject constructor(
             workspaceRepository.selectWorkspace(workspaceId)
             loadChannels()
         }
+    }
+
+    fun selectTab(tab: HomeTab) {
+        selectedTab.value = tab
     }
 
     fun signOut() {

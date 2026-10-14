@@ -83,6 +83,20 @@ class HomeViewModelTest {
         assertEquals("ws-2", workspaceRepository.currentSelectedId.value)
     }
 
+    @Test
+    fun selectTab_updatesSelectedTab() = runTest {
+        val viewModel = HomeViewModel(authRepository, channelRepository, workspaceRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        assertEquals(HomeTab.Channels, viewModel.uiState.value.selectedTab)
+
+        viewModel.selectTab(HomeTab.Settings)
+
+        assertEquals(HomeTab.Settings, viewModel.uiState.value.selectedTab)
+    }
+
     private class FakeAuthRepository : AuthRepository {
         val sessionFlow = MutableStateFlow(
             Session(

@@ -46,6 +46,7 @@ fun HomeRoute(
         onPlanixClick = onPlanixClick,
         onSignOut = viewModel::signOut,
         onSelectWorkspace = viewModel::selectWorkspace,
+        onSelectTab = viewModel::selectTab,
     )
 }
 
@@ -56,6 +57,7 @@ fun HomeScreen(
     onPlanixClick: () -> Unit,
     onSignOut: () -> Unit,
     onSelectWorkspace: (String) -> Unit,
+    onSelectTab: (HomeTab) -> Unit,
     modifier: Modifier = Modifier,
     state: HomeScreenState = rememberHomeScreenState(),
 ) {
@@ -79,15 +81,15 @@ fun HomeScreen(
         Scaffold(
             topBar = {
                 HomeTopAppBar(
-                    selectedTab = state.selectedTab,
+                    selectedTab = uiState.selectedTab,
                     uiState = uiState,
                     onOpenDrawer = state::openDrawer,
                 )
             },
             bottomBar = {
                 HomeBottomBar(
-                    selectedTab = state.selectedTab,
-                    onSelectTab = { state.selectedTab = it },
+                    selectedTab = uiState.selectedTab,
+                    onSelectTab = onSelectTab,
                 )
             },
         ) { innerPadding ->
@@ -96,7 +98,7 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
             ) {
-                when (state.selectedTab) {
+                when (uiState.selectedTab) {
                     HomeTab.Channels -> ChannelsContent(
                         uiState = uiState,
                         onChannelClick = onChannelClick,
@@ -191,6 +193,7 @@ private fun HomeScreenPreview() {
             onPlanixClick = {},
             onSignOut = {},
             onSelectWorkspace = {},
+            onSelectTab = {},
         )
     }
 }
