@@ -11,7 +11,16 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class LocalDatabase
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class InMemoryDatabase
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -19,7 +28,8 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideShineDatabase(
+    @LocalDatabase
+    fun provideLocalShineDatabase(
         @ApplicationContext context: Context,
     ): ShineDatabase = Room.databaseBuilder(
         context,
@@ -28,17 +38,33 @@ object DatabaseModule {
     ).fallbackToDestructiveMigration(dropAllTables = true).build()
 
     @Provides
+    @Singleton
+    @InMemoryDatabase
+    fun provideInMemoryShineDatabase(
+        @ApplicationContext context: Context,
+    ): ShineDatabase = Room.inMemoryDatabaseBuilder(
+        context,
+        ShineDatabase::class.java,
+    ).build()
+
+    @Provides
+    @Singleton
+    fun provideShineDatabase(
+        @LocalDatabase database: ShineDatabase,
+    ): ShineDatabase = database
+
+    @Provides
     fun provideWorkspaceDao(
-        database: ShineDatabase,
+        @LocalDatabase database: ShineDatabase,
     ): WorkspaceDao = database.workspaceDao()
 
     @Provides
     fun provideProjectDao(
-        database: ShineDatabase,
+        @InMemoryDatabase database: ShineDatabase,
     ): ProjectDao = database.projectDao()
 
     @Provides
     fun provideProjectRemoteKeyDao(
-        database: ShineDatabase,
+        @InMemoryDatabase database: ShineDatabase,
     ): ProjectRemoteKeyDao = database.projectRemoteKeyDao()
 }

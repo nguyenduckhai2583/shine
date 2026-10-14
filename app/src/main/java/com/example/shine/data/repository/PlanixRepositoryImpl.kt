@@ -5,6 +5,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
+import com.example.shine.core.di.InMemoryDatabase
 import com.example.shine.data.local.ShineDatabase
 import com.example.shine.data.local.entity.toDomain
 import com.example.shine.data.remote.PlanixApi
@@ -16,7 +17,7 @@ import javax.inject.Inject
 
 class PlanixRepositoryImpl @Inject constructor(
     private val planixApi: PlanixApi,
-    private val database: ShineDatabase,
+    @InMemoryDatabase private val database: ShineDatabase,
 ) : PlanixRepository {
 
     @OptIn(ExperimentalPagingApi::class)
