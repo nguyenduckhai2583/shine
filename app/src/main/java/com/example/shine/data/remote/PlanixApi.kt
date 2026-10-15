@@ -10,6 +10,6 @@ interface PlanixApi {
     suspend fun getProjectsPagination(
         @Query("key") key: String? = null,
         @Query("page") page: Int? = null,
-        @Query("limit") limit: Int? = null,
+        @Query("perPage") perPage: Int? = null,
     ): PaginationResponse<ProjectDto>
 }

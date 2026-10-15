@@ -28,7 +28,7 @@ class PlanixPagingSource(
             val response = planixApi.getProjectsPagination(
                 key = searchKey?.takeIf { it.isNotBlank() },
                 page = page,
-                limit = params.loadSize,
+                perPage = params.loadSize,
             )
             val projects = response.items.orEmpty().map { it.toDomain() }
 

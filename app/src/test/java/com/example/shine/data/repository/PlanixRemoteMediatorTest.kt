@@ -288,7 +288,7 @@ class PlanixRemoteMediatorTest {
         override suspend fun getProjectsPagination(
             key: String?,
             page: Int?,
-            limit: Int?,
+            perPage: Int?,
         ): PaginationResponse<ProjectDto> {
             lastRequestedPage = page
             if (shouldFail) throw AppException(AppError.NO_INTERNET)

@@ -46,7 +46,7 @@ class PlanixRemoteMediator(
             val response = planixApi.getProjectsPagination(
                 key = searchKey?.takeIf { it.isNotBlank() },
                 page = page,
-                limit = state.config.pageSize,
+                perPage = state.config.pageSize,
             )
 
             val projects = response.items.orEmpty().map { it.toDomain() }

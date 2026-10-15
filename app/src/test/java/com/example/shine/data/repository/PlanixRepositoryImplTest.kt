@@ -44,7 +44,7 @@ class PlanixRepositoryImplTest {
         override suspend fun getProjectsPagination(
             key: String?,
             page: Int?,
-            limit: Int?,
+            perPage: Int?,
         ): PaginationResponse<ProjectDto> {
             if (shouldFail) throw AppException(AppError.NO_INTERNET)
             return PaginationResponse(

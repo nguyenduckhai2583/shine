@@ -24,8 +24,10 @@ class PlanixRepositoryImpl @Inject constructor(
     override fun getProjectsPagingFlow(searchKey: String?): Flow<PagingData<Project>> {
         return Pager(
             config = PagingConfig(
-                pageSize = 20,
-                enablePlaceholders = false,
+                pageSize = 25,
+                initialLoadSize = 25,
+                prefetchDistance = 1,
+                enablePlaceholders = true,
             ),
             remoteMediator = PlanixRemoteMediator(
                 planixApi = planixApi,
