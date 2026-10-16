@@ -14,6 +14,8 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import androidx.compose.runtime.LaunchedEffect
+import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
 import com.example.shine.ui.channel.ChannelDetailRoute
 import com.example.shine.ui.home.HomeRoute
 import com.example.shine.ui.planix.PlanixListRoute
@@ -29,6 +31,7 @@ import com.example.shine.ui.workspace.WorkspaceListRoute
 @Composable
 fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
     val authState by viewModel.authState.collectAsStateWithLifecycle()
+    val pendingDestination by viewModel.pendingDestination.collectAsStateWithLifecycle()
 
     when (authState) {
         AuthState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -36,7 +39,10 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
         }
         AuthState.SignedOut -> AuthNavigation()
         AuthState.SelectWorkspace -> WorkspaceNavigation()
-        AuthState.SignedIn -> MainNavigation()
+        AuthState.SignedIn -> MainNavigation(
+            pendingDestination = pendingDestination,
+            onDestinationConsumed = viewModel::onDeepLinkConsumed,
+        )
     }
 }
 
@@ -73,8 +79,25 @@ private fun WorkspaceNavigation() {
 }
 
 @Composable
-private fun MainNavigation() {
+private fun MainNavigation(
+    pendingDestination: DeepLinkDestination?,
+    onDestinationConsumed: () -> Unit,
+) {
     val backStack = rememberNavBackStack(Home)
+
+    LaunchedEffect(pendingDestination) {
+        when (val destination = pendingDestination) {
+            is DeepLinkDestination.Channel -> {
+                val targetKey = ChannelDetail(destination.channelId)
+                if (backStack.lastOrNull() != targetKey) {
+                    backStack.add(targetKey)
+                }
+                onDestinationConsumed()
+            }
+            null -> Unit
+        }
+    }
+
     NavDisplay(
         backStack = backStack,
         onBack = { backStack.removeLastOrNull() },

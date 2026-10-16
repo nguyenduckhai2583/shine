@@ -23,6 +23,9 @@ android {
 
         buildConfigField("String", "BASE_URL", "\"https://employer-api.dev.hodfords.uk/\"")
         buildConfigField("String", "PASSWORD_SALT", "\"709d0a32e4d0b1a2ce8800998d95d6f9\"")
+
+        val deepLinkHost = "employer.dev.hodfords.uk"
+        buildConfigField("String", "DEEP_LINK_HOST", "\"$deepLinkHost\"")
     }
 
     buildTypes {
@@ -39,6 +42,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
 }
 
