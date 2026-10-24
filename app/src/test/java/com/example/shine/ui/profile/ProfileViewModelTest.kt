@@ -1,0 +1,66 @@
+package com.example.shine.ui.profile
+
+import android.net.Uri
+import com.example.shine.domain.model.Session
+import com.example.shine.domain.model.User
+import com.example.shine.domain.repository.AuthRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class ProfileViewModelTest {
+
+    private val authRepository = FakeAuthRepository()
+
+    @Before
+    fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
+
+    @After
+    fun tearDown() = Dispatchers.resetMain()
+
+    @Test
+    fun init_observesUserSessionDisplayNameAndAvatar() = runTest {
+        val viewModel = ProfileViewModel(authRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        val state = viewModel.uiState.value
+        assertEquals("Jane Doe", state.name)
+        assertEquals("https://example.com/avatar.jpg", state.avatarUrl)
+        assertFalse(state.isLoading)
+    }
+
+    private class FakeAuthRepository : AuthRepository {
+        val sessionFlow = MutableStateFlow(
+            Session(
+                token = "token",
+                refreshToken = "refresh",
+                expireAt = null,
+                user = User(
+                    id = "1",
+                    email = "jane@example.com",
+                    firstName = "Jane",
+                    lastName = "Doe",
+                    avatarUrl = "https://example.com/avatar.jpg",
+                ),
+                workspaceId = "ws-1",
+            )
+        )
+        override val session: Flow<Session?> = sessionFlow
+        override suspend fun signIn(email: String, password: String): Session = throw NotImplementedError()
+        override suspend fun signOut() {}
+    }
+}

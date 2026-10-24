@@ -17,3 +17,7 @@ data object PlanixList : NavKey
 
 @Serializable
 data object WorkspaceList : NavKey
+
+@Serializable
+data object Profile : NavKey
+

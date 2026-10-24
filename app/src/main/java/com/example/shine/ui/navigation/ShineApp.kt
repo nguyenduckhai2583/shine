@@ -19,6 +19,7 @@ import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
 import com.example.shine.ui.channel.ChannelDetailRoute
 import com.example.shine.ui.home.HomeRoute
 import com.example.shine.ui.planix.PlanixListRoute
+import com.example.shine.ui.profile.ProfileRoute
 import com.example.shine.ui.signin.SignInRoute
 import com.example.shine.ui.workspace.WorkspaceListRoute
 
@@ -110,6 +111,7 @@ private fun MainNavigation(
                 HomeRoute(
                     onChannelClick = { channel -> backStack.add(ChannelDetail(channel.id)) },
                     onPlanixClick = { backStack.add(PlanixList) },
+                    onProfileClick = { backStack.add(Profile) },
                 )
             }
             entry<ChannelDetail> { key ->
@@ -120,6 +122,11 @@ private fun MainNavigation(
             }
             entry<PlanixList> {
                 PlanixListRoute(
+                    onBack = { backStack.removeLastOrNull() },
+                )
+            }
+            entry<Profile> {
+                ProfileRoute(
                     onBack = { backStack.removeLastOrNull() },
                 )
             }

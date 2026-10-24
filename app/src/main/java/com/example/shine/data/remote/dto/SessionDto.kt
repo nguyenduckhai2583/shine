@@ -18,4 +18,5 @@ data class UserDto(
     val firstName: String? = null,
     val lastName: String? = null,
     val avatarUrl: String? = null,
+    val avatar: FileDto? = null,
 )

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -35,6 +37,7 @@ fun SettingsContent(
     uiState: HomeUiState,
     onPlanixClick: () -> Unit,
     onSignOut: () -> Unit,
+    onProfileClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -42,10 +45,12 @@ fun SettingsContent(
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable(onClick = onProfileClick)
                 .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
@@ -61,19 +66,27 @@ fun SettingsContent(
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = uiState.displayName.ifEmpty { "User" },
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (uiState.userEmail.isNotEmpty()) {
+            Spacer(Modifier.size(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = uiState.userEmail,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = uiState.displayName.ifEmpty { "User" },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                 )
+                if (uiState.userEmail.isNotEmpty()) {
+                    Text(
+                        text = uiState.userEmail,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                contentDescription = "View Profile",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         HorizontalDivider()
@@ -115,6 +128,27 @@ fun SettingsContent(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        )
+
+        ListItem(
+            modifier = Modifier.clickable(onClick = onProfileClick),
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            },
+            headlineContent = { Text("My Profile") },
+            supportingContent = { Text("Manage profile and avatar") },
+            trailingContent = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
         )
 
         ListItem(

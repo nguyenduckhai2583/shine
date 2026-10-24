@@ -13,7 +13,12 @@ data class User(
     val email: String?,
     val firstName: String?,
     val lastName: String?,
+    val avatarUrl: String? = null,
 ) {
     val displayName: String
         get() = listOfNotNull(firstName, lastName).joinToString(" ").ifBlank { email.orEmpty() }
+
+    val avatarPath: String?
+        get() = avatarUrl
 }
+

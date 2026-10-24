@@ -10,4 +10,11 @@ fun SessionDto.toDomain() = Session(
     user = user?.toDomain(),
 )
 
-fun UserDto.toDomain() = User(id = id, email = email, firstName = firstName, lastName = lastName)
+fun UserDto.toDomain() = User(
+    id = id,
+    email = email,
+    firstName = firstName,
+    lastName = lastName,
+    avatarUrl = avatarUrl?.takeIf { it.isNotBlank() } ?: avatar?.signedUrl,
+)
+

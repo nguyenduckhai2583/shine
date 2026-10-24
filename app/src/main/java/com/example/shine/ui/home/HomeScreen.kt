@@ -37,6 +37,7 @@ import com.example.shine.ui.theme.ShineTheme
 fun HomeRoute(
     onChannelClick: (Channel) -> Unit,
     onPlanixClick: () -> Unit,
+    onProfileClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -44,6 +45,7 @@ fun HomeRoute(
         uiState = uiState,
         onChannelClick = onChannelClick,
         onPlanixClick = onPlanixClick,
+        onProfileClick = onProfileClick,
         onSignOut = viewModel::signOut,
         onSelectWorkspace = viewModel::selectWorkspace,
         onSelectTab = viewModel::selectTab,
@@ -58,6 +60,7 @@ fun HomeScreen(
     onSignOut: () -> Unit,
     onSelectWorkspace: (String) -> Unit,
     onSelectTab: (HomeTab) -> Unit,
+    onProfileClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     state: HomeScreenState = rememberHomeScreenState(),
 ) {
@@ -108,6 +111,7 @@ fun HomeScreen(
                         uiState = uiState,
                         onPlanixClick = onPlanixClick,
                         onSignOut = onSignOut,
+                        onProfileClick = onProfileClick,
                     )
                 }
             }

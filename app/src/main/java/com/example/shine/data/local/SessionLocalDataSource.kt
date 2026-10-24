@@ -28,6 +28,7 @@ class SessionLocalDataSource @Inject constructor(
                     email = prefs[USER_EMAIL],
                     firstName = prefs[USER_FIRST_NAME],
                     lastName = prefs[USER_LAST_NAME],
+                    avatarUrl = prefs[USER_AVATAR_URL],
                 )
             },
             workspaceId = prefs[WORKSPACE_ID],
@@ -46,7 +47,14 @@ class SessionLocalDataSource @Inject constructor(
                 user.email?.let { prefs[USER_EMAIL] = it }
                 user.firstName?.let { prefs[USER_FIRST_NAME] = it }
                 user.lastName?.let { prefs[USER_LAST_NAME] = it }
+                user.avatarUrl?.let { prefs[USER_AVATAR_URL] = it }
             }
+        }
+    }
+
+    suspend fun updateAvatar(avatarUrl: String) {
+        dataStore.edit { prefs ->
+            prefs[USER_AVATAR_URL] = avatarUrl
         }
     }
 
@@ -69,5 +77,6 @@ class SessionLocalDataSource @Inject constructor(
         val USER_EMAIL = stringPreferencesKey("user_email")
         val USER_FIRST_NAME = stringPreferencesKey("user_first_name")
         val USER_LAST_NAME = stringPreferencesKey("user_last_name")
+        val USER_AVATAR_URL = stringPreferencesKey("user_avatar_url")
     }
 }
