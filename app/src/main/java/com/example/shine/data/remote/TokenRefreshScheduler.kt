@@ -7,6 +7,7 @@ import com.example.shine.domain.model.Session
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
@@ -16,13 +17,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Refreshes the token [REFRESH_BEFORE_EXPIRY] before `expireAt` (epoch seconds),
  * and reschedules whenever the session changes.
- * The reactive 440 path in [AuthInterceptor] still covers anything this misses.
+ * The reactive 401/440 path in [AuthInterceptor] still covers anything this misses.
  */
 @Singleton
 class TokenRefreshScheduler @Inject constructor(

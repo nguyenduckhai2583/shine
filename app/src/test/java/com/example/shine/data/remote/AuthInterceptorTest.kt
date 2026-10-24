@@ -160,8 +160,50 @@ class AuthInterceptorTest {
     }
 
     @Test
+    fun expiredToken401_refreshesSavesAndRetries() {
+        // Real-world server behavior: server returns 401 when access token is expired
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when {
+                request.url.encodedPath.endsWith("auth/refresh-token") -> {
+                    refreshCalls.incrementAndGet()
+                    refreshResponse
+                }
+                request.headers["Authorization"] == "Bearer new" -> MockResponse(code = 200)
+                else -> MockResponse(code = 401)
+            }
+        }
+        saveSession(token = "expired-401")
+
+        assertEquals(200, call())
+        assertEquals(1, refreshCalls.get())
+        val saved = currentSession()
+        assertEquals("new", saved?.token)
+        assertEquals("r2", saved?.refreshToken)
+    }
+
+    @Test
+    fun expiredToken_preservesWorkspaceIdAfterRefresh() {
+        saveSession(token = "old", workspaceId = "ws-123")
+
+        assertEquals(200, call())
+        val saved = currentSession()
+        assertEquals("ws-123", saved?.workspaceId)
+    }
+
+    @Test
     fun unauthorized_signsOut() {
+        refreshResponse = MockResponse(code = 401)
         saveSession(token = "revoked")
+
+        assertEquals(401, call())
+        assertNull(currentSession())
+    }
+
+    @Test
+    fun unauthorizedWithoutRefreshToken_signsOut() {
+        runBlocking {
+            local.save(Session(token = "revoked", refreshToken = null, expireAt = null, user = null))
+        }
 
         assertEquals(401, call())
         assertNull(currentSession())

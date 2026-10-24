@@ -46,11 +46,11 @@ class TokenRefresher @Inject constructor(
             json.decodeFromJsonElement(SessionDto.serializer(), payload).toDomain()
         }.getOrNull() ?: return null
 
-
         val merged = fresh.copy(
             refreshToken = fresh.refreshToken ?: session.refreshToken,
             expireAt = fresh.expireAt ?: session.expireAt,
             user = fresh.user ?: session.user,
+            workspaceId = fresh.workspaceId ?: session.workspaceId,
         )
         runBlocking { local.save(merged) }
         merged.token

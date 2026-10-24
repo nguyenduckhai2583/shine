@@ -24,14 +24,10 @@ class AuthInterceptor @Inject constructor(
         val workspaceId = workspaceProvider.current()
         val response = chain.proceed(request.withAuth(token, workspaceId))
         return when (response.code) {
-            HTTP_TOKEN_EXPIRED -> {
+            HTTP_UNAUTHORIZED, HTTP_TOKEN_EXPIRED -> {
                 val newToken = tokenRefresher.refresh(token) ?: return response
                 response.close()
                 chain.proceed(request.withAuth(newToken, workspaceId))
-            }
-            HTTP_UNAUTHORIZED -> {
-                tokenRefresher.signOut(token)
-                response
             }
             else -> response
         }
