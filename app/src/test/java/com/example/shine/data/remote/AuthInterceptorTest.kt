@@ -80,7 +80,7 @@ class AuthInterceptorTest {
                 AuthInterceptor(
                     TokenProvider(local, scope),
                     WorkspaceProvider(local, scope),
-                    TokenRefresher(refreshApi, local, json),
+                    TokenRefresher(refreshApi, local),
                 ),
             )
             .build()

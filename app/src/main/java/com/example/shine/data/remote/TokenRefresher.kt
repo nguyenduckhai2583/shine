@@ -2,13 +2,9 @@ package com.example.shine.data.remote
 
 import com.example.shine.data.local.SessionLocalDataSource
 import com.example.shine.data.remote.dto.RefreshTokenRequest
-import com.example.shine.data.remote.dto.SessionDto
 import com.example.shine.data.remote.dto.toDomain
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import java.io.IOException
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,7 +17,6 @@ import javax.inject.Singleton
 class TokenRefresher @Inject constructor(
     private val api: TokenRefreshApi,
     private val local: SessionLocalDataSource,
-    private val json: Json,
 ) {
     private val lock = Any()
 
@@ -35,16 +30,13 @@ class TokenRefresher @Inject constructor(
 
         val response = try {
             api.refreshToken(RefreshTokenRequest(refreshToken)).execute()
-        } catch (e: IOException) {
+        } catch (_: Exception) {
             return null
         }
         if (response.code() == HTTP_UNAUTHORIZED) return signOut(expiredToken)
 
-        val body = response.body() ?: return null
-        val fresh = runCatching {
-            val payload = body["data"] as? JsonObject ?: body
-            json.decodeFromJsonElement(SessionDto.serializer(), payload).toDomain()
-        }.getOrNull() ?: return null
+        val fresh = response.body()?.toDomain() ?: return null
+
 
         val merged = fresh.copy(
             refreshToken = fresh.refreshToken ?: session.refreshToken,
