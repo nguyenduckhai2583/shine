@@ -5,13 +5,17 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
+import com.example.shine.data.local.AndroidImageReader
+import com.example.shine.data.local.ImageReader
 import com.example.shine.data.repository.AuthRepositoryImpl
 import com.example.shine.data.repository.ChannelRepositoryImpl
 import com.example.shine.data.repository.PlanixRepositoryImpl
+import com.example.shine.data.repository.UserRepositoryImpl
 import com.example.shine.data.repository.WorkspaceRepositoryImpl
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.ChannelRepository
 import com.example.shine.domain.repository.PlanixRepository
+import com.example.shine.domain.repository.UserRepository
 import com.example.shine.domain.repository.WorkspaceRepository
 import dagger.Binds
 import dagger.Module
@@ -36,6 +40,12 @@ abstract class DataModule {
 
     @Binds
     abstract fun bindWorkspaceRepository(impl: WorkspaceRepositoryImpl): WorkspaceRepository
+
+    @Binds
+    abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository
+
+    @Binds
+    abstract fun bindImageReader(impl: AndroidImageReader): ImageReader
 
     companion object {
         @Provides

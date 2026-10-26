@@ -7,4 +7,6 @@ data class ProfileUiState(
     val avatarUrl: String? = null,
     val selectedAvatarUri: Uri? = null,
     val isLoading: Boolean = false,
+    val isUploading: Boolean = false,
+    val errorMessage: String? = null,
 )

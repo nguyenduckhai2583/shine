@@ -8,6 +8,7 @@ import com.example.shine.data.remote.ChatApi
 import com.example.shine.data.remote.ErrorMappingCallAdapterFactory
 import com.example.shine.data.remote.PlanixApi
 import com.example.shine.data.remote.TokenRefreshApi
+import com.example.shine.data.remote.UserApi
 import com.example.shine.data.remote.WorkspaceApi
 import dagger.Module
 import dagger.Provides
@@ -95,6 +96,10 @@ object NetworkModule {
     @Singleton
     fun provideWorkspaceApi(retrofit: Retrofit): WorkspaceApi =
         retrofit.create(WorkspaceApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideUserApi(retrofit: Retrofit): UserApi = retrofit.create(UserApi::class.java)
 
     @Provides
     @Singleton

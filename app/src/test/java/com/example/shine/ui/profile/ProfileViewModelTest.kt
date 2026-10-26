@@ -4,6 +4,7 @@ import android.net.Uri
 import com.example.shine.domain.model.Session
 import com.example.shine.domain.model.User
 import com.example.shine.domain.repository.AuthRepository
+import com.example.shine.domain.repository.UserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -16,13 +17,17 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+
+import org.mockito.Mockito.mock
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModelTest {
 
     private val authRepository = FakeAuthRepository()
+    private val userRepository = FakeUserRepository()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -32,7 +37,7 @@ class ProfileViewModelTest {
 
     @Test
     fun init_observesUserSessionDisplayNameAndAvatar() = runTest {
-        val viewModel = ProfileViewModel(authRepository)
+        val viewModel = ProfileViewModel(authRepository, userRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -41,6 +46,43 @@ class ProfileViewModelTest {
         assertEquals("Jane Doe", state.name)
         assertEquals("https://example.com/avatar.jpg", state.avatarUrl)
         assertFalse(state.isLoading)
+    }
+
+    @Test
+    fun onAvatarSelected_success_updatesAvatarAndClearsUploading() = runTest {
+        val viewModel = ProfileViewModel(authRepository, userRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        val uri = mock(Uri::class.java)
+        viewModel.onAvatarSelected(uri)
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isUploading)
+        assertNull(state.selectedAvatarUri)
+        assertNull(state.errorMessage)
+        assertEquals(uri, userRepository.lastUpdatedUri)
+    }
+
+    @Test
+    fun onAvatarSelected_failure_setsErrorMessageAndClearsUploading() = runTest {
+        userRepository.shouldFail = true
+        val viewModel = ProfileViewModel(authRepository, userRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        val uri = mock(Uri::class.java)
+        viewModel.onAvatarSelected(uri)
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isUploading)
+        assertNull(state.selectedAvatarUri)
+        assertEquals("Network upload failed", state.errorMessage)
+
+        viewModel.clearErrorMessage()
+        assertNull(viewModel.uiState.value.errorMessage)
     }
 
     private class FakeAuthRepository : AuthRepository {
@@ -62,5 +104,24 @@ class ProfileViewModelTest {
         override val session: Flow<Session?> = sessionFlow
         override suspend fun signIn(email: String, password: String): Session = throw NotImplementedError()
         override suspend fun signOut() {}
+    }
+
+    private class FakeUserRepository : UserRepository {
+        var lastUpdatedUri: Uri? = null
+        var shouldFail: Boolean = false
+
+        override suspend fun updateAvatar(uri: Uri): User {
+            lastUpdatedUri = uri
+            if (shouldFail) {
+                throw RuntimeException("Network upload failed")
+            }
+            return User(
+                id = "1",
+                email = "jane@example.com",
+                firstName = "Jane",
+                lastName = "Doe",
+                avatarUrl = "https://example.com/new_avatar.jpg",
+            )
+        }
     }
 }

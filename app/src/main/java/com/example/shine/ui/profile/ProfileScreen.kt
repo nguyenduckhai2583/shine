@@ -17,15 +17,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -55,21 +60,33 @@ fun ProfileRoute(
         uiState = uiState,
         onBack = onBack,
         onAvatarSelected = viewModel::onAvatarSelected,
+        onDismissError = viewModel::clearErrorMessage,
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
+    modifier: Modifier = Modifier,
     uiState: ProfileUiState,
     onBack: () -> Unit,
     onAvatarSelected: (Uri) -> Unit,
-    modifier: Modifier = Modifier,
+    onDismissError: () -> Unit = {},
 ) {
     var showImagePicker by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.errorMessage) {
+        val message = uiState.errorMessage
+        if (!message.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(message)
+            onDismissError()
+        }
+    }
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("My Profile") },
@@ -108,7 +125,7 @@ fun ProfileScreen(
                         .size(avatarRadius * 2)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primaryContainer)
-                        .clickable { showImagePicker = true },
+                        .clickable(enabled = !uiState.isUploading) { showImagePicker = true },
                     contentAlignment = Alignment.Center,
                 ) {
                     val avatarSource = uiState.selectedAvatarUri ?: uiState.avatarUrl
@@ -130,6 +147,22 @@ fun ProfileScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
+
+                    if (uiState.isUploading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.45f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(36.dp),
+                                color = Color.White,
+                                strokeWidth = 3.dp,
+                            )
+                        }
+                    }
                 }
 
                 // Camera action badge overlay - đặt tại tâm mép viền avatar
@@ -139,13 +172,16 @@ fun ProfileScreen(
                         .offset(x = edgeOffset, y = edgeOffset)
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(
+                            if (uiState.isUploading) MaterialTheme.colorScheme.outline
+                            else MaterialTheme.colorScheme.primary
+                        )
                         .border(
                             width = 2.dp,
                             color = MaterialTheme.colorScheme.surface,
                             shape = CircleShape,
                         )
-                        .clickable { showImagePicker = true },
+                        .clickable(enabled = !uiState.isUploading) { showImagePicker = true },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -162,6 +198,7 @@ fun ProfileScreen(
             // Button for updating avatar
             FilledTonalButton(
                 onClick = { showImagePicker = true },
+                enabled = !uiState.isUploading,
                 modifier = Modifier.padding(top = 4.dp),
             ) {
                 Icon(
@@ -170,7 +207,7 @@ fun ProfileScreen(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.size(8.dp))
-                Text(text = "Change Avatar")
+                Text(text = if (uiState.isUploading) "Uploading..." else "Change Avatar")
             }
 
             Spacer(modifier = Modifier.height(32.dp))

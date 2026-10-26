@@ -54,8 +54,6 @@ fun ImagePickerBottomSheet(
     modifier: Modifier = Modifier,
     title: String = "Select Photo",
 ) {
-    if (!visible) return
-
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
@@ -70,7 +68,15 @@ fun ImagePickerBottomSheet(
             currentPhotoUri?.let { uriString ->
                 onImagePicked(uriString.toUri())
             }
+        } else {
+            // Xóa file tạm nếu người dùng hủy chụp ảnh
+            currentPhotoUri?.let { uriString ->
+                runCatching {
+                    context.contentResolver.delete(uriString.toUri(), null, null)
+                }
+            }
         }
+        currentPhotoUri = null
     }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -81,83 +87,85 @@ fun ImagePickerBottomSheet(
         }
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
-        modifier = modifier,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
+    if (visible) {
+        ModalBottomSheet(
+            onDismissRequest = onDismissRequest,
+            sheetState = sheetState,
+            modifier = modifier,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 12.dp),
-            )
-
-            ListItem(
+            Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable {
-                        coroutineScope.launch {
-                            sheetState.hide()
-                            onDismissRequest()
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+
+                ListItem(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
                             val uri = createTempPictureUri(context)
                             currentPhotoUri = uri.toString()
                             takePictureLauncher.launch(uri)
-                        }
+                            coroutineScope.launch {
+                                sheetState.hide()
+                                onDismissRequest()
+                            }
+                        },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Filled.CameraAlt,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
                     },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Filled.CameraAlt,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                },
-                headlineContent = {
-                    Text(
-                        text = "Open Camera",
-                        fontWeight = FontWeight.Medium,
-                    )
-                },
-                supportingContent = {
-                    Text("Take a new photo with camera")
-                },
-            )
+                    headlineContent = {
+                        Text(
+                            text = "Open Camera",
+                            fontWeight = FontWeight.Medium,
+                        )
+                    },
+                    supportingContent = {
+                        Text("Take a new photo with camera")
+                    },
+                )
 
-            ListItem(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable {
-                        coroutineScope.launch {
-                            sheetState.hide()
-                            onDismissRequest()
+                ListItem(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
                             photoPickerLauncher.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
-                        }
+                            coroutineScope.launch {
+                                sheetState.hide()
+                                onDismissRequest()
+                            }
+                        },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Filled.PhotoLibrary,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
                     },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Filled.PhotoLibrary,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                },
-                headlineContent = {
-                    Text(
-                        text = "Choose from Gallery",
-                        fontWeight = FontWeight.Medium,
-                    )
-                },
-                supportingContent = {
-                    Text("Select a photo from device gallery")
-                },
-            )
+                    headlineContent = {
+                        Text(
+                            text = "Choose from Gallery",
+                            fontWeight = FontWeight.Medium,
+                        )
+                    },
+                    supportingContent = {
+                        Text("Select a photo from device gallery")
+                    },
+                )
+            }
         }
     }
 }
