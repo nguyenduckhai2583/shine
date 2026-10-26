@@ -77,5 +77,10 @@ class ChannelRepositoryImplTest {
             if (shouldFail) throw AppException(AppError.NO_INTERNET)
             return conversationToReturn ?: ChannelDto(id = id, name = "Channel $id")
         }
+
+        override suspend fun getDirectMessages(): List<com.example.shine.data.remote.dto.DirectMessageDto> {
+            if (shouldFail) throw AppException(AppError.NO_INTERNET)
+            return emptyList()
+        }
     }
 }

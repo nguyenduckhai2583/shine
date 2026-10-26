@@ -8,11 +8,13 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 
 import com.example.shine.data.repository.AuthRepositoryImpl
 import com.example.shine.data.repository.ChannelRepositoryImpl
+import com.example.shine.data.repository.DirectMessageRepositoryImpl
 import com.example.shine.data.repository.PlanixRepositoryImpl
 import com.example.shine.data.repository.UserRepositoryImpl
 import com.example.shine.data.repository.WorkspaceRepositoryImpl
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.ChannelRepository
+import com.example.shine.domain.repository.DirectMessageRepository
 import com.example.shine.domain.repository.PlanixRepository
 import com.example.shine.domain.repository.UserRepository
 import com.example.shine.domain.repository.WorkspaceRepository
@@ -34,6 +36,9 @@ abstract class DataModule {
 
     @Binds
     abstract fun bindChannelRepository(impl: ChannelRepositoryImpl): ChannelRepository
+
+    @Binds
+    abstract fun bindDirectMessageRepository(impl: DirectMessageRepositoryImpl): DirectMessageRepository
 
     @Binds
     abstract fun bindPlanixRepository(impl: PlanixRepositoryImpl): PlanixRepository

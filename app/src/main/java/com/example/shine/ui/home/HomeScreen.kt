@@ -28,7 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.domain.model.Channel
 import com.example.shine.domain.model.Workspace
 import com.example.shine.ui.home.components.ChannelsRoute
-import com.example.shine.ui.home.components.DmsContent
+import com.example.shine.ui.home.components.DmsRoute
 import com.example.shine.ui.home.components.HomeDrawerContent
 import com.example.shine.ui.home.components.SettingsContent
 import com.example.shine.ui.theme.ShineTheme
@@ -103,7 +103,7 @@ fun HomeScreen(
             ) {
                 when (uiState.selectedTab) {
                     HomeTab.Channels -> ChannelsRoute(onChannelClick = onChannelClick)
-                    HomeTab.Dms -> DmsContent()
+                    HomeTab.Dms -> DmsRoute()
                     HomeTab.Settings -> SettingsContent(
                         uiState = uiState,
                         onPlanixClick = onPlanixClick,

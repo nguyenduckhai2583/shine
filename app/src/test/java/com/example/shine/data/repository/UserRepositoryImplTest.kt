@@ -238,5 +238,7 @@ class UserRepositoryImplTest {
             lastUpdateUserRequest = request
             return updatedProfile ?: throw IllegalStateException("updatedProfile not set")
         }
+
+        override suspend fun getChatUsers(): List<UserProfileDto> = emptyList()
     }
 }

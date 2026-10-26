@@ -18,4 +18,7 @@ interface UserApi {
 
     @PUT("user-services/users/me")
     suspend fun updateProfile(@Body request: UpdateUserRequest): UserProfileDto
+
+    @GET("user-services/users/chat-users")
+    suspend fun getChatUsers(): List<UserProfileDto>
 }
