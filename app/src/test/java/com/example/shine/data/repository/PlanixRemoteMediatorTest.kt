@@ -1,6 +1,7 @@
 package com.example.shine.data.repository
 
 import androidx.paging.ExperimentalPagingApi
+import androidx.paging.LoadType
 import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
@@ -67,7 +68,7 @@ class PlanixRemoteMediatorTest {
             leadingPlaceholderCount = 0,
         )
 
-        val result = mediator.load(androidx.paging.LoadType.REFRESH, state)
+        val result = mediator.load(LoadType.REFRESH, state)
 
         assertTrue(result is RemoteMediator.MediatorResult.Success)
         val success = result as RemoteMediator.MediatorResult.Success
@@ -100,7 +101,7 @@ class PlanixRemoteMediatorTest {
             leadingPlaceholderCount = 0,
         )
 
-        val result = mediator.load(androidx.paging.LoadType.REFRESH, state)
+        val result = mediator.load(LoadType.REFRESH, state)
 
         assertTrue(result is RemoteMediator.MediatorResult.Success)
         val success = result as RemoteMediator.MediatorResult.Success
@@ -130,7 +131,7 @@ class PlanixRemoteMediatorTest {
         )
 
         val mediator = PlanixRemoteMediator(api, database)
-        val state = PagingState<Int, ProjectEntity>(
+        val state = PagingState(
             pages = listOf(
                 PagingSource.LoadResult.Page(
                     data = listOf(lastItem),
@@ -143,7 +144,7 @@ class PlanixRemoteMediatorTest {
             leadingPlaceholderCount = 0,
         )
 
-        val result = mediator.load(androidx.paging.LoadType.APPEND, state)
+        val result = mediator.load(LoadType.APPEND, state)
 
         assertTrue(result is RemoteMediator.MediatorResult.Success)
         val success = result as RemoteMediator.MediatorResult.Success
@@ -175,7 +176,7 @@ class PlanixRemoteMediatorTest {
             leadingPlaceholderCount = 0,
         )
 
-        val result = mediator.load(androidx.paging.LoadType.APPEND, state)
+        val result = mediator.load(LoadType.APPEND, state)
 
         assertTrue(result is RemoteMediator.MediatorResult.Success)
         val success = result as RemoteMediator.MediatorResult.Success
@@ -194,7 +195,7 @@ class PlanixRemoteMediatorTest {
         )
 
         val mediator = PlanixRemoteMediator(api, database)
-        val state = PagingState<Int, ProjectEntity>(
+        val state = PagingState(
             pages = listOf(
                 PagingSource.LoadResult.Page(
                     data = listOf(firstItem),
@@ -207,7 +208,7 @@ class PlanixRemoteMediatorTest {
             leadingPlaceholderCount = 0,
         )
 
-        val result = mediator.load(androidx.paging.LoadType.PREPEND, state)
+        val result = mediator.load(LoadType.PREPEND, state)
 
         assertTrue(result is RemoteMediator.MediatorResult.Success)
         val success = result as RemoteMediator.MediatorResult.Success
@@ -227,7 +228,7 @@ class PlanixRemoteMediatorTest {
             leadingPlaceholderCount = 0,
         )
 
-        val result = mediator.load(androidx.paging.LoadType.REFRESH, state)
+        val result = mediator.load(LoadType.REFRESH, state)
 
         assertTrue(result is RemoteMediator.MediatorResult.Error)
         val error = result as RemoteMediator.MediatorResult.Error
@@ -235,6 +236,7 @@ class PlanixRemoteMediatorTest {
         assertEquals(AppError.NO_INTERNET, (error.throwable as AppException).error)
     }
 
+    @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
     private class FakeShineDatabase(
         private val projectDao: ProjectDao,
         private val remoteKeyDao: ProjectRemoteKeyDao,
@@ -246,7 +248,6 @@ class PlanixRemoteMediatorTest {
 
         override fun createOpenHelper(config: DatabaseConfiguration): SupportSQLiteOpenHelper = error("Not implemented")
         override fun createInvalidationTracker(): InvalidationTracker = error("Not implemented")
-        @Deprecated("Deprecated in Room")
         override fun clearAllTables() = Unit
     }
 

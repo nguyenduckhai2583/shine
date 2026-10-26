@@ -39,8 +39,8 @@ fun SettingsContent(
     uiState: HomeUiState,
     onPlanixClick: () -> Unit,
     onSignOut: () -> Unit,
-    onProfileClick: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onProfileClick: () -> Unit = {},
 ) {
     Column(
         modifier = modifier

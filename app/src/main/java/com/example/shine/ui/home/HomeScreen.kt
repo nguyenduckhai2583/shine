@@ -60,8 +60,8 @@ fun HomeScreen(
     onSignOut: () -> Unit,
     onSelectWorkspace: (String) -> Unit,
     onSelectTab: (HomeTab) -> Unit,
-    onProfileClick: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onProfileClick: () -> Unit = {},
     state: HomeScreenState = rememberHomeScreenState(),
 ) {
     ModalNavigationDrawer(

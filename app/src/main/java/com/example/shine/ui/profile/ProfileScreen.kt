@@ -67,10 +67,10 @@ fun ProfileRoute(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    modifier: Modifier = Modifier,
     uiState: ProfileUiState,
     onBack: () -> Unit,
     onAvatarSelected: (Uri) -> Unit,
+    modifier: Modifier = Modifier,
     onDismissError: () -> Unit = {},
 ) {
     var showImagePicker by remember { mutableStateOf(false) }

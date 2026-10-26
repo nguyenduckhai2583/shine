@@ -34,17 +34,21 @@ class TokenRefreshSchedulerTest {
         sessions.value = session("a", expireAtSeconds = 400)
         start()
 
-        advanceTimeBy(99_999); runCurrent()
+        advanceTimeBy(99_999)
+        runCurrent()
         assertEquals(emptyList<String>(), refreshedFrom)
 
-        advanceTimeBy(1); runCurrent()
+        advanceTimeBy(1)
+        runCurrent()
         assertEquals(listOf("a"), refreshedFrom)
 
         // "a+" lives 360s, so it is refreshed 60s later (5 min before it expires).
-        advanceTimeBy(59_999); runCurrent()
+        advanceTimeBy(59_999)
+        runCurrent()
         assertEquals(listOf("a"), refreshedFrom)
 
-        advanceTimeBy(1); runCurrent()
+        advanceTimeBy(1)
+        runCurrent()
         assertEquals(listOf("a", "a+"), refreshedFrom)
     }
 
@@ -52,7 +56,8 @@ class TokenRefreshSchedulerTest {
     fun withinFiveMinutesOfExpiry_refreshesImmediately() = runTest {
         sessions.value = session("a", expireAtSeconds = 200)
 
-        start(); runCurrent()
+        start()
+        runCurrent()
 
         assertEquals(listOf("a"), refreshedFrom)
     }
@@ -62,7 +67,8 @@ class TokenRefreshSchedulerTest {
         testScheduler.advanceTimeBy(500_000)
         sessions.value = session("a", expireAtSeconds = 100)
 
-        start(); runCurrent()
+        start()
+        runCurrent()
 
         assertEquals(listOf("a"), refreshedFrom)
     }
@@ -70,13 +76,16 @@ class TokenRefreshSchedulerTest {
     @Test
     fun newSessionCancelsPendingTimer() = runTest {
         sessions.value = session("a", expireAtSeconds = 400)
-        start(); runCurrent()
+        start()
+        runCurrent()
 
         sessions.value = session("b", expireAtSeconds = 600)
-        advanceTimeBy(200_000); runCurrent()
+        advanceTimeBy(200_000)
+        runCurrent()
         assertEquals(emptyList<String>(), refreshedFrom)
 
-        advanceTimeBy(100_000); runCurrent()
+        advanceTimeBy(100_000)
+        runCurrent()
         assertEquals(listOf("b"), refreshedFrom)
     }
 
@@ -84,10 +93,12 @@ class TokenRefreshSchedulerTest {
     fun signedOutOrNoExpiry_doesNothing() = runTest {
         sessions.value = session("a", expireAtSeconds = null)
         start()
-        advanceTimeBy(1_000_000); runCurrent()
+        advanceTimeBy(1_000_000)
+        runCurrent()
 
         sessions.value = null
-        advanceTimeBy(1_000_000); runCurrent()
+        advanceTimeBy(1_000_000)
+        runCurrent()
 
         assertEquals(emptyList<String>(), refreshedFrom)
     }

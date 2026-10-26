@@ -28,6 +28,7 @@ class PlanixRepositoryImplTest {
         assertNotNull(pagingFlow)
     }
 
+    @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
     private class FakeShineDatabase : ShineDatabase() {
         override fun workspaceDao(): WorkspaceDao = error("Not implemented")
         override fun projectDao(): ProjectDao = error("Not implemented")
