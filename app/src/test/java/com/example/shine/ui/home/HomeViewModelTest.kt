@@ -1,14 +1,10 @@
 package com.example.shine.ui.home
 
-import com.example.shine.R
-import com.example.shine.domain.model.AppError
-import com.example.shine.domain.model.AppException
-import com.example.shine.domain.model.Channel
 import com.example.shine.domain.model.Session
 import com.example.shine.domain.model.User
+import com.example.shine.domain.model.Workspace
 import com.example.shine.domain.repository.AuthRepository
-import com.example.shine.domain.repository.ChannelRepository
-import com.example.shine.ui.common.UiText
+import com.example.shine.domain.repository.WorkspaceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -20,18 +16,14 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-
-import com.example.shine.domain.model.Workspace
-import com.example.shine.domain.repository.WorkspaceRepository
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
 
     private val authRepository = FakeAuthRepository()
-    private val channelRepository = FakeChannelRepository()
     private val workspaceRepository = FakeWorkspaceRepository()
 
     @Before
@@ -41,40 +33,24 @@ class HomeViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
-    fun init_observesChannelsFromFlowAndLoadsRemote() = runTest {
-        val viewModel = HomeViewModel(authRepository, channelRepository, workspaceRepository)
+    fun init_observesSessionAndWorkspaces() = runTest {
+        val viewModel = HomeViewModel(authRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
 
         val state = viewModel.uiState.value
-        assertEquals(1, state.channels.size)
-        assertEquals("general", state.channels[0].name)
         assertEquals("ws-1", state.selectedWorkspaceId)
         assertEquals("Default Workspace", state.currentWorkspaceName)
         assertEquals("https://example.com/avatar.jpg", state.avatarUrl)
-        assertFalse(state.isLoading)
+        assertEquals("Jane Doe", state.displayName)
+        assertEquals("jane@example.com", state.userEmail)
+        assertEquals(2, state.workspaces.size)
     }
 
     @Test
-    fun loadChannels_error_updatesErrorMessage() = runTest {
-        channelRepository.shouldFail = true
-        channelRepository.channelsFlow.value = emptyList()
-
-        val viewModel = HomeViewModel(authRepository, channelRepository, workspaceRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
-        }
-
-        val state = viewModel.uiState.value
-        assertEquals(0, state.channels.size)
-        assertEquals(UiText.Resource(R.string.error_no_internet), state.errorMessage)
-        assertFalse(state.isLoading)
-    }
-
-    @Test
-    fun selectWorkspace_updatesWorkspaceAndReloadsChannels() = runTest {
-        val viewModel = HomeViewModel(authRepository, channelRepository, workspaceRepository)
+    fun selectWorkspace_updatesWorkspace() = runTest {
+        val viewModel = HomeViewModel(authRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -86,7 +62,7 @@ class HomeViewModelTest {
 
     @Test
     fun selectTab_updatesSelectedTab() = runTest {
-        val viewModel = HomeViewModel(authRepository, channelRepository, workspaceRepository)
+        val viewModel = HomeViewModel(authRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -98,7 +74,20 @@ class HomeViewModelTest {
         assertEquals(HomeTab.Settings, viewModel.uiState.value.selectedTab)
     }
 
+    @Test
+    fun signOut_invokesAuthRepositorySignOut() = runTest {
+        val viewModel = HomeViewModel(authRepository, workspaceRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        viewModel.signOut()
+
+        assertTrue(authRepository.signedOut)
+    }
+
     private class FakeAuthRepository : AuthRepository {
+        var signedOut = false
         val sessionFlow = MutableStateFlow(
             Session(
                 token = "token",
@@ -116,10 +105,10 @@ class HomeViewModelTest {
         )
         override val session: Flow<Session?> = sessionFlow
         override suspend fun signIn(email: String, password: String): Session = throw NotImplementedError()
-        override suspend fun signOut() {}
+        override suspend fun signOut() {
+            signedOut = true
+        }
     }
-
-    private class FakeChannelRepository : FakeChannelRepositoryBase()
 
     private class FakeWorkspaceRepository : WorkspaceRepository {
         val currentWorkspaces = MutableStateFlow(
@@ -142,23 +131,5 @@ class HomeViewModelTest {
         override suspend fun clear() {
             currentWorkspaces.value = emptyList()
         }
-    }
-}
-
-open class FakeChannelRepositoryBase : ChannelRepository {
-    val channelsFlow = MutableStateFlow(listOf(Channel("1", "general", false, false, true, null, null, null)))
-    var shouldFail = false
-
-    override fun getChannelsFlow(): Flow<List<Channel>> = channelsFlow
-
-    override suspend fun getChannels(): List<Channel> {
-        if (shouldFail) throw AppException(AppError.NO_INTERNET)
-        return channelsFlow.value
-    }
-
-    override suspend fun getChannel(id: String): Channel = channelsFlow.value.first { it.id == id }
-
-    override fun clear() {
-        channelsFlow.value = emptyList()
     }
 }

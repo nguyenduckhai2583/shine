@@ -27,7 +27,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.domain.model.Channel
 import com.example.shine.domain.model.Workspace
-import com.example.shine.ui.home.components.ChannelsContent
+import com.example.shine.ui.home.components.ChannelsRoute
 import com.example.shine.ui.home.components.DmsContent
 import com.example.shine.ui.home.components.HomeDrawerContent
 import com.example.shine.ui.home.components.SettingsContent
@@ -102,10 +102,7 @@ fun HomeScreen(
                     .padding(innerPadding),
             ) {
                 when (uiState.selectedTab) {
-                    HomeTab.Channels -> ChannelsContent(
-                        uiState = uiState,
-                        onChannelClick = onChannelClick,
-                    )
+                    HomeTab.Channels -> ChannelsRoute(onChannelClick = onChannelClick)
                     HomeTab.Dms -> DmsContent()
                     HomeTab.Settings -> SettingsContent(
                         uiState = uiState,
@@ -142,6 +139,7 @@ private fun HomeTopAppBar(
                             Text(subtitle, style = MaterialTheme.typography.bodySmall)
                         }
                     }
+
                     HomeTab.Dms -> Text("DMs")
                     HomeTab.Settings -> Text("Settings")
                 }
@@ -188,10 +186,6 @@ private fun HomeScreenPreview() {
                     Workspace("1", "Default Workspace", true, "default"),
                 ),
                 selectedWorkspaceId = "1",
-                channels = listOf(
-                    Channel("1", "general", false, false, true, null, null, null),
-                    Channel("2", "devops-support", true, false, false, "diginex", null, null),
-                ),
             ),
             onChannelClick = {},
             onPlanixClick = {},

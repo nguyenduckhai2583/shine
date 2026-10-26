@@ -16,15 +16,35 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.domain.model.Channel
-import com.example.shine.ui.home.HomeUiState
+import com.example.shine.ui.home.ChannelUiState
+import com.example.shine.ui.home.ChannelViewModel
+import com.example.shine.ui.theme.ShineTheme
+
+@Composable
+fun ChannelsRoute(
+    onChannelClick: (Channel) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: ChannelViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    ChannelsContent(
+        uiState = uiState,
+        onChannelClick = onChannelClick,
+        modifier = modifier,
+    )
+}
 
 @Composable
 fun ChannelsContent(
-    uiState: HomeUiState,
+    uiState: ChannelUiState,
     onChannelClick: (Channel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -64,3 +84,20 @@ private fun ChannelItem(channel: Channel, onClick: () -> Unit) {
         supportingContent = channel.categoryName?.let { category -> { Text(category) } },
     )
 }
+
+@Preview(showBackground = true)
+@Composable
+private fun ChannelsContentPreview() {
+    ShineTheme(dynamicColor = false) {
+        ChannelsContent(
+            uiState = ChannelUiState(
+                channels = listOf(
+                    Channel("1", "general", false, false, true, null, null, null),
+                    Channel("2", "random", false, false, false, null, null, null),
+                ),
+            ),
+            onChannelClick = {},
+        )
+    }
+}
+
