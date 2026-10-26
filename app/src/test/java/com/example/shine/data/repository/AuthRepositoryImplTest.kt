@@ -37,6 +37,10 @@ class AuthRepositoryImplTest {
     val tempFolder = TemporaryFolder()
 
     private val scope = CoroutineScope(UnconfinedTestDispatcher())
+    private val json = kotlinx.serialization.json.Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+    }
     private lateinit var local: SessionLocalDataSource
     private lateinit var fakeAuthApi: FakeAuthApi
     private lateinit var fakeWorkspaceApi: FakeWorkspaceApi
@@ -51,6 +55,7 @@ class AuthRepositoryImplTest {
             PreferenceDataStoreFactory.create(scope = scope) {
                 tempFolder.newFile("auth_test_session.preferences_pb")
             },
+            json,
         )
         fakeAuthApi = FakeAuthApi()
         fakeWorkspaceApi = FakeWorkspaceApi()

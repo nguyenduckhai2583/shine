@@ -33,6 +33,10 @@ class WorkspaceRepositoryImplTest {
     val tempFolder = TemporaryFolder()
 
     private val scope = CoroutineScope(UnconfinedTestDispatcher())
+    private val json = kotlinx.serialization.json.Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+    }
     private lateinit var local: SessionLocalDataSource
     private lateinit var fakeDao: FakeWorkspaceDao
     private lateinit var fakeApi: FakeWorkspaceApi
@@ -44,6 +48,7 @@ class WorkspaceRepositoryImplTest {
             PreferenceDataStoreFactory.create(scope = scope) {
                 tempFolder.newFile("test_session.preferences_pb")
             },
+            json,
         )
         fakeDao = FakeWorkspaceDao()
         fakeApi = FakeWorkspaceApi()

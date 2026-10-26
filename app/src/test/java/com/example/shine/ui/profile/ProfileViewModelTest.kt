@@ -110,6 +110,19 @@ class ProfileViewModelTest {
         var lastUpdatedUri: Uri? = null
         var shouldFail: Boolean = false
 
+        override suspend fun getProfile(): User {
+            if (shouldFail) {
+                throw RuntimeException("Network request failed")
+            }
+            return User(
+                id = "1",
+                email = "jane@example.com",
+                firstName = "Jane",
+                lastName = "Doe",
+                avatarUrl = "https://example.com/avatar.jpg",
+            )
+        }
+
         override suspend fun updateAvatar(uri: Uri): User {
             lastUpdatedUri = uri
             if (shouldFail) {

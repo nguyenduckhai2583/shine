@@ -1,18 +1,22 @@
 package com.example.shine.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Session(
     val token: String,
-    val refreshToken: String?,
-    val expireAt: Long?,
-    val user: User?,
+    val refreshToken: String? = null,
+    val expireAt: Long? = null,
+    val user: User? = null,
     val workspaceId: String? = null,
 )
 
+@Serializable
 data class User(
     val id: String,
-    val email: String?,
-    val firstName: String?,
-    val lastName: String?,
+    val email: String? = null,
+    val firstName: String? = null,
+    val lastName: String? = null,
     val avatarUrl: String? = null,
 ) {
     val displayName: String

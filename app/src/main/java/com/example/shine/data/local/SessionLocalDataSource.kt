@@ -3,64 +3,55 @@ package com.example.shine.data.local
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.shine.domain.model.Session
 import com.example.shine.domain.model.User
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class SessionLocalDataSource @Inject constructor(
     private val dataStore: DataStore<Preferences>,
+    private val json: Json,
 ) {
     val session: Flow<Session?> = dataStore.data.map { prefs ->
-        val token = prefs[TOKEN] ?: return@map null
-        Session(
-            token = token,
-            refreshToken = prefs[REFRESH_TOKEN],
-            expireAt = prefs[EXPIRE_AT],
-            user = prefs[USER_ID]?.let { id ->
-                User(
-                    id = id,
-                    email = prefs[USER_EMAIL],
-                    firstName = prefs[USER_FIRST_NAME],
-                    lastName = prefs[USER_LAST_NAME],
-                    avatarUrl = prefs[USER_AVATAR_URL],
-                )
-            },
-            workspaceId = prefs[WORKSPACE_ID],
-        )
+        getSession(prefs)
     }
 
     suspend fun save(session: Session) {
         dataStore.edit { prefs ->
             prefs.clear()
-            prefs[TOKEN] = session.token
-            session.refreshToken?.let { prefs[REFRESH_TOKEN] = it }
-            session.expireAt?.let { prefs[EXPIRE_AT] = it }
-            session.workspaceId?.let { prefs[WORKSPACE_ID] = it }
-            session.user?.let { user ->
-                prefs[USER_ID] = user.id
-                user.email?.let { prefs[USER_EMAIL] = it }
-                user.firstName?.let { prefs[USER_FIRST_NAME] = it }
-                user.lastName?.let { prefs[USER_LAST_NAME] = it }
-                user.avatarUrl?.let { prefs[USER_AVATAR_URL] = it }
-            }
+            prefs[KEY_SESSION] = json.encodeToString(session)
+        }
+    }
+
+    suspend fun updateUser(user: User) {
+        dataStore.edit { prefs ->
+            val current = getSession(prefs) ?: return@edit
+            val updated = current.copy(user = user)
+            prefs[KEY_SESSION] = json.encodeToString(updated)
         }
     }
 
     suspend fun updateAvatar(avatarUrl: String) {
         dataStore.edit { prefs ->
-            prefs[USER_AVATAR_URL] = avatarUrl
+            val current = getSession(prefs) ?: return@edit
+            val updated = current.copy(
+                user = current.user?.copy(avatarUrl = avatarUrl),
+            )
+            prefs[KEY_SESSION] = json.encodeToString(updated)
         }
     }
 
     suspend fun setWorkspaceId(workspaceId: String) {
         dataStore.edit { prefs ->
-            prefs[WORKSPACE_ID] = workspaceId
+            val current = getSession(prefs) ?: return@edit
+            val updated = current.copy(workspaceId = workspaceId)
+            prefs[KEY_SESSION] = json.encodeToString(updated)
         }
     }
 
@@ -68,15 +59,16 @@ class SessionLocalDataSource @Inject constructor(
         dataStore.edit { it.clear() }
     }
 
+    private fun getSession(prefs: Preferences): Session? {
+        val rawSession = prefs[KEY_SESSION] ?: return null
+        return try {
+            json.decodeFromString<Session>(rawSession)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private companion object {
-        val TOKEN = stringPreferencesKey("token")
-        val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
-        val EXPIRE_AT = longPreferencesKey("expire_at")
-        val WORKSPACE_ID = stringPreferencesKey("workspace_id")
-        val USER_ID = stringPreferencesKey("user_id")
-        val USER_EMAIL = stringPreferencesKey("user_email")
-        val USER_FIRST_NAME = stringPreferencesKey("user_first_name")
-        val USER_LAST_NAME = stringPreferencesKey("user_last_name")
-        val USER_AVATAR_URL = stringPreferencesKey("user_avatar_url")
+        val KEY_SESSION = stringPreferencesKey("session")
     }
 }

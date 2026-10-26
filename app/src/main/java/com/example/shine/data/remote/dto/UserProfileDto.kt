@@ -1,5 +1,6 @@
 package com.example.shine.data.remote.dto
 
+import com.example.shine.domain.model.User
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -58,4 +59,12 @@ fun UserProfileDto.toUpdateRequest(newAvatarId: String) = UpdateUserRequest(
     socialInsurance = socialInsurance,
     birthDate = birthDate,
     avatarId = newAvatarId,
+)
+
+fun UserProfileDto.toDomain(fallbackAvatarUrl: String? = null) = User(
+    id = id,
+    email = email,
+    firstName = firstName,
+    lastName = lastName,
+    avatarUrl = avatar?.signedUrl?.takeIf { it.isNotBlank() } ?: fallbackAvatarUrl,
 )

@@ -65,6 +65,7 @@ class UserRepositoryImplTest {
             PreferenceDataStoreFactory.create(scope = scope) {
                 tempFolder.newFile("test_session.preferences_pb")
             },
+            json,
         )
         fakeApi = FakeUserApi()
         contentUriResolver = FakeContentUriResolver()
@@ -143,6 +144,7 @@ class UserRepositoryImplTest {
         assert(bodyContent.contains("avatar-123"))
 
         // Verify API calls
+        assertEquals(0, fakeApi.getProfileCalls)
         assertEquals("avatar-123", fakeApi.lastUpdateUserRequest?.avatarId)
         assertEquals("John", fakeApi.lastUpdateUserRequest?.firstName)
 
@@ -176,6 +178,41 @@ class UserRepositoryImplTest {
         }
     }
 
+    @Test
+    fun getProfile_success_updatesLocalDataSourceAndReturnsUser() = runTest {
+        local.save(
+            Session(
+                token = "token",
+                user = com.example.shine.domain.model.User(
+                    id = "user-1",
+                    email = "old@example.com",
+                    firstName = "Old",
+                    lastName = "Name",
+                ),
+            ),
+        )
+
+        fakeApi.currentProfile = UserProfileDto(
+            id = "user-1",
+            email = "new@example.com",
+            firstName = "New",
+            lastName = "Name",
+            avatar = FileDto(signedUrl = "https://cdn.example.com/fresh-avatar.png"),
+        )
+
+        val result = repository.getProfile()
+
+        assertEquals("user-1", result.id)
+        assertEquals("new@example.com", result.email)
+        assertEquals("New", result.firstName)
+        assertEquals("https://cdn.example.com/fresh-avatar.png", result.avatarUrl)
+
+        val updatedLocalSession = local.session.first()
+        assertEquals("new@example.com", updatedLocalSession?.user?.email)
+        assertEquals("New", updatedLocalSession?.user?.firstName)
+        assertEquals("https://cdn.example.com/fresh-avatar.png", updatedLocalSession?.user?.avatarUrl)
+    }
+
     private class FakeContentUriResolver : ContentUriResolver(org.mockito.Mockito.mock(android.content.Context::class.java)) {
         var resolvedFile = ResolvedFile("test.png", "image/png", okio.ByteString.of(1, 2, 3, 4))
         override fun resolve(uri: Uri): ResolvedFile = resolvedFile
@@ -186,8 +223,10 @@ class UserRepositoryImplTest {
         var currentProfile: UserProfileDto? = null
         var updatedProfile: UserProfileDto? = null
         var lastUpdateUserRequest: UpdateUserRequest? = null
+        var getProfileCalls = 0
 
         override suspend fun getProfile(): UserProfileDto {
+            getProfileCalls++
             return currentProfile ?: throw IllegalStateException("currentProfile not set")
         }
 
