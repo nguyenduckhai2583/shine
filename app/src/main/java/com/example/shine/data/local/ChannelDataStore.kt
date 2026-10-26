@@ -4,7 +4,9 @@ import com.example.shine.domain.model.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,21 +22,21 @@ class ChannelDataStore @Inject constructor() {
 
     fun getChannelFlow(id: String): Flow<Channel?> = channelsFlow.map { channels ->
         channels.firstOrNull { it.id == id }
-    }
+    }.distinctUntilChanged()
 
     fun replaceChannels(channels: List<Channel>) {
         _channelsState.value = channels
     }
 
     fun updateChannel(channel: Channel) {
-        val current = _channelsState.value.toMutableList()
-        val index = current.indexOfFirst { it.id == channel.id }
-        if (index >= 0) {
-            current[index] = channel
-        } else {
-            current.add(channel)
+        _channelsState.update { current ->
+            val index = current.indexOfFirst { it.id == channel.id }
+            if (index >= 0) {
+                current.toMutableList().apply { set(index, channel) }
+            } else {
+                current + channel
+            }
         }
-        _channelsState.value = current
     }
 
     fun clear() {
