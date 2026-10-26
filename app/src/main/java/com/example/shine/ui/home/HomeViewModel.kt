@@ -23,6 +23,7 @@ import javax.inject.Inject
 data class HomeUiState(
     val displayName: String = "",
     val userEmail: String = "",
+    val avatarUrl: String? = null,
     val channels: List<Channel> = emptyList(),
     val workspaces: List<Workspace> = emptyList(),
     val selectedWorkspaceId: String? = null,
@@ -61,6 +62,7 @@ class HomeViewModel @Inject constructor(
                     current.copy(
                         displayName = session?.user?.displayName.orEmpty(),
                         userEmail = session?.user?.email.orEmpty(),
+                        avatarUrl = session?.user?.avatarUrl,
                         channels = channels,
                         workspaces = workspaces,
                         selectedWorkspaceId = session?.workspaceId,

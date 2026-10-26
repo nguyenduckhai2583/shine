@@ -52,6 +52,7 @@ class HomeViewModelTest {
         assertEquals("general", state.channels[0].name)
         assertEquals("ws-1", state.selectedWorkspaceId)
         assertEquals("Default Workspace", state.currentWorkspaceName)
+        assertEquals("https://example.com/avatar.jpg", state.avatarUrl)
         assertFalse(state.isLoading)
     }
 
@@ -103,7 +104,13 @@ class HomeViewModelTest {
                 token = "token",
                 refreshToken = "refresh",
                 expireAt = null,
-                user = User(id = "1", email = "jane@example.com", firstName = "Jane", lastName = "Doe"),
+                user = User(
+                    id = "1",
+                    email = "jane@example.com",
+                    firstName = "Jane",
+                    lastName = "Doe",
+                    avatarUrl = "https://example.com/avatar.jpg",
+                ),
                 workspaceId = "ws-1",
             )
         )
