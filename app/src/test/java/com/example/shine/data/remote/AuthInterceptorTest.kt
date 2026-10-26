@@ -68,6 +68,7 @@ class AuthInterceptorTest {
             PreferenceDataStoreFactory.create(scope = scope) {
                 tempFolder.newFile("session.preferences_pb")
             },
+            json,
         )
         val refreshApi = Retrofit.Builder()
             .baseUrl(server.url("/"))
