@@ -8,17 +8,24 @@ import android.webkit.MimeTypeMap
 import com.example.shine.domain.model.AppError
 import com.example.shine.domain.model.AppException
 import dagger.hilt.android.qualifiers.ApplicationContext
+import okio.ByteString
+import okio.ByteString.Companion.toByteString
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Singleton
-class AndroidImageReader @Inject constructor(
-    @ApplicationContext private val context: Context,
-) : ImageReader {
+data class ResolvedFile(
+    val fileName: String,
+    val mimeType: String,
+    val bytes: ByteString,
+)
 
-    override fun read(uri: Uri): ImageData {
+@Singleton
+open class ContentUriResolver @Inject constructor(
+    @ApplicationContext private val context: Context,
+) {
+    open fun resolve(uri: Uri): ResolvedFile {
         val contentResolver = context.contentResolver
-        val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
+        val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
 
         var fileName: String? = null
         if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
@@ -33,17 +40,21 @@ class AndroidImageReader @Inject constructor(
             fileName = uri.lastPathSegment?.substringAfterLast('/')
         }
         if (fileName.isNullOrBlank()) {
-            val ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "jpg"
-            fileName = "avatar_${System.currentTimeMillis()}.$ext"
+            val ext = try {
+                MimeTypeMap.getSingleton()?.getExtensionFromMimeType(mimeType) ?: "bin"
+            } catch (_: Exception) {
+                "bin"
+            }
+            fileName = "file_${System.currentTimeMillis()}.$ext"
         }
 
         val bytes = try {
-            contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            contentResolver.openInputStream(uri)?.use { it.readBytes().toByteString() }
         } catch (e: Exception) {
-            throw AppException(AppError.UNKNOWN, "Failed to read image", e)
-        } ?: throw AppException(AppError.UNKNOWN, "Failed to open image stream")
+            throw AppException(AppError.UNKNOWN, "Failed to read file from uri", e)
+        } ?: throw AppException(AppError.UNKNOWN, "Failed to open input stream from uri")
 
-        return ImageData(
+        return ResolvedFile(
             fileName = fileName,
             mimeType = mimeType,
             bytes = bytes,

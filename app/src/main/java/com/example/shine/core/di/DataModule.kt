@@ -5,8 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
-import com.example.shine.data.local.AndroidImageReader
-import com.example.shine.data.local.ImageReader
+
 import com.example.shine.data.repository.AuthRepositoryImpl
 import com.example.shine.data.repository.ChannelRepositoryImpl
 import com.example.shine.data.repository.PlanixRepositoryImpl
@@ -43,9 +42,6 @@ abstract class DataModule {
 
     @Binds
     abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository
-
-    @Binds
-    abstract fun bindImageReader(impl: AndroidImageReader): ImageReader
 
     companion object {
         @Provides

@@ -2,9 +2,10 @@ package com.example.shine.data.repository
 
 import android.net.Uri
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import com.example.shine.data.local.ImageData
-import com.example.shine.data.local.ImageReader
+import com.example.shine.data.local.ContentUriResolver
+import com.example.shine.data.local.ResolvedFile
 import com.example.shine.data.local.SessionLocalDataSource
+import com.example.shine.data.remote.StorageUploader
 import com.example.shine.data.remote.UserApi
 import com.example.shine.data.remote.dto.DraftMediaRequest
 import com.example.shine.data.remote.dto.DraftMediaResponse
@@ -32,6 +33,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UserRepositoryImplTest {
@@ -43,7 +47,8 @@ class UserRepositoryImplTest {
     private lateinit var mockWebServer: MockWebServer
     private lateinit var local: SessionLocalDataSource
     private lateinit var fakeApi: FakeUserApi
-    private lateinit var fakeImageReader: FakeImageReader
+    private lateinit var contentUriResolver: ContentUriResolver
+    private lateinit var storageUploader: StorageUploader
     private lateinit var repository: UserRepositoryImpl
 
     private val json = Json {
@@ -62,13 +67,14 @@ class UserRepositoryImplTest {
             },
         )
         fakeApi = FakeUserApi()
-        fakeImageReader = FakeImageReader()
+        contentUriResolver = FakeContentUriResolver()
+        storageUploader = StorageUploader(OkHttpClient())
 
         repository = UserRepositoryImpl(
-            imageReader = fakeImageReader,
+            contentUriResolver = contentUriResolver,
+            storageUploader = storageUploader,
             userApi = fakeApi,
             local = local,
-            unauthenticatedClient = OkHttpClient(),
             json = json,
         )
     }
@@ -170,9 +176,9 @@ class UserRepositoryImplTest {
         }
     }
 
-    private class FakeImageReader : ImageReader {
-        var imageData = ImageData("test.png", "image/png", byteArrayOf(1, 2, 3, 4))
-        override fun read(uri: Uri): ImageData = imageData
+    private class FakeContentUriResolver : ContentUriResolver(org.mockito.Mockito.mock(android.content.Context::class.java)) {
+        var resolvedFile = ResolvedFile("test.png", "image/png", okio.ByteString.of(1, 2, 3, 4))
+        override fun resolve(uri: Uri): ResolvedFile = resolvedFile
     }
 
     private class FakeUserApi : UserApi {
