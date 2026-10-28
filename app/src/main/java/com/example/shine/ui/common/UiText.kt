@@ -1,5 +1,6 @@
 package com.example.shine.ui.common
 
+import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -16,6 +17,11 @@ sealed interface UiText {
     fun asString(): String = when (this) {
         is Raw -> value
         is Resource -> stringResource(id)
+    }
+
+    fun asString(context: Context): String = when (this) {
+        is Raw -> value
+        is Resource -> context.getString(id)
     }
 }
 

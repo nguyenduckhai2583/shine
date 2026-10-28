@@ -2,6 +2,7 @@ package com.example.shine.data.repository
 
 import com.example.shine.data.local.ChannelDataStore
 import com.example.shine.data.remote.ChatApi
+import com.example.shine.data.remote.dto.CreateChannelRequestDto
 import com.example.shine.data.remote.dto.toDomain
 import com.example.shine.domain.model.Channel
 import com.example.shine.domain.repository.ChannelRepository
@@ -35,6 +36,17 @@ class ChannelRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             channelDataStore.getChannel(id) ?: throw e
         }
+    }
+
+    override suspend fun createChannel(name: String): Channel {
+        val request = CreateChannelRequestDto(
+            name = name,
+            isPrivate = false,
+            isEncrypted = false,
+        )
+        val channel = api.createChannel(request).toDomain()
+        channelDataStore.updateChannel(channel)
+        return channel
     }
 
     override fun getChannelsFlow(): Flow<List<Channel>> = channelDataStore.channelsFlow

@@ -23,6 +23,8 @@ data class ChannelUiState(
     val channels: List<Channel> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: UiText? = null,
+    val showCreateChannelDialog: Boolean = false,
+    val snackbarMessage: UiText? = null,
 )
 
 @HiltViewModel
@@ -79,6 +81,46 @@ class ChannelViewModel @Inject constructor(
                 _uiState.update { it.copy(errorMessage = e.toUiText()) }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    fun openCreateChannelDialog() {
+        _uiState.update { it.copy(showCreateChannelDialog = true) }
+    }
+
+    fun dismissCreateChannelDialog() {
+        _uiState.update { it.copy(showCreateChannelDialog = false) }
+    }
+
+    fun clearSnackbarMessage() {
+        _uiState.update { it.copy(snackbarMessage = null) }
+    }
+
+    fun createChannel(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+
+        viewModelScope.launch {
+            try {
+                val created = channelRepository.createChannel(name = trimmed)
+                _uiState.update {
+                    it.copy(
+                        snackbarMessage = UiText.Raw("Channel \"#${created.name}\" created successfully"),
+                    )
+                }
+            } catch (e: AppException) {
+                _uiState.update {
+                    it.copy(snackbarMessage = e.toUiText())
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(snackbarMessage = UiText.Raw(e.message ?: "Failed to create channel"))
+                }
+            } finally {
+                _uiState.update {
+                    it.copy(showCreateChannelDialog = false)
+                }
             }
         }
     }

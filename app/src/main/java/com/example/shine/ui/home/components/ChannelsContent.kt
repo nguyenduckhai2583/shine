@@ -1,24 +1,35 @@
 package com.example.shine.ui.home.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -35,38 +46,127 @@ fun ChannelsRoute(
     viewModel: ChannelViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    LaunchedEffect(uiState.snackbarMessage) {
+        val message = uiState.snackbarMessage
+        if (message != null) {
+            snackbarHostState.showSnackbar(message.asString(context))
+            viewModel.clearSnackbarMessage()
+        }
+    }
+
     ChannelsContent(
         uiState = uiState,
         onChannelClick = onChannelClick,
+        onAddChannelClick = viewModel::openCreateChannelDialog,
+        snackbarHostState = snackbarHostState,
         modifier = modifier,
     )
+
+    if (uiState.showCreateChannelDialog) {
+        CreateChannelDialog(
+            onDismiss = viewModel::dismissCreateChannelDialog,
+            onCreateChannel = viewModel::createChannel,
+        )
+    }
 }
 
 @Composable
 fun ChannelsContent(
     uiState: ChannelUiState,
     onChannelClick: (Channel) -> Unit,
+    onAddChannelClick: () -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     Box(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
     ) {
         when {
-            uiState.isLoading && uiState.channels.isEmpty() -> CircularProgressIndicator()
-            uiState.errorMessage != null && uiState.channels.isEmpty() -> Text(
-                text = uiState.errorMessage.asString(),
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(24.dp),
-            )
-            uiState.channels.isEmpty() -> Text("No channels yet")
-            else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+            uiState.isLoading && uiState.channels.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            uiState.errorMessage != null && uiState.channels.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = uiState.errorMessage.asString(),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(24.dp),
+                    )
+                }
+            }
+
+            uiState.channels.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(24.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Tag,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "No channels yet",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = "Channels are where conversations happen. Tap + to create a public channel.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 88.dp),
+            ) {
                 items(uiState.channels, key = { it.id }) { channel ->
                     ChannelItem(channel = channel, onClick = { onChannelClick(channel) })
                     HorizontalDivider()
                 }
             }
         }
+
+        if (!uiState.isLoading) {
+            FloatingActionButton(
+                onClick = onAddChannelClick,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Create channel",
+                )
+            }
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp),
+        )
     }
 }
 
@@ -97,7 +197,7 @@ private fun ChannelsContentPreview() {
                 ),
             ),
             onChannelClick = {},
+            onAddChannelClick = {},
         )
     }
 }
-

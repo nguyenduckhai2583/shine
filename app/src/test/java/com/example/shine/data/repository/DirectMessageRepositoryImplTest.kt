@@ -89,6 +89,8 @@ class DirectMessageRepositoryImplTest {
 
         override suspend fun getChannels(): List<ChannelDto> = emptyList()
 
+        override suspend fun createChannel(request: com.example.shine.data.remote.dto.CreateChannelRequestDto): ChannelDto = ChannelDto(id = "c1", name = request.name)
+
         override suspend fun getConversation(id: String): ChannelDto = ChannelDto(id = id)
 
         override suspend fun getDirectMessages(): List<DirectMessageDto> {

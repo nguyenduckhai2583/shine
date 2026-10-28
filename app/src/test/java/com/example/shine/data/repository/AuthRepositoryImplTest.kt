@@ -133,6 +133,7 @@ class AuthRepositoryImplTest {
 
     private class FakeChatApi : ChatApi {
         override suspend fun getChannels(): List<ChannelDto> = emptyList()
+        override suspend fun createChannel(request: com.example.shine.data.remote.dto.CreateChannelRequestDto): ChannelDto = throw NotImplementedError()
         override suspend fun getConversation(id: String): ChannelDto = throw NotImplementedError()
         override suspend fun getDirectMessages(): List<com.example.shine.data.remote.dto.DirectMessageDto> = emptyList()
     }

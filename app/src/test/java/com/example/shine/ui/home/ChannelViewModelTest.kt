@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -80,6 +81,81 @@ class ChannelViewModelTest {
         assertEquals(2, channelRepository.getChannelsCallCount)
     }
 
+    @Test
+    fun openAndDismissCreateChannelDialog_updatesState() = runTest {
+        val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        assertFalse(viewModel.uiState.value.showCreateChannelDialog)
+
+        viewModel.openCreateChannelDialog()
+        assertTrue(viewModel.uiState.value.showCreateChannelDialog)
+
+        viewModel.dismissCreateChannelDialog()
+        assertFalse(viewModel.uiState.value.showCreateChannelDialog)
+    }
+
+    @Test
+    fun createChannel_success_createsChannel_closesDialog_andSetsSuccessSnackbar() = runTest {
+        val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        viewModel.openCreateChannelDialog()
+        viewModel.createChannel(name = "announcements")
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertFalse(viewModel.uiState.value.showCreateChannelDialog)
+        assertEquals(UiText.Raw("Channel \"#announcements\" created successfully"), viewModel.uiState.value.snackbarMessage)
+        assertEquals(2, viewModel.uiState.value.channels.size)
+    }
+
+    @Test
+    fun createChannel_error_closesDialog_andSetsErrorSnackbar() = runTest {
+        channelRepository.shouldFail = true
+
+        val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        viewModel.openCreateChannelDialog()
+        viewModel.createChannel(name = "engineering")
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertFalse(viewModel.uiState.value.showCreateChannelDialog)
+        assertEquals(UiText.Resource(R.string.error_no_internet), viewModel.uiState.value.snackbarMessage)
+    }
+
+    @Test
+    fun createChannel_blankName_doesNothing() = runTest {
+        val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        viewModel.createChannel(name = "   ")
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(1, viewModel.uiState.value.channels.size)
+    }
+
+    @Test
+    fun clearSnackbarMessage_clearsSnackbar() = runTest {
+        val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        viewModel.createChannel(name = "general-2")
+        assertEquals(UiText.Raw("Channel \"#general-2\" created successfully"), viewModel.uiState.value.snackbarMessage)
+
+        viewModel.clearSnackbarMessage()
+        assertNull(viewModel.uiState.value.snackbarMessage)
+    }
+
     private class FakeChannelRepository : ChannelRepository {
         val channelsFlow = MutableStateFlow(listOf(Channel("1", "general", false, false, true, null, null, null)))
         var shouldFail = false
@@ -95,6 +171,22 @@ class ChannelViewModelTest {
         }
 
         override suspend fun getChannel(id: String): Channel = channelsFlow.value.first { it.id == id }
+
+        override suspend fun createChannel(name: String): Channel {
+            if (shouldFail) throw AppException(AppError.NO_INTERNET)
+            val newChannel = Channel(
+                id = "c-${System.currentTimeMillis()}",
+                name = name,
+                isPrivate = false,
+                isEncrypted = false,
+                isDefault = false,
+                categoryName = null,
+                createdAt = System.currentTimeMillis(),
+                lastActivityAt = null,
+            )
+            channelsFlow.value = channelsFlow.value + newChannel
+            return newChannel
+        }
 
         override fun clear() {
             clearCalled = true

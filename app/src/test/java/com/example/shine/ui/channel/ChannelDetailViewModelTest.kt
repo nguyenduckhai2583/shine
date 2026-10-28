@@ -64,6 +64,8 @@ class ChannelDetailViewModelTest {
             error?.let { throw it }
             return CHANNEL
         }
+
+        override suspend fun createChannel(name: String): Channel = CHANNEL
     }
 
     private companion object {

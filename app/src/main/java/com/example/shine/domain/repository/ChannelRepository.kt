@@ -9,6 +9,8 @@ interface ChannelRepository {
 
     suspend fun getChannel(id: String): Channel
 
+    suspend fun createChannel(name: String): Channel
+
     fun getChannelsFlow(): Flow<List<Channel>> = emptyFlow()
 
     fun getChannelFlow(id: String): Flow<Channel?> = emptyFlow()
