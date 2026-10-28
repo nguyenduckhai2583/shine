@@ -144,7 +144,7 @@ class UserRepositoryImplTest {
         assert(bodyContent.contains("avatar-123"))
 
         // Verify API calls
-        assertEquals(0, fakeApi.getProfileCalls)
+        assertEquals(1, fakeApi.getProfileCalls)
         assertEquals("avatar-123", fakeApi.lastUpdateUserRequest?.avatarId)
         assertEquals("John", fakeApi.lastUpdateUserRequest?.firstName)
 

@@ -21,3 +21,17 @@ data object WorkspaceList : NavKey
 @Serializable
 data object Profile : NavKey
 
+@Serializable
+data class CameraCapture(
+    val resultKey: String,
+    val allowVideo: Boolean = false,
+) : NavKey
+
+@Serializable
+data class MediaPreview(
+    val uri: String,
+    val isVideo: Boolean = false,
+    val durationMs: Long = 0L,
+    val resultKey: String = "",
+) : NavKey
+

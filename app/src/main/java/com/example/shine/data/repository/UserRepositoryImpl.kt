@@ -6,9 +6,9 @@ import com.example.shine.data.local.SessionLocalDataSource
 import com.example.shine.data.remote.StorageUploader
 import com.example.shine.data.remote.UserApi
 import com.example.shine.data.remote.dto.DraftMediaRequest
-import com.example.shine.data.remote.dto.UpdateUserRequest
 import com.example.shine.data.remote.dto.extractFields
 import com.example.shine.data.remote.dto.toDomain
+import com.example.shine.data.remote.dto.toRequest
 import com.example.shine.domain.model.AppError
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.User
@@ -63,14 +63,9 @@ class UserRepositoryImpl @Inject constructor(
             bytes = bytes,
         )
 
-        // 3. Save updated avatar ID to user profile using current user info from SessionLocalDataSource
-        val currentUser = local.session.first()?.user
-        val updateRequest = UpdateUserRequest(
-            email = currentUser?.email,
-            firstName = currentUser?.firstName,
-            lastName = currentUser?.lastName,
-            avatarId = draft.id,
-        )
+        // 3. Save updated avatar ID to user profile
+        val currentProfile = userApi.getProfile()
+        val updateRequest = currentProfile.toRequest(avatarId = draft.id)
         val updatedProfile = userApi.updateProfile(updateRequest)
 
         // 4. Resolve new avatar URL and persist locally
@@ -80,13 +75,14 @@ class UserRepositoryImpl @Inject constructor(
 
         val updatedUser = User(
             id = updatedProfile.id,
-            email = updatedProfile.email ?: currentUser?.email,
-            firstName = updatedProfile.firstName ?: currentUser?.firstName,
-            lastName = updatedProfile.lastName ?: currentUser?.lastName,
-            avatarUrl = newAvatarUrl.ifBlank { currentUser?.avatarUrl },
+            email = updatedProfile.email ?: currentProfile.email,
+            firstName = updatedProfile.firstName ?: currentProfile.firstName,
+            lastName = updatedProfile.lastName ?: currentProfile.lastName,
+            avatarUrl = newAvatarUrl.ifBlank { null },
         )
 
         local.updateUser(updatedUser)
         updatedUser
     }
 }
+

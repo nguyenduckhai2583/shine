@@ -43,7 +43,7 @@ data class UpdateUserRequest(
     val avatarId: String? = null,
 )
 
-fun UserProfileDto.toUpdateRequest(newAvatarId: String) = UpdateUserRequest(
+fun UserProfileDto.toRequest(avatarId: String? = null) = UpdateUserRequest(
     email = email,
     firstName = firstName,
     lastName = lastName,
@@ -58,8 +58,9 @@ fun UserProfileDto.toUpdateRequest(newAvatarId: String) = UpdateUserRequest(
     taxCode = taxCode,
     socialInsurance = socialInsurance,
     birthDate = birthDate,
-    avatarId = newAvatarId,
+    avatarId = avatarId,
 )
+
 
 fun UserProfileDto.toDomain(fallbackAvatarUrl: String? = null) = User(
     id = id,
@@ -68,3 +69,7 @@ fun UserProfileDto.toDomain(fallbackAvatarUrl: String? = null) = User(
     lastName = lastName,
     avatarUrl = avatar?.signedUrl?.takeIf { it.isNotBlank() } ?: fallbackAvatarUrl,
 )
+
+
+
+

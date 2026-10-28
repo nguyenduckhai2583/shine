@@ -13,6 +13,8 @@ import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDe
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.runtime.result.LocalResultEventBus
+import androidx.navigation3.runtime.result.rememberResultEventBusNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import androidx.compose.runtime.LaunchedEffect
 import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
@@ -22,6 +24,11 @@ import com.example.shine.ui.planix.PlanixListRoute
 import com.example.shine.ui.profile.ProfileRoute
 import com.example.shine.ui.signin.SignInRoute
 import com.example.shine.ui.workspace.WorkspaceListRoute
+import com.example.shine.ui.camera.CameraCaptureMode
+import com.example.shine.ui.camera.CameraRoute
+import com.example.shine.ui.camera.CapturedMedia
+import com.example.shine.ui.camera.MediaPreviewRoute
+import androidx.core.net.toUri
 
 /**
  * Login is mandatory, so signed-out and signed-in flows are separate back stacks.
@@ -105,6 +112,7 @@ private fun MainNavigation(
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator(),
             rememberViewModelStoreNavEntryDecorator(),
+            rememberResultEventBusNavEntryDecorator(),
         ),
         entryProvider = entryProvider {
             entry<Home> {
@@ -128,6 +136,53 @@ private fun MainNavigation(
             entry<Profile> {
                 ProfileRoute(
                     onBack = { backStack.removeLastOrNull() },
+                    onOpenCamera = {
+                        backStack.add(CameraCapture(resultKey = "profile_avatar", allowVideo = true))
+                    },
+                )
+            }
+            entry<CameraCapture> { key ->
+                val allowedModes = if (key.allowVideo) {
+                    setOf(CameraCaptureMode.PHOTO, CameraCaptureMode.VIDEO)
+                } else {
+                    setOf(CameraCaptureMode.PHOTO)
+                }
+                CameraRoute(
+                    allowedModes = allowedModes,
+                    onMediaCaptured = { media ->
+                        val isVideo = media is CapturedMedia.Video
+                        val durationMs = (media as? CapturedMedia.Video)?.durationMs ?: 0L
+                        backStack.add(
+                            MediaPreview(
+                                uri = media.uri.toString(),
+                                isVideo = isVideo,
+                                durationMs = durationMs,
+                                resultKey = key.resultKey,
+                            )
+                        )
+                    },
+                    onClose = { backStack.removeLastOrNull() },
+                )
+            }
+            entry<MediaPreview> { key ->
+                val resultBus = LocalResultEventBus.current
+                val media = if (key.isVideo) {
+                    CapturedMedia.Video(key.uri.toUri(), key.durationMs)
+                } else {
+                    CapturedMedia.Photo(key.uri.toUri())
+                }
+                MediaPreviewRoute(
+                    media = media,
+                    onRetake = { backStack.removeLastOrNull() },
+                    onConfirm = { confirmedMedia ->
+                        if (key.resultKey.isNotBlank()) {
+                            resultBus.sendResult(key.resultKey, confirmedMedia.uri.toString())
+                        }
+                        backStack.removeAll { it is MediaPreview || it is CameraCapture }
+                    },
+                    onClose = {
+                        backStack.removeAll { it is MediaPreview || it is CameraCapture }
+                    },
                 )
             }
         },

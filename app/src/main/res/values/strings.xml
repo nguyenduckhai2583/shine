@@ -9,4 +9,14 @@
     <!-- Deep link hosts -->
     <string name="app_deep_link_host_bare" translatable="false">employer.dev.hodfords.uk</string>
     <string name="app_deep_link_host_wildcard" translatable="false">*.employer.dev.hodfords.uk</string>
+
+    <string name="camera_permission_title">Camera access required</string>
+    <string name="camera_permission_description">Please allow camera access in Settings to take photos and videos.</string>
+    <string name="camera_permission_settings">Open Settings</string>
+    <string name="camera_mode_photo">PHOTO</string>
+    <string name="camera_mode_video">VIDEO</string>
+    <string name="camera_retake">Retake</string>
+    <string name="camera_use">Use</string>
+    <string name="camera_use_photo">Use Photo</string>
+    <string name="camera_use_video">Use Video</string>
 </resources>

@@ -45,21 +45,29 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.result.ResultEffect
 import coil.compose.AsyncImage
 import com.example.shine.ui.common.ImagePickerBottomSheet
 import com.example.shine.ui.theme.ShineTheme
 import kotlin.math.sqrt
+import androidx.core.net.toUri
 
 @Composable
 fun ProfileRoute(
     onBack: () -> Unit,
+    onOpenCamera: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    ResultEffect<String>(resultKey = "profile_avatar") { uriString ->
+        viewModel.onAvatarSelected(uriString.toUri())
+    }
+
     ProfileScreen(
         uiState = uiState,
         onBack = onBack,
         onAvatarSelected = viewModel::onAvatarSelected,
+        onOpenCamera = onOpenCamera,
         onDismissError = viewModel::clearErrorMessage,
     )
 }
@@ -71,6 +79,7 @@ fun ProfileScreen(
     onBack: () -> Unit,
     onAvatarSelected: (Uri) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenCamera: () -> Unit = {},
     onDismissError: () -> Unit = {},
 ) {
     var showImagePicker by remember { mutableStateOf(false) }
@@ -228,6 +237,7 @@ fun ProfileScreen(
         visible = showImagePicker,
         onDismissRequest = { showImagePicker = false },
         onImagePicked = onAvatarSelected,
+        onOpenCamera = onOpenCamera,
         title = "Profile Photo",
     )
 }
