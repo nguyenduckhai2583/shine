@@ -1,8 +1,8 @@
 package com.example.shine.ui.profile
 
 import android.net.Uri
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.shine.core.base.BaseViewModel
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +18,7 @@ import javax.inject.Inject
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
-) : ViewModel() {
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState(isLoading = true))
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
@@ -50,25 +50,26 @@ class ProfileViewModel @Inject constructor(
                 errorMessage = null,
             )
         }
-        viewModelScope.launch {
-            try {
-                userRepository.updateAvatar(uri)
+        execute(
+            task = { userRepository.updateAvatar(uri) },
+            onSuccess = {
                 _uiState.update {
                     it.copy(
                         isUploading = false,
                         selectedAvatarUri = null,
                     )
                 }
-            } catch (e: Exception) {
+            },
+            onError = { error ->
                 _uiState.update {
                     it.copy(
                         isUploading = false,
                         selectedAvatarUri = null,
-                        errorMessage = e.message ?: "Failed to update avatar",
+                        errorMessage = error,
                     )
                 }
             }
-        }
+        )
     }
 
     fun clearErrorMessage() {

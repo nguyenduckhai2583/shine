@@ -14,6 +14,7 @@ import com.example.shine.data.remote.dto.SignInRequest
 import com.example.shine.data.remote.dto.UserDto
 import com.example.shine.data.remote.dto.WorkspaceDto
 import com.example.shine.data.security.PasswordHasher
+import com.example.shine.domain.model.SignInStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -82,7 +83,8 @@ class AuthRepositoryImplTest {
             WorkspaceDto(id = "ws-single", name = "Single Workspace", isActive = true),
         )
 
-        val session = repository.signIn("user@test.com", "password")
+        val status = repository.signIn("user@test.com", "password").getOrThrow() as SignInStatus.Authenticated
+        val session = status.session
 
         assertEquals("ws-single", session.workspaceId)
         val saved = local.session.first()
@@ -96,7 +98,8 @@ class AuthRepositoryImplTest {
             WorkspaceDto(id = "ws-2", name = "Workspace 2", isActive = true),
         )
 
-        val session = repository.signIn("user@test.com", "password")
+        val status = repository.signIn("user@test.com", "password").getOrThrow() as SignInStatus.Authenticated
+        val session = status.session
 
         assertNull(session.workspaceId)
         val saved = local.session.first()
@@ -104,11 +107,23 @@ class AuthRepositoryImplTest {
     }
 
     @Test
+    fun signIn_tmpToken_returnsTwoFactorRequired() = runTest {
+        fakeAuthApi.sessionToReturn = SessionDto(
+            token = "temp-token",
+            isTmpToken = true,
+        )
+
+        val status = repository.signIn("user@test.com", "password").getOrThrow()
+        org.junit.Assert.assertTrue(status is SignInStatus.TwoFactorRequired)
+        assertEquals("temp-token", (status as SignInStatus.TwoFactorRequired).tmpToken)
+    }
+
+    @Test
     fun signOut_clearsLocalSession() = runTest {
         fakeWorkspaceApi.workspacesToReturn = listOf(
             WorkspaceDto(id = "ws-single", name = "Single Workspace", isActive = true),
         )
-        repository.signIn("user@test.com", "password")
+        repository.signIn("user@test.com", "password").getOrThrow()
         assertEquals("ws-single", local.session.first()?.workspaceId)
 
         repository.signOut()
@@ -116,8 +131,10 @@ class AuthRepositoryImplTest {
     }
 
     private class FakeAuthApi : AuthApi {
+        var sessionToReturn: SessionDto? = null
+
         override suspend fun signIn(request: SignInRequest): SessionDto {
-            return SessionDto(
+            return sessionToReturn ?: SessionDto(
                 token = "mock-token",
                 refreshToken = "mock-refresh",
                 expireAt = 123456789L,

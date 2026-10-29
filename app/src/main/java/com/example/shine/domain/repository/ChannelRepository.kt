@@ -5,11 +5,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
 interface ChannelRepository {
-    suspend fun getChannels(): List<Channel>
+    suspend fun getChannels(): Result<List<Channel>>
 
-    suspend fun getChannel(id: String): Channel
+    suspend fun getChannel(id: String): Result<Channel>
 
-    suspend fun createChannel(name: String): Channel
+    suspend fun createChannel(name: String): Result<Unit>
 
     fun getChannelsFlow(): Flow<List<Channel>> = emptyFlow()
 

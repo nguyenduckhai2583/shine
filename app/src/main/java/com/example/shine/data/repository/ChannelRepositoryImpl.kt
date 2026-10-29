@@ -1,5 +1,6 @@
 package com.example.shine.data.repository
 
+import com.example.shine.core.util.suspendRunCatching
 import com.example.shine.data.local.ChannelDataStore
 import com.example.shine.data.remote.ChatApi
 import com.example.shine.data.remote.dto.CreateChannelRequestDto
@@ -16,8 +17,8 @@ class ChannelRepositoryImpl @Inject constructor(
     private val channelDataStore: ChannelDataStore,
 ) : ChannelRepository {
 
-    override suspend fun getChannels(): List<Channel> {
-        return try {
+    override suspend fun getChannels(): Result<List<Channel>> = suspendRunCatching {
+        try {
             val channels = api.getChannels()
                 .sortedBy { it.position ?: Long.MAX_VALUE }
                 .map { it.toDomain() }
@@ -28,8 +29,8 @@ class ChannelRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getChannel(id: String): Channel {
-        return try {
+    override suspend fun getChannel(id: String): Result<Channel> = suspendRunCatching {
+        try {
             val channel = api.getConversation(id).toDomain()
             channelDataStore.updateChannel(channel)
             channel
@@ -38,7 +39,7 @@ class ChannelRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun createChannel(name: String): Channel {
+    override suspend fun createChannel(name: String): Result<Unit> = suspendRunCatching {
         val request = CreateChannelRequestDto(
             name = name,
             isPrivate = false,
@@ -46,7 +47,6 @@ class ChannelRepositoryImpl @Inject constructor(
         )
         val channel = api.createChannel(request).toDomain()
         channelDataStore.updateChannel(channel)
-        return channel
     }
 
     override fun getChannelsFlow(): Flow<List<Channel>> = channelDataStore.channelsFlow

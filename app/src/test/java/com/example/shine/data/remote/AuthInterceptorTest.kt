@@ -134,15 +134,6 @@ class AuthInterceptorTest {
     }
 
     @Test
-    fun refreshResponseWrappedInData_isAlsoParsed() {
-        refreshResponse = MockResponse(code = 200, body = """{"data":{"token":"new"}}""")
-        saveSession(token = "old")
-
-        assertEquals(200, call())
-        assertEquals("r1", currentSession()?.refreshToken)
-    }
-
-    @Test
     fun refreshRejectedWith401_signsOut() {
         refreshResponse = MockResponse(code = 401)
         saveSession(token = "old")

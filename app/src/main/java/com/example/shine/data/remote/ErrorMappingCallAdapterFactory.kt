@@ -1,7 +1,7 @@
 package com.example.shine.data.remote
 
 import com.example.shine.data.remote.dto.ApiErrorResponse
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import kotlinx.serialization.json.Json
 import okhttp3.Request
@@ -76,9 +76,14 @@ class ErrorMappingCallAdapterFactory(private val json: Json) : CallAdapter.Facto
 
     private fun Throwable.toAppException(): AppException = when (this) {
         is AppException -> this
-        is HttpException -> AppException(AppError.SERVER, serverMessage = parseMessage(), cause = this)
-        is IOException -> AppException(AppError.NO_INTERNET, cause = this)
-        else -> AppException(AppError.UNKNOWN, cause = this)
+        is HttpException -> AppException(
+            type = AppErrorEnum.SERVER,
+            errorMessage = parseMessage(),
+            statusCode = code(),
+            cause = this,
+        )
+        is IOException -> AppException(type = AppErrorEnum.NO_INTERNET, cause = this)
+        else -> AppException(type = AppErrorEnum.UNKNOWN, cause = this)
     }
 
     private fun HttpException.parseMessage(): String? {

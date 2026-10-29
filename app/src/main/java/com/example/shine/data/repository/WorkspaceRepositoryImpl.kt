@@ -1,5 +1,6 @@
 package com.example.shine.data.repository
 
+import com.example.shine.core.util.suspendRunCatching
 import com.example.shine.data.local.SessionLocalDataSource
 import com.example.shine.data.local.dao.WorkspaceDao
 import com.example.shine.data.local.entity.toDomain
@@ -25,8 +26,8 @@ class WorkspaceRepositoryImpl @Inject constructor(
 
     override val selectedWorkspaceId: Flow<String?> = local.session.map { it?.workspaceId }
 
-    override suspend fun fetchWorkspaces(): List<Workspace> {
-        return try {
+    override suspend fun fetchWorkspaces(): Result<List<Workspace>> = suspendRunCatching {
+        try {
             val remoteWorkspaces = api.getWorkspaces().map { it.toDomain() }
             workspaceDao.replaceWorkspaces(remoteWorkspaces.map { it.toEntity() })
             remoteWorkspaces

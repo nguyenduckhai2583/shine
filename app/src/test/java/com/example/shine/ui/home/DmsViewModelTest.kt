@@ -1,7 +1,7 @@
 package com.example.shine.ui.home
 
 import com.example.shine.R
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.DirectMessage
 import com.example.shine.domain.model.Workspace
@@ -88,10 +88,13 @@ class DmsViewModelTest {
 
         override fun getDirectMessagesFlow(): Flow<List<DirectMessage>> = dmsFlow
 
-        override suspend fun getDirectMessages(): List<DirectMessage> {
+        override suspend fun getDirectMessages(): Result<List<DirectMessage>> {
             getDmsCallCount++
-            if (shouldFail) throw AppException(AppError.NO_INTERNET)
-            return dmsFlow.value
+            return if (shouldFail) {
+                Result.failure(AppException(AppErrorEnum.NO_INTERNET))
+            } else {
+                Result.success(dmsFlow.value)
+            }
         }
 
         override fun clear() {
@@ -112,7 +115,8 @@ class DmsViewModelTest {
         override val workspaces: Flow<List<Workspace>> = currentWorkspaces
         override val selectedWorkspaceId: Flow<String?> = currentSelectedId
 
-        override suspend fun fetchWorkspaces(): List<Workspace> = currentWorkspaces.value
+        override suspend fun fetchWorkspaces(): Result<List<Workspace>> =
+            Result.success(currentWorkspaces.value)
 
         override suspend fun selectWorkspace(workspaceId: String) {
             currentSelectedId.value = workspaceId

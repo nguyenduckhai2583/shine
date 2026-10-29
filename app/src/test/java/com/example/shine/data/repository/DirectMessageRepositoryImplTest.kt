@@ -10,12 +10,11 @@ import com.example.shine.data.remote.dto.DraftMediaRequest
 import com.example.shine.data.remote.dto.DraftMediaResponse
 import com.example.shine.data.remote.dto.UpdateUserRequest
 import com.example.shine.data.remote.dto.UserProfileDto
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.DirectMessage
 import com.example.shine.domain.model.Session
 import com.example.shine.domain.model.User
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -46,7 +45,7 @@ class DirectMessageRepositoryImplTest {
             DirectMessageDto(id = "dm-2", name = "Team Beta", lastActivityAt = 200L),
         )
 
-        val result = repository.getDirectMessages()
+        val result = repository.getDirectMessages().getOrThrow()
 
         assertEquals(2, result.size)
         // sorted descending by time
@@ -63,17 +62,19 @@ class DirectMessageRepositoryImplTest {
         dataStore.replaceDirectMessages(listOf(DirectMessage("cached-1", "Cached DM", 50L)))
         chatApi.shouldFail = true
 
-        val result = repository.getDirectMessages()
+        val result = repository.getDirectMessages().getOrThrow()
         assertEquals(1, result.size)
         assertEquals("cached-1", result[0].id)
     }
 
-    @Test(expected = AppException::class)
-    fun getDirectMessages_apiFails_emptyCache_throws() = runTest {
+    @Test
+    fun getDirectMessages_apiFails_emptyCache_returnsFailure() = runTest {
         `when`(sessionLocal.session).thenReturn(flowOf(null))
         chatApi.shouldFail = true
 
-        repository.getDirectMessages()
+        val result = repository.getDirectMessages()
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is AppException)
     }
 
     @Test
@@ -94,7 +95,7 @@ class DirectMessageRepositoryImplTest {
         override suspend fun getConversation(id: String): ChannelDto = ChannelDto(id = id)
 
         override suspend fun getDirectMessages(): List<DirectMessageDto> {
-            if (shouldFail) throw AppException(AppError.NO_INTERNET)
+            if (shouldFail) throw AppException(AppErrorEnum.NO_INTERNET)
             return dmsToReturn
         }
     }

@@ -1,8 +1,9 @@
 package com.example.shine.ui.workspace
 
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Session
+import com.example.shine.domain.model.SignInStatus
 import com.example.shine.domain.model.Workspace
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.WorkspaceRepository
@@ -96,9 +97,9 @@ class WorkspaceListViewModelTest {
         override val workspaces: Flow<List<Workspace>> = workspacesFlow
         override val selectedWorkspaceId: Flow<String?> = selectedIdFlow
 
-        override suspend fun fetchWorkspaces(): List<Workspace> {
-            if (shouldFail) throw AppException(AppError.NO_INTERNET)
-            return workspacesFlow.value
+        override suspend fun fetchWorkspaces(): Result<List<Workspace>> {
+            if (shouldFail) return Result.failure(AppException(AppErrorEnum.NO_INTERNET))
+            return Result.success(workspacesFlow.value)
         }
 
         override suspend fun selectWorkspace(workspaceId: String) {
@@ -113,7 +114,7 @@ class WorkspaceListViewModelTest {
 
     private class FakeAuthRepository : AuthRepository {
         override val session: Flow<Session?> = MutableStateFlow(null)
-        override suspend fun signIn(email: String, password: String): Session = throw NotImplementedError()
+        override suspend fun signIn(email: String, password: String): Result<SignInStatus> = throw NotImplementedError()
         override suspend fun signOut() {}
     }
 }

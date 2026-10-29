@@ -66,9 +66,7 @@ class HomeViewModel @Inject constructor(
 
     fun loadWorkspaces() {
         viewModelScope.launch {
-            try {
-                workspaceRepository.fetchWorkspaces()
-            } catch (_: Exception) {}
+            workspaceRepository.fetchWorkspaces()
         }
     }
 

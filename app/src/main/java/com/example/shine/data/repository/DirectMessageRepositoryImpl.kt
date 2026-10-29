@@ -1,5 +1,6 @@
 package com.example.shine.data.repository
 
+import com.example.shine.core.util.suspendRunCatching
 import com.example.shine.data.local.DirectMessageDataStore
 import com.example.shine.data.local.SessionLocalDataSource
 import com.example.shine.data.remote.ChatApi
@@ -20,8 +21,8 @@ class DirectMessageRepositoryImpl @Inject constructor(
     private val directMessageDataStore: DirectMessageDataStore,
 ) : DirectMessageRepository {
 
-    override suspend fun getDirectMessages(): List<DirectMessage> {
-        return try {
+    override suspend fun getDirectMessages(): Result<List<DirectMessage>> = suspendRunCatching {
+        try {
             val currentUserId = sessionLocalDataSource.session.firstOrNull()?.user?.id
             val chatUsersMap = runCatching {
                 userApi.getChatUsers().associate { userDto ->

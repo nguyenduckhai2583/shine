@@ -18,7 +18,7 @@ import com.example.shine.data.local.entity.ProjectRemoteKeyEntity
 import com.example.shine.data.remote.PlanixApi
 import com.example.shine.data.remote.dto.PaginationResponse
 import com.example.shine.data.remote.dto.ProjectDto
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -233,7 +233,7 @@ class PlanixRemoteMediatorTest {
         assertTrue(result is RemoteMediator.MediatorResult.Error)
         val error = result as RemoteMediator.MediatorResult.Error
         assertTrue(error.throwable is AppException)
-        assertEquals(AppError.NO_INTERNET, (error.throwable as AppException).error)
+        assertEquals(AppErrorEnum.NO_INTERNET, (error.throwable as AppException).type)
     }
 
     @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
@@ -292,7 +292,7 @@ class PlanixRemoteMediatorTest {
             perPage: Int?,
         ): PaginationResponse<ProjectDto> {
             lastRequestedPage = page
-            if (shouldFail) throw AppException(AppError.NO_INTERNET)
+            if (shouldFail) throw AppException(AppErrorEnum.NO_INTERNET)
             return responseToReturn
         }
     }

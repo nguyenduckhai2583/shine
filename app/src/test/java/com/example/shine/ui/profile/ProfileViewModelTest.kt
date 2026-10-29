@@ -2,9 +2,11 @@ package com.example.shine.ui.profile
 
 import android.net.Uri
 import com.example.shine.domain.model.Session
+import com.example.shine.domain.model.SignInStatus
 import com.example.shine.domain.model.User
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.UserRepository
+import com.example.shine.ui.common.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -79,7 +81,7 @@ class ProfileViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isUploading)
         assertNull(state.selectedAvatarUri)
-        assertEquals("Network upload failed", state.errorMessage)
+        assertEquals(UiText.Raw("Network upload failed"), state.errorMessage)
 
         viewModel.clearErrorMessage()
         assertNull(viewModel.uiState.value.errorMessage)
@@ -102,7 +104,7 @@ class ProfileViewModelTest {
             )
         )
         override val session: Flow<Session?> = sessionFlow
-        override suspend fun signIn(email: String, password: String): Session = throw NotImplementedError()
+        override suspend fun signIn(email: String, password: String): Result<SignInStatus> = throw NotImplementedError()
         override suspend fun signOut() {}
     }
 
@@ -110,30 +112,34 @@ class ProfileViewModelTest {
         var lastUpdatedUri: Uri? = null
         var shouldFail: Boolean = false
 
-        override suspend fun getProfile(): User {
+        override suspend fun getProfile(): Result<User> {
             if (shouldFail) {
-                throw RuntimeException("Network request failed")
+                return Result.failure(RuntimeException("Network request failed"))
             }
-            return User(
-                id = "1",
-                email = "jane@example.com",
-                firstName = "Jane",
-                lastName = "Doe",
-                avatarUrl = "https://example.com/avatar.jpg",
+            return Result.success(
+                User(
+                    id = "1",
+                    email = "jane@example.com",
+                    firstName = "Jane",
+                    lastName = "Doe",
+                    avatarUrl = "https://example.com/avatar.jpg",
+                )
             )
         }
 
-        override suspend fun updateAvatar(uri: Uri): User {
+        override suspend fun updateAvatar(uri: Uri): Result<User> {
             lastUpdatedUri = uri
             if (shouldFail) {
-                throw RuntimeException("Network upload failed")
+                return Result.failure(RuntimeException("Network upload failed"))
             }
-            return User(
-                id = "1",
-                email = "jane@example.com",
-                firstName = "Jane",
-                lastName = "Doe",
-                avatarUrl = "https://example.com/new_avatar.jpg",
+            return Result.success(
+                User(
+                    id = "1",
+                    email = "jane@example.com",
+                    firstName = "Jane",
+                    lastName = "Doe",
+                    avatarUrl = "https://example.com/new_avatar.jpg",
+                )
             )
         }
     }

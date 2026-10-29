@@ -2,6 +2,7 @@ package com.example.shine.ui.navigation
 
 import android.net.Uri
 import com.example.shine.domain.model.Session
+import com.example.shine.domain.model.SignInStatus
 import com.example.shine.domain.model.User
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.UserRepository
@@ -87,7 +88,7 @@ class AppViewModelTest {
     }
 
     private class FakeAuthRepository(override val session: Flow<Session?>) : AuthRepository {
-        override suspend fun signIn(email: String, password: String): Session = throw NotImplementedError()
+        override suspend fun signIn(email: String, password: String): Result<SignInStatus> = throw NotImplementedError()
         override suspend fun signOut() {}
     }
 
@@ -95,12 +96,12 @@ class AppViewModelTest {
         var getProfileCalls = 0
         var shouldFail = false
 
-        override suspend fun getProfile(): User {
+        override suspend fun getProfile(): Result<User> {
             getProfileCalls++
-            if (shouldFail) throw RuntimeException("Network error")
-            return User(id = "user-1", email = "user@test.com", firstName = "Jane", lastName = "Doe")
+            if (shouldFail) return Result.failure(RuntimeException("Network error"))
+            return Result.success(User(id = "user-1", email = "user@test.com", firstName = "Jane", lastName = "Doe"))
         }
 
-        override suspend fun updateAvatar(uri: Uri): User = throw NotImplementedError()
+        override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()
     }
 }

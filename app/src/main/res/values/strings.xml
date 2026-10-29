@@ -3,8 +3,8 @@
 
     <string name="error_no_internet">No internet connection</string>
     <string name="error_server">Something went wrong on the server</string>
-    <string name="error_two_factor_required">Two-factor verification is not supported yet</string>
     <string name="error_unknown">Something went wrong</string>
+    <string name="channel_created_success">Channel \"%1$s\" created successfully</string>
 
     <!-- Deep link hosts -->
     <string name="app_deep_link_host_bare" translatable="false">employer.dev.hodfords.uk</string>

@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -85,10 +86,11 @@ fun ProfileScreen(
     var showImagePicker by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val context = LocalContext.current
     LaunchedEffect(uiState.errorMessage) {
         val message = uiState.errorMessage
-        if (!message.isNullOrBlank()) {
-            snackbarHostState.showSnackbar(message)
+        if (message != null) {
+            snackbarHostState.showSnackbar(message.asString(context))
             onDismissError()
         }
     }

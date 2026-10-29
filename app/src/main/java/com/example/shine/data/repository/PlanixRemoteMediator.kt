@@ -10,7 +10,7 @@ import com.example.shine.data.local.entity.ProjectRemoteKeyEntity
 import com.example.shine.data.local.entity.toEntity
 import com.example.shine.data.remote.PlanixApi
 import com.example.shine.data.remote.dto.toDomain
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 
 @OptIn(ExperimentalPagingApi::class)
@@ -77,7 +77,7 @@ class PlanixRemoteMediator(
 
             MediatorResult.Success(endOfPaginationReached = endOfPaginationReached)
         } catch (e: Exception) {
-            val appException = (e as? AppException) ?: AppException(AppError.UNKNOWN, cause = e)
+            val appException = (e as? AppException) ?: AppException(AppErrorEnum.UNKNOWN, cause = e)
             MediatorResult.Error(appException)
         }
     }

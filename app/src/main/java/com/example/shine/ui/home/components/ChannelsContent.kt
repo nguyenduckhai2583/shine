@@ -26,7 +26,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +49,7 @@ fun ChannelsRoute(
     viewModel: ChannelViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showCreateChannelDialog by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -60,15 +64,18 @@ fun ChannelsRoute(
     ChannelsContent(
         uiState = uiState,
         onChannelClick = onChannelClick,
-        onAddChannelClick = viewModel::openCreateChannelDialog,
+        onAddChannelClick = { showCreateChannelDialog = true },
         snackbarHostState = snackbarHostState,
         modifier = modifier,
     )
 
-    if (uiState.showCreateChannelDialog) {
+    if (showCreateChannelDialog) {
         CreateChannelDialog(
-            onDismiss = viewModel::dismissCreateChannelDialog,
-            onCreateChannel = viewModel::createChannel,
+            onDismiss = { showCreateChannelDialog = false },
+            onCreateChannel = { name ->
+                viewModel.createChannel(name)
+                showCreateChannelDialog = false
+            },
         )
     }
 }
@@ -141,8 +148,12 @@ fun ChannelsContent(
                 contentPadding = PaddingValues(bottom = 88.dp),
             ) {
                 items(uiState.channels, key = { it.id }) { channel ->
-                    ChannelItem(channel = channel, onClick = { onChannelClick(channel) })
-                    HorizontalDivider()
+                    ChannelItem(
+                        channel = channel,
+                        onClick = { onChannelClick(channel) },
+                        modifier = Modifier.animateItem(),
+                    )
+                    HorizontalDivider(modifier = Modifier.animateItem())
                 }
             }
         }
@@ -171,9 +182,13 @@ fun ChannelsContent(
 }
 
 @Composable
-private fun ChannelItem(channel: Channel, onClick: () -> Unit) {
+private fun ChannelItem(
+    channel: Channel,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     ListItem(
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = modifier.clickable(onClick = onClick),
         leadingContent = {
             Icon(
                 imageVector = if (channel.isPrivate) Icons.Filled.Lock else Icons.Filled.Tag,

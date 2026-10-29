@@ -1,6 +1,6 @@
 package com.example.shine.data.remote
 
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
@@ -60,8 +60,9 @@ class ErrorMappingCallAdapterFactoryTest {
 
         val error = captureError { api.item() }
 
-        assertEquals(AppError.SERVER, error.error)
-        assertEquals("Wrong password", error.serverMessage)
+        assertEquals(AppErrorEnum.SERVER, error.type)
+        assertEquals("Wrong password", error.errorMessage)
+        assertEquals(400, error.statusCode)
     }
 
     @Test
@@ -70,8 +71,9 @@ class ErrorMappingCallAdapterFactoryTest {
 
         val error = captureError { api.item() }
 
-        assertEquals(AppError.SERVER, error.error)
-        assertNull(error.serverMessage)
+        assertEquals(AppErrorEnum.SERVER, error.type)
+        assertNull(error.errorMessage)
+        assertEquals(500, error.statusCode)
     }
 
     @Test
@@ -80,14 +82,14 @@ class ErrorMappingCallAdapterFactoryTest {
             MockResponse.Builder().onRequestStart(SocketEffect.CloseSocket()).build(),
         )
 
-        assertEquals(AppError.NO_INTERNET, captureError { api.item() }.error)
+        assertEquals(AppErrorEnum.NO_INTERNET, captureError { api.item() }.type)
     }
 
     @Test
     fun malformedBody_mapsToUnknown() = runBlocking {
         server.enqueue(MockResponse(code = 200, body = "not json"))
 
-        assertEquals(AppError.UNKNOWN, captureError { api.item() }.error)
+        assertEquals(AppErrorEnum.UNKNOWN, captureError { api.item() }.type)
     }
 
     private suspend fun captureError(block: suspend () -> Unit): AppException {

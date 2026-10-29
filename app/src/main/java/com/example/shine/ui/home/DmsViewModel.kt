@@ -1,13 +1,11 @@
 package com.example.shine.ui.home
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.shine.domain.model.AppException
+import com.example.shine.core.base.BaseViewModel
 import com.example.shine.domain.model.DirectMessage
 import com.example.shine.domain.repository.DirectMessageRepository
 import com.example.shine.domain.repository.WorkspaceRepository
 import com.example.shine.ui.common.UiText
-import com.example.shine.ui.common.toUiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +27,7 @@ data class DmsUiState(
 class DmsViewModel @Inject constructor(
     private val directMessageRepository: DirectMessageRepository,
     private val workspaceRepository: WorkspaceRepository,
-) : ViewModel() {
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(DmsUiState(isLoading = true))
     val uiState: StateFlow<DmsUiState> = _uiState.asStateFlow()
@@ -37,12 +35,6 @@ class DmsViewModel @Inject constructor(
     private var currentWorkspaceId: String? = null
 
     init {
-        observeDms()
-        observeWorkspace()
-        loadDms()
-    }
-
-    private fun observeDms() {
         viewModelScope.launch {
             directMessageRepository.getDirectMessagesFlow().collectLatest { dms ->
                 _uiState.update { current ->
@@ -53,9 +45,7 @@ class DmsViewModel @Inject constructor(
                 }
             }
         }
-    }
 
-    private fun observeWorkspace() {
         viewModelScope.launch {
             workspaceRepository.selectedWorkspaceId
                 .filterNotNull()
@@ -63,23 +53,23 @@ class DmsViewModel @Inject constructor(
                 .collectLatest { workspaceId ->
                     if (currentWorkspaceId != null && currentWorkspaceId != workspaceId) {
                         directMessageRepository.clear()
-                        loadDms()
                     }
                     currentWorkspaceId = workspaceId
+                    loadDms()
                 }
         }
     }
 
     fun loadDms() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        viewModelScope.launch {
-            try {
-                directMessageRepository.getDirectMessages()
-            } catch (e: AppException) {
-                _uiState.update { it.copy(errorMessage = e.toUiText()) }
-            } finally {
+        execute(
+            task = { directMessageRepository.getDirectMessages() },
+            onSuccess = {
                 _uiState.update { it.copy(isLoading = false) }
+            },
+            onError = { error ->
+                _uiState.update { it.copy(isLoading = false, errorMessage = error) }
             }
-        }
+        )
     }
 }

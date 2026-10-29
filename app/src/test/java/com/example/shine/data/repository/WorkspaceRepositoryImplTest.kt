@@ -7,7 +7,7 @@ import com.example.shine.data.local.entity.WorkspaceEntity
 import com.example.shine.data.remote.WorkspaceApi
 import com.example.shine.data.remote.dto.FileDto
 import com.example.shine.data.remote.dto.WorkspaceDto
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Session
 import kotlinx.coroutines.CoroutineScope
@@ -72,7 +72,7 @@ class WorkspaceRepositoryImplTest {
             ),
         )
 
-        val result = repository.fetchWorkspaces()
+        val result = repository.fetchWorkspaces().getOrThrow()
 
         assertEquals(1, result.size)
         assertEquals("ws-1", result[0].id)
@@ -82,6 +82,14 @@ class WorkspaceRepositoryImplTest {
         val cached = repository.workspaces.first()
         assertEquals(1, cached.size)
         assertEquals("ws-1", cached[0].id)
+    }
+
+    @Test
+    fun fetchWorkspaces_apiFails_emptyCache_returnsFailure() = runTest {
+        fakeApi.shouldFail = true
+        val result = repository.fetchWorkspaces()
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is AppException)
     }
 
     @Test
@@ -99,7 +107,7 @@ class WorkspaceRepositoryImplTest {
         fakeApi.workspacesToReturn = listOf(
             WorkspaceDto(id = "ws-1", name = "Test", isActive = true),
         )
-        repository.fetchWorkspaces()
+        repository.fetchWorkspaces().getOrThrow()
         assertEquals(1, repository.workspaces.first().size)
 
         repository.clear()
@@ -133,7 +141,7 @@ class WorkspaceRepositoryImplTest {
         var shouldFail = false
 
         override suspend fun getWorkspaces(): List<WorkspaceDto> {
-            if (shouldFail) throw AppException(AppError.NO_INTERNET)
+            if (shouldFail) throw AppException(AppErrorEnum.NO_INTERNET)
             return workspacesToReturn
         }
     }

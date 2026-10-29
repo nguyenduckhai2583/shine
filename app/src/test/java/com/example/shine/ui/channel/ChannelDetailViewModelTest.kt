@@ -1,7 +1,7 @@
 package com.example.shine.ui.channel
 
 import com.example.shine.R
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Channel
 import com.example.shine.domain.repository.ChannelRepository
@@ -42,7 +42,7 @@ class ChannelDetailViewModelTest {
 
     @Test
     fun load_failure_showsErrorThenRetrySucceeds() {
-        repository.error = AppException(AppError.NO_INTERNET)
+        repository.error = AppException(AppErrorEnum.NO_INTERNET)
         val viewModel = ChannelDetailViewModel("1", repository)
         assertEquals(UiText.Resource(R.string.error_no_internet), viewModel.uiState.value.errorMessage)
 
@@ -57,15 +57,19 @@ class ChannelDetailViewModelTest {
         var error: AppException? = null
         var lastId: String? = null
 
-        override suspend fun getChannels(): List<Channel> = listOf(CHANNEL)
+        override suspend fun getChannels(): Result<List<Channel>> = Result.success(listOf(CHANNEL))
 
-        override suspend fun getChannel(id: String): Channel {
+        override suspend fun getChannel(id: String): Result<Channel> {
             lastId = id
-            error?.let { throw it }
-            return CHANNEL
+            val currentError = error
+            return if (currentError != null) {
+                Result.failure(currentError)
+            } else {
+                Result.success(CHANNEL)
+            }
         }
 
-        override suspend fun createChannel(name: String): Channel = CHANNEL
+        override suspend fun createChannel(name: String): Result<Unit> = Result.success(Unit)
     }
 
     private companion object {

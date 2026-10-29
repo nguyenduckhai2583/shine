@@ -1,13 +1,12 @@
 package com.example.shine.ui.home
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.shine.domain.model.AppException
+import com.example.shine.R
+import com.example.shine.core.base.BaseViewModel
 import com.example.shine.domain.model.Channel
 import com.example.shine.domain.repository.ChannelRepository
 import com.example.shine.domain.repository.WorkspaceRepository
 import com.example.shine.ui.common.UiText
-import com.example.shine.ui.common.toUiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +22,6 @@ data class ChannelUiState(
     val channels: List<Channel> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: UiText? = null,
-    val showCreateChannelDialog: Boolean = false,
     val snackbarMessage: UiText? = null,
 )
 
@@ -31,7 +29,7 @@ data class ChannelUiState(
 class ChannelViewModel @Inject constructor(
     private val channelRepository: ChannelRepository,
     private val workspaceRepository: WorkspaceRepository,
-) : ViewModel() {
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(ChannelUiState(isLoading = true))
     val uiState: StateFlow<ChannelUiState> = _uiState.asStateFlow()
@@ -39,12 +37,6 @@ class ChannelViewModel @Inject constructor(
     private var currentWorkspaceId: String? = null
 
     init {
-        observeChannels()
-        observeWorkspace()
-        loadChannels()
-    }
-
-    private fun observeChannels() {
         viewModelScope.launch {
             channelRepository.getChannelsFlow().collectLatest { channels ->
                 _uiState.update { current ->
@@ -55,9 +47,7 @@ class ChannelViewModel @Inject constructor(
                 }
             }
         }
-    }
 
-    private fun observeWorkspace() {
         viewModelScope.launch {
             workspaceRepository.selectedWorkspaceId
                 .filterNotNull()
@@ -65,32 +55,24 @@ class ChannelViewModel @Inject constructor(
                 .collectLatest { workspaceId ->
                     if (currentWorkspaceId != null && currentWorkspaceId != workspaceId) {
                         channelRepository.clear()
-                        loadChannels()
                     }
                     currentWorkspaceId = workspaceId
+                    loadChannels()
                 }
         }
     }
 
     fun loadChannels() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        viewModelScope.launch {
-            try {
-                channelRepository.getChannels()
-            } catch (e: AppException) {
-                _uiState.update { it.copy(errorMessage = e.toUiText()) }
-            } finally {
+        execute(
+            task = { channelRepository.getChannels() },
+            onSuccess = {
                 _uiState.update { it.copy(isLoading = false) }
+            },
+            onError = { error ->
+                _uiState.update { it.copy(isLoading = false, errorMessage = error) }
             }
-        }
-    }
-
-    fun openCreateChannelDialog() {
-        _uiState.update { it.copy(showCreateChannelDialog = true) }
-    }
-
-    fun dismissCreateChannelDialog() {
-        _uiState.update { it.copy(showCreateChannelDialog = false) }
+        )
     }
 
     fun clearSnackbarMessage() {
@@ -101,27 +83,16 @@ class ChannelViewModel @Inject constructor(
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
 
-        viewModelScope.launch {
-            try {
-                val created = channelRepository.createChannel(name = trimmed)
+        execute(
+            task = { channelRepository.createChannel(name = trimmed) },
+            onSuccess = {
                 _uiState.update {
-                    it.copy(
-                        snackbarMessage = UiText.Raw("Channel \"#${created.name}\" created successfully"),
-                    )
+                    it.copy(snackbarMessage = UiText(R.string.channel_created_success, "#$trimmed"))
                 }
-            } catch (e: AppException) {
-                _uiState.update {
-                    it.copy(snackbarMessage = e.toUiText())
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(snackbarMessage = UiText.Raw(e.message ?: "Failed to create channel"))
-                }
-            } finally {
-                _uiState.update {
-                    it.copy(showCreateChannelDialog = false)
-                }
+            },
+            onError = { error ->
+                _uiState.update { it.copy(snackbarMessage = error) }
             }
-        }
+        )
     }
 }

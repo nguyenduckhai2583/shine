@@ -1,6 +1,7 @@
 package com.example.shine.data.repository
 
 import android.net.Uri
+import com.example.shine.core.util.suspendRunCatching
 import com.example.shine.data.local.ContentUriResolver
 import com.example.shine.data.local.SessionLocalDataSource
 import com.example.shine.data.remote.StorageUploader
@@ -9,7 +10,7 @@ import com.example.shine.data.remote.dto.DraftMediaRequest
 import com.example.shine.data.remote.dto.extractFields
 import com.example.shine.data.remote.dto.toDomain
 import com.example.shine.data.remote.dto.toRequest
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.User
 import com.example.shine.domain.repository.UserRepository
@@ -29,60 +30,64 @@ class UserRepositoryImpl @Inject constructor(
     private val json: Json,
 ) : UserRepository {
 
-    override suspend fun getProfile(): User = withContext(Dispatchers.IO) {
-        val currentLocalUser = local.session.first()?.user
-        val profile = userApi.getProfile()
-        val user = profile.toDomain(fallbackAvatarUrl = currentLocalUser?.avatarUrl)
-        local.updateUser(user)
-        user
+    override suspend fun getProfile(): Result<User> = suspendRunCatching {
+        withContext(Dispatchers.IO) {
+            val currentLocalUser = local.session.first()?.user
+            val profile = userApi.getProfile()
+            val user = profile.toDomain(fallbackAvatarUrl = currentLocalUser?.avatarUrl)
+            local.updateUser(user)
+            user
+        }
     }
 
-    override suspend fun updateAvatar(uri: Uri): User = withContext(Dispatchers.IO) {
-        val file = contentUriResolver.resolve(uri)
-        val fileName = file.fileName
-        val mimeType = file.mimeType
-        val bytes = file.bytes
+    override suspend fun updateAvatar(uri: Uri): Result<User> = suspendRunCatching {
+        withContext(Dispatchers.IO) {
+            val file = contentUriResolver.resolve(uri)
+            val fileName = file.fileName
+            val mimeType = file.mimeType
+            val bytes = file.bytes
 
-        // 1. Request draft avatar to obtain draft ID and storage presigned POST metadata
-        val draft = userApi.createAvatarDraft(
-            DraftMediaRequest(
-                name = fileName,
-                mimeType = mimeType,
+            // 1. Request draft avatar to obtain draft ID and storage presigned POST metadata
+            val draft = userApi.createAvatarDraft(
+                DraftMediaRequest(
+                    name = fileName,
+                    mimeType = mimeType,
+                )
             )
-        )
 
-        // 2. Upload image binary directly to storage via presigned form data
-        val presignedPost = draft.presignedPost
-            ?: throw AppException(AppError.SERVER, "Missing presigned post configuration")
+            // 2. Upload image binary directly to storage via presigned form data
+            val presignedPost = draft.presignedPost
+                ?: throw AppException(AppErrorEnum.SERVER)
 
-        storageUploader.upload(
-            url = presignedPost.url,
-            fields = presignedPost.extractFields(json),
-            fileName = fileName,
-            mimeType = mimeType,
-            bytes = bytes,
-        )
+            storageUploader.upload(
+                url = presignedPost.url,
+                fields = presignedPost.extractFields(json),
+                fileName = fileName,
+                mimeType = mimeType,
+                bytes = bytes,
+            )
 
-        // 3. Save updated avatar ID to user profile
-        val currentProfile = userApi.getProfile()
-        val updateRequest = currentProfile.toRequest(avatarId = draft.id)
-        val updatedProfile = userApi.updateProfile(updateRequest)
+            // 3. Save updated avatar ID to user profile
+            val currentProfile = userApi.getProfile()
+            val updateRequest = currentProfile.toRequest(avatarId = draft.id)
+            val updatedProfile = userApi.updateProfile(updateRequest)
 
-        // 4. Resolve new avatar URL and persist locally
-        val newAvatarUrl = updatedProfile.avatar?.signedUrl
-            ?: draft.presignedUrl
-            ?: ""
+            // 4. Resolve new avatar URL and persist locally
+            val newAvatarUrl = updatedProfile.avatar?.signedUrl
+                ?: draft.presignedUrl
+                ?: ""
 
-        val updatedUser = User(
-            id = updatedProfile.id,
-            email = updatedProfile.email ?: currentProfile.email,
-            firstName = updatedProfile.firstName ?: currentProfile.firstName,
-            lastName = updatedProfile.lastName ?: currentProfile.lastName,
-            avatarUrl = newAvatarUrl.ifBlank { null },
-        )
+            val updatedUser = User(
+                id = updatedProfile.id,
+                email = updatedProfile.email ?: currentProfile.email,
+                firstName = updatedProfile.firstName ?: currentProfile.firstName,
+                lastName = updatedProfile.lastName ?: currentProfile.lastName,
+                avatarUrl = newAvatarUrl.ifBlank { null },
+            )
 
-        local.updateUser(updatedUser)
-        updatedUser
+            local.updateUser(updatedUser)
+            updatedUser
+        }
     }
 }
 

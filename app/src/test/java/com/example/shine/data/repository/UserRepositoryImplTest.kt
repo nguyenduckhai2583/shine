@@ -134,7 +134,7 @@ class UserRepositoryImplTest {
         // Mock S3 response (204 No Content)
         mockWebServer.enqueue(MockResponse(code = 204))
 
-        val resultUser = repository.updateAvatar(org.mockito.Mockito.mock(Uri::class.java))
+        val resultUser = repository.updateAvatar(org.mockito.Mockito.mock(Uri::class.java)).getOrThrow()
 
         // Verify S3 request
         val recordedS3Request = mockWebServer.takeRequest()
@@ -157,7 +157,7 @@ class UserRepositoryImplTest {
     }
 
     @Test
-    fun updateAvatar_s3Fails_throwsException() = runTest {
+    fun updateAvatar_s3Fails_returnsFailure() = runTest {
         val s3Url = mockWebServer.url("/").toString()
         fakeApi.draftResponse = DraftMediaResponse(
             id = "avatar-123",
@@ -170,12 +170,9 @@ class UserRepositoryImplTest {
         // S3 returns 403 Forbidden
         mockWebServer.enqueue(MockResponse(code = 403))
 
-        try {
-            repository.updateAvatar(org.mockito.Mockito.mock(Uri::class.java))
-            org.junit.Assert.fail("Expected AppException")
-        } catch (e: AppException) {
-            // Expected
-        }
+        val result = repository.updateAvatar(org.mockito.Mockito.mock(Uri::class.java))
+        org.junit.Assert.assertTrue(result.isFailure)
+        org.junit.Assert.assertTrue(result.exceptionOrNull() is AppException)
     }
 
     @Test
@@ -200,7 +197,7 @@ class UserRepositoryImplTest {
             avatar = FileDto(signedUrl = "https://cdn.example.com/fresh-avatar.png"),
         )
 
-        val result = repository.getProfile()
+        val result = repository.getProfile().getOrThrow()
 
         assertEquals("user-1", result.id)
         assertEquals("new@example.com", result.email)

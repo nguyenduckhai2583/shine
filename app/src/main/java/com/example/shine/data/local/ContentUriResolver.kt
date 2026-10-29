@@ -5,7 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import okio.ByteString
@@ -51,8 +51,8 @@ open class ContentUriResolver @Inject constructor(
         val bytes = try {
             contentResolver.openInputStream(uri)?.use { it.readBytes().toByteString() }
         } catch (e: Exception) {
-            throw AppException(AppError.UNKNOWN, "Failed to read file from uri", e)
-        } ?: throw AppException(AppError.UNKNOWN, "Failed to open input stream from uri")
+            throw AppException(type = AppErrorEnum.UNKNOWN, cause = e)
+        } ?: throw AppException(AppErrorEnum.UNKNOWN)
 
         return ResolvedFile(
             fileName = fileName,

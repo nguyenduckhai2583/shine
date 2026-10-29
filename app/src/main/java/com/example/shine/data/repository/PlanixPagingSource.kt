@@ -5,7 +5,7 @@ import androidx.paging.PagingState
 import com.example.shine.data.local.PlanixDataStore
 import com.example.shine.data.remote.PlanixApi
 import com.example.shine.data.remote.dto.toDomain
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Project
 
@@ -59,7 +59,7 @@ class PlanixPagingSource(
                     nextKey = null,
                 )
             } else {
-                val appException = (e as? AppException) ?: AppException(AppError.UNKNOWN, cause = e)
+                val appException = (e as? AppException) ?: AppException(AppErrorEnum.UNKNOWN, cause = e)
                 LoadResult.Error(appException)
             }
         }

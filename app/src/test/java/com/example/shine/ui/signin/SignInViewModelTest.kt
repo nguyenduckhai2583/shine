@@ -1,8 +1,9 @@
 package com.example.shine.ui.signin
 
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Session
+import com.example.shine.domain.model.SignInStatus
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.ui.common.UiText
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +50,7 @@ class SignInViewModelTest {
 
     @Test
     fun signIn_failure_showsServerMessage() = runTest {
-        repository.nextError = AppException(AppError.SERVER, serverMessage = "Wrong password")
+        repository.nextError = AppException(AppErrorEnum.SERVER, errorMessage = "Wrong password")
 
         viewModel.signIn("a@b.com")
 
@@ -59,7 +60,7 @@ class SignInViewModelTest {
 
     @Test
     fun editingInput_clearsError() = runTest {
-        repository.nextError = AppException(AppError.NO_INTERNET)
+        repository.nextError = AppException(AppErrorEnum.NO_INTERNET)
         viewModel.signIn("a@b.com")
 
         viewModel.onPasswordChange("other")
@@ -79,10 +80,12 @@ private class FakeAuthRepository : AuthRepository {
     var nextError: AppException? = null
     var lastEmail: String? = null
 
-    override suspend fun signIn(email: String, password: String): Session {
+    override suspend fun signIn(email: String, password: String): Result<SignInStatus> {
         lastEmail = email
-        nextError?.let { throw it }
-        return Session("token", null, null, null).also { session.value = it }
+        val err = nextError
+        if (err != null) return Result.failure(err)
+        val sessionObj = Session("token", null, null, null).also { session.value = it }
+        return Result.success(SignInStatus.Authenticated(sessionObj))
     }
 
     override suspend fun signOut() {

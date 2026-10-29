@@ -1,7 +1,7 @@
 package com.example.shine.data.remote
 
 import com.example.shine.core.di.Unauthenticated
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -42,15 +42,12 @@ open class StorageUploader @Inject constructor(
         val response = try {
             unauthenticatedClient.newCall(request).execute()
         } catch (e: IOException) {
-            throw AppException(AppError.NO_INTERNET, cause = e)
+            throw AppException(AppErrorEnum.NO_INTERNET, cause = e)
         }
 
         response.use {
             if (!it.isSuccessful) {
-                throw AppException(
-                    AppError.SERVER,
-                    serverMessage = "Failed to upload file to storage (${it.code})",
-                )
+                throw AppException(AppErrorEnum.SERVER)
             }
         }
     }

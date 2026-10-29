@@ -5,7 +5,7 @@ import com.example.shine.data.local.PlanixDataStore
 import com.example.shine.data.remote.PlanixApi
 import com.example.shine.data.remote.dto.PaginationResponse
 import com.example.shine.data.remote.dto.ProjectDto
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Project
 import kotlinx.coroutines.test.runTest
@@ -149,7 +149,7 @@ class PlanixPagingSourceTest {
             page: Int?,
             perPage: Int?,
         ): PaginationResponse<ProjectDto> {
-            if (shouldFail) throw AppException(AppError.NO_INTERNET)
+            if (shouldFail) throw AppException(AppErrorEnum.NO_INTERNET)
             return responseToReturn
         }
     }

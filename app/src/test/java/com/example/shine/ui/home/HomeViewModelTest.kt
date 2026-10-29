@@ -1,6 +1,7 @@
 package com.example.shine.ui.home
 
 import com.example.shine.domain.model.Session
+import com.example.shine.domain.model.SignInStatus
 import com.example.shine.domain.model.User
 import com.example.shine.domain.model.Workspace
 import com.example.shine.domain.repository.AuthRepository
@@ -104,7 +105,7 @@ class HomeViewModelTest {
             )
         )
         override val session: Flow<Session?> = sessionFlow
-        override suspend fun signIn(email: String, password: String): Session = throw NotImplementedError()
+        override suspend fun signIn(email: String, password: String): Result<SignInStatus> = throw NotImplementedError()
         override suspend fun signOut() {
             signedOut = true
         }
@@ -122,7 +123,8 @@ class HomeViewModelTest {
         override val workspaces: Flow<List<Workspace>> = currentWorkspaces
         override val selectedWorkspaceId: Flow<String?> = currentSelectedId
 
-        override suspend fun fetchWorkspaces(): List<Workspace> = currentWorkspaces.value
+        override suspend fun fetchWorkspaces(): Result<List<Workspace>> =
+            Result.success(currentWorkspaces.value)
 
         override suspend fun selectWorkspace(workspaceId: String) {
             currentSelectedId.value = workspaceId

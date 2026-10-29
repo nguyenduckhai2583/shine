@@ -1,6 +1,6 @@
 package com.example.shine.data.remote
 
-import com.example.shine.domain.model.AppError
+import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -75,7 +75,7 @@ class StorageUploaderTest {
             )
             fail("Expected AppException")
         } catch (e: AppException) {
-            assertEquals(AppError.SERVER, e.error)
+            assertEquals(AppErrorEnum.SERVER, e.type)
         }
     }
 }

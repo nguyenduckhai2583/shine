@@ -1,6 +1,7 @@
 package com.example.shine.ui.profile
 
 import android.net.Uri
+import com.example.shine.ui.common.UiText
 
 data class ProfileUiState(
     val name: String = "",
@@ -8,5 +9,5 @@ data class ProfileUiState(
     val selectedAvatarUri: Uri? = null,
     val isLoading: Boolean = false,
     val isUploading: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )

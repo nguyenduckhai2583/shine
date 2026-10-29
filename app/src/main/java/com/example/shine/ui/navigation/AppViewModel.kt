@@ -43,11 +43,7 @@ class AppViewModel @Inject constructor(
                 .filterNotNull()
                 .distinctUntilChangedBy { it.token }
                 .collectLatest {
-                    try {
-                        userRepository.getProfile()
-                    } catch (_: Exception) {
-                        // Fail gracefully if offline on app open
-                    }
+                    userRepository.getProfile()
                 }
         }
     }

@@ -1,8 +1,6 @@
 package com.example.shine.ui.home
 
 import com.example.shine.R
-import com.example.shine.domain.model.AppError
-import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Channel
 import com.example.shine.domain.model.Workspace
 import com.example.shine.domain.repository.ChannelRepository
@@ -62,7 +60,7 @@ class ChannelViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals(0, state.channels.size)
-        assertEquals(UiText.Resource(R.string.error_no_internet), state.errorMessage)
+        assertEquals(UiText("Failed to connect"), state.errorMessage)
         assertFalse(state.isLoading)
     }
 
@@ -82,39 +80,21 @@ class ChannelViewModelTest {
     }
 
     @Test
-    fun openAndDismissCreateChannelDialog_updatesState() = runTest {
+    fun createChannel_success_createsChannel_andSetsSuccessSnackbar() = runTest {
         val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
 
-        assertFalse(viewModel.uiState.value.showCreateChannelDialog)
-
-        viewModel.openCreateChannelDialog()
-        assertTrue(viewModel.uiState.value.showCreateChannelDialog)
-
-        viewModel.dismissCreateChannelDialog()
-        assertFalse(viewModel.uiState.value.showCreateChannelDialog)
-    }
-
-    @Test
-    fun createChannel_success_createsChannel_closesDialog_andSetsSuccessSnackbar() = runTest {
-        val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
-        }
-
-        viewModel.openCreateChannelDialog()
         viewModel.createChannel(name = "announcements")
 
         assertFalse(viewModel.uiState.value.isLoading)
-        assertFalse(viewModel.uiState.value.showCreateChannelDialog)
-        assertEquals(UiText.Raw("Channel \"#announcements\" created successfully"), viewModel.uiState.value.snackbarMessage)
+        assertEquals(UiText(R.string.channel_created_success, "#announcements"), viewModel.uiState.value.snackbarMessage)
         assertEquals(2, viewModel.uiState.value.channels.size)
     }
 
     @Test
-    fun createChannel_error_closesDialog_andSetsErrorSnackbar() = runTest {
+    fun createChannel_error_setsErrorSnackbar() = runTest {
         channelRepository.shouldFail = true
 
         val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
@@ -122,12 +102,10 @@ class ChannelViewModelTest {
             viewModel.uiState.collect {}
         }
 
-        viewModel.openCreateChannelDialog()
         viewModel.createChannel(name = "engineering")
 
         assertFalse(viewModel.uiState.value.isLoading)
-        assertFalse(viewModel.uiState.value.showCreateChannelDialog)
-        assertEquals(UiText.Resource(R.string.error_no_internet), viewModel.uiState.value.snackbarMessage)
+        assertEquals(UiText("Failed to connect"), viewModel.uiState.value.snackbarMessage)
     }
 
     @Test
@@ -150,7 +128,7 @@ class ChannelViewModelTest {
         }
 
         viewModel.createChannel(name = "general-2")
-        assertEquals(UiText.Raw("Channel \"#general-2\" created successfully"), viewModel.uiState.value.snackbarMessage)
+        assertEquals(UiText(R.string.channel_created_success, "#general-2"), viewModel.uiState.value.snackbarMessage)
 
         viewModel.clearSnackbarMessage()
         assertNull(viewModel.uiState.value.snackbarMessage)
@@ -164,16 +142,17 @@ class ChannelViewModelTest {
 
         override fun getChannelsFlow(): Flow<List<Channel>> = channelsFlow
 
-        override suspend fun getChannels(): List<Channel> {
+        override suspend fun getChannels(): Result<List<Channel>> {
             getChannelsCallCount++
-            if (shouldFail) throw AppException(AppError.NO_INTERNET)
-            return channelsFlow.value
+            if (shouldFail) return Result.failure(Exception("Failed to connect"))
+            return Result.success(channelsFlow.value)
         }
 
-        override suspend fun getChannel(id: String): Channel = channelsFlow.value.first { it.id == id }
+        override suspend fun getChannel(id: String): Result<Channel> =
+            Result.success(channelsFlow.value.first { it.id == id })
 
-        override suspend fun createChannel(name: String): Channel {
-            if (shouldFail) throw AppException(AppError.NO_INTERNET)
+        override suspend fun createChannel(name: String): Result<Unit> {
+            if (shouldFail) return Result.failure(Exception("Failed to connect"))
             val newChannel = Channel(
                 id = "c-${System.currentTimeMillis()}",
                 name = name,
@@ -185,7 +164,7 @@ class ChannelViewModelTest {
                 lastActivityAt = null,
             )
             channelsFlow.value = channelsFlow.value + newChannel
-            return newChannel
+            return Result.success(Unit)
         }
 
         override fun clear() {
@@ -206,7 +185,8 @@ class ChannelViewModelTest {
         override val workspaces: Flow<List<Workspace>> = currentWorkspaces
         override val selectedWorkspaceId: Flow<String?> = currentSelectedId
 
-        override suspend fun fetchWorkspaces(): List<Workspace> = currentWorkspaces.value
+        override suspend fun fetchWorkspaces(): Result<List<Workspace>> =
+            Result.success(currentWorkspaces.value)
 
         override suspend fun selectWorkspace(workspaceId: String) {
             currentSelectedId.value = workspaceId
