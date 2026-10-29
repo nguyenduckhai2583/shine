@@ -29,6 +29,10 @@ class BaseViewModelTest {
     }
 
     private class TestViewModel : BaseViewModel() {
+        fun triggerClear() {
+            onCleared()
+        }
+
         fun runSuccessTask(value: String, callback: (String) -> Unit) {
             execute(
                 task = { Result.success(value) },
@@ -43,6 +47,12 @@ class BaseViewModelTest {
                 onFinally = finallyCallback,
             )
         }
+    }
+
+    @Test
+    fun viewModel_lifecycle_initializationAndCleared_runsWithoutException() = runTest {
+        val viewModel = TestViewModel()
+        viewModel.triggerClear()
     }
 
     @Test

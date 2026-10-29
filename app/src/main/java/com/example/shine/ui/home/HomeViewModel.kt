@@ -1,7 +1,7 @@
 package com.example.shine.ui.home
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.shine.core.base.BaseViewModel
 import com.example.shine.domain.model.Workspace
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.WorkspaceRepository
@@ -31,7 +31,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val workspaceRepository: WorkspaceRepository,
-) : ViewModel() {
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()

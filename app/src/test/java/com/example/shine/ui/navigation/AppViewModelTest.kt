@@ -12,6 +12,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -20,6 +21,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import kotlin.coroutines.resume
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModelTest {
@@ -55,6 +57,42 @@ class AppViewModelTest {
         }
 
         assertEquals(1, userRepository.getProfileCalls)
+        assertEquals(AuthState.SignedIn, viewModel.authState.value)
+    }
+
+    @Test
+    fun activeSession_staysLoadingUntilProfileFetchCompletes() = runTest {
+        val testSession = Session(
+            token = "jwt-token",
+            workspaceId = "workspace-1",
+        )
+        sessionFlow.value = testSession
+
+        var completeProfileCall: (() -> Unit)? = null
+        val deferredUserRepository = object : UserRepository {
+            override suspend fun getProfile(): Result<User> {
+                suspendCancellableCoroutine { cont ->
+                    completeProfileCall = {
+                        cont.resume(Result.success(User(id = "user-1", email = "test@test.com")))
+                    }
+                }
+                return Result.success(User(id = "user-1", email = "test@test.com"))
+            }
+
+            override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()
+        }
+
+        val viewModel = AppViewModel(authRepository, deferredUserRepository, deepLinkParser)
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.authState.collect {}
+        }
+
+        // Before getProfile completes -> state is still Loading
+        assertEquals(AuthState.Loading, viewModel.authState.value)
+
+        // After getProfile completes -> state transitions to SignedIn
+        completeProfileCall?.invoke()
         assertEquals(AuthState.SignedIn, viewModel.authState.value)
     }
 

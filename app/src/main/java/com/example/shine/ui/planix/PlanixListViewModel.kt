@@ -1,9 +1,9 @@
 package com.example.shine.ui.planix
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.example.shine.core.base.BaseViewModel
 import com.example.shine.domain.model.Project
 import com.example.shine.domain.repository.PlanixRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,7 +28,7 @@ data class PlanixListUiState(
 @HiltViewModel
 class PlanixListViewModel @Inject constructor(
     private val planixRepository: PlanixRepository,
-) : ViewModel() {
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(PlanixListUiState())
     val uiState: StateFlow<PlanixListUiState> = _uiState.asStateFlow()

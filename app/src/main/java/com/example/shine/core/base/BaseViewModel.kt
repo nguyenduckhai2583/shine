@@ -1,7 +1,9 @@
 package com.example.shine.core.base
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.shine.BuildConfig
 import com.example.shine.R
 import com.example.shine.domain.model.AppException
 import com.example.shine.ui.common.UiText
@@ -10,6 +12,21 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 abstract class BaseViewModel : ViewModel() {
+
+    private val tag: String = this::class.java.simpleName
+    private val instanceId: String = Integer.toHexString(System.identityHashCode(this))
+
+    init {
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "🟢 [$tag@$instanceId] INITIALIZED")
+        }
+    }
+
+    override fun onCleared() {
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "🔴 [$tag@$instanceId] CLEARED")
+        }
+    }
 
     /**
      * Executes a task returning [Result].
@@ -36,6 +53,10 @@ abstract class BaseViewModel : ViewModel() {
         } finally {
             onFinally()
         }
+    }
+
+    companion object {
+        private const val TAG = "ViewModelLifecycle"
     }
 }
 
