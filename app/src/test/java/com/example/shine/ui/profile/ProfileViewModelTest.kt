@@ -142,5 +142,7 @@ class ProfileViewModelTest {
                 )
             )
         }
+
+        override suspend fun getChatUsers(): Result<List<User>> = Result.success(emptyList())
     }
 }

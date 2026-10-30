@@ -6,4 +6,5 @@ import com.example.shine.domain.model.User
 interface UserRepository {
     suspend fun getProfile(): Result<User>
     suspend fun updateAvatar(uri: Uri): Result<User>
+    suspend fun getChatUsers(): Result<List<User>>
 }

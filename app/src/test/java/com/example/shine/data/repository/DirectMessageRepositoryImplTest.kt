@@ -2,19 +2,18 @@ package com.example.shine.data.repository
 
 import com.example.shine.data.local.DirectMessageDataStore
 import com.example.shine.data.local.SessionLocalDataSource
+import com.example.shine.data.local.UserLocalDataSource
+import com.example.shine.data.local.dao.UserDao
+import com.example.shine.data.local.entity.UserEntity
 import com.example.shine.data.remote.ChatApi
-import com.example.shine.data.remote.UserApi
 import com.example.shine.data.remote.dto.ChannelDto
 import com.example.shine.data.remote.dto.DirectMessageDto
-import com.example.shine.data.remote.dto.DraftMediaRequest
-import com.example.shine.data.remote.dto.DraftMediaResponse
-import com.example.shine.data.remote.dto.UpdateUserRequest
-import com.example.shine.data.remote.dto.UserProfileDto
 import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.DirectMessage
 import com.example.shine.domain.model.Session
 import com.example.shine.domain.model.User
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -26,13 +25,14 @@ import org.mockito.Mockito.`when`
 class DirectMessageRepositoryImplTest {
 
     private val chatApi = FakeChatApi()
-    private val userApi = FakeUserApi()
+    private val userDao = FakeUserDao()
+    private val userLocal = UserLocalDataSource(userDao)
     private val sessionLocal = mock(SessionLocalDataSource::class.java)
     private val dataStore = DirectMessageDataStore()
 
     private val repository = DirectMessageRepositoryImpl(
         chatApi = chatApi,
-        userApi = userApi,
+        userLocalDataSource = userLocal,
         sessionLocalDataSource = sessionLocal,
         directMessageDataStore = dataStore,
     )
@@ -40,9 +40,10 @@ class DirectMessageRepositoryImplTest {
     @Test
     fun getDirectMessages_success_mapsAndSavesToDataStore() = runTest {
         `when`(sessionLocal.session).thenReturn(flowOf(Session("token", user = User("me"))))
+        userDao.users.add(UserEntity(id = "user-2", firstName = "Alice", lastName = "Smith"))
         chatApi.dmsToReturn = listOf(
             DirectMessageDto(id = "dm-1", name = "Team Alpha", lastActivityAt = 100L),
-            DirectMessageDto(id = "dm-2", name = "Team Beta", lastActivityAt = 200L),
+            DirectMessageDto(id = "dm-2", recipientIds = listOf("user-2"), lastActivityAt = 200L),
         )
 
         val result = repository.getDirectMessages().getOrThrow()
@@ -50,6 +51,7 @@ class DirectMessageRepositoryImplTest {
         assertEquals(2, result.size)
         // sorted descending by time
         assertEquals("dm-2", result[0].id)
+        assertEquals("Alice Smith", result[0].name)
         assertEquals("dm-1", result[1].id)
 
         val cached = dataStore.getDirectMessages()
@@ -100,15 +102,17 @@ class DirectMessageRepositoryImplTest {
         }
     }
 
-    private class FakeUserApi : UserApi {
-        override suspend fun getProfile(): UserProfileDto = UserProfileDto(id = "me")
-
-        override suspend fun createAvatarDraft(request: DraftMediaRequest): DraftMediaResponse =
-            DraftMediaResponse("1")
-
-        override suspend fun updateProfile(request: UpdateUserRequest): UserProfileDto =
-            UserProfileDto(id = "me")
-
-        override suspend fun getChatUsers(): List<UserProfileDto> = emptyList()
+    private class FakeUserDao : UserDao {
+        val users = mutableListOf<UserEntity>()
+        override fun observeUsers(): Flow<List<UserEntity>> = flowOf(users)
+        override suspend fun getUsers(): List<UserEntity> = users
+        override suspend fun getUser(id: String): UserEntity? = users.find { it.id == id }
+        override suspend fun upsertUsers(users: List<UserEntity>) {
+            this.users.removeAll { u -> users.any { it.id == u.id } }
+            this.users.addAll(users)
+        }
+        override suspend fun clear() {
+            users.clear()
+        }
     }
 }

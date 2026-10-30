@@ -6,6 +6,7 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import com.example.shine.data.local.ShineDatabase
 import com.example.shine.data.local.dao.ProjectDao
 import com.example.shine.data.local.dao.ProjectRemoteKeyDao
+import com.example.shine.data.local.dao.UserDao
 import com.example.shine.data.local.dao.WorkspaceDao
 import com.example.shine.data.remote.PlanixApi
 import com.example.shine.data.remote.dto.PaginationResponse
@@ -31,6 +32,7 @@ class PlanixRepositoryImplTest {
     @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
     private class FakeShineDatabase : ShineDatabase() {
         override fun workspaceDao(): WorkspaceDao = error("Not implemented")
+        override fun userDao(): UserDao = error("Not implemented")
         override fun projectDao(): ProjectDao = error("Not implemented")
         override fun projectRemoteKeyDao(): ProjectRemoteKeyDao = error("Not implemented")
         override fun createOpenHelper(config: DatabaseConfiguration): SupportSQLiteOpenHelper = error("Not implemented")

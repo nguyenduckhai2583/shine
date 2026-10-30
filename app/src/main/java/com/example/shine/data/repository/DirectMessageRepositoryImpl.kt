@@ -3,8 +3,8 @@ package com.example.shine.data.repository
 import com.example.shine.core.util.suspendRunCatching
 import com.example.shine.data.local.DirectMessageDataStore
 import com.example.shine.data.local.SessionLocalDataSource
+import com.example.shine.data.local.UserLocalDataSource
 import com.example.shine.data.remote.ChatApi
-import com.example.shine.data.remote.UserApi
 import com.example.shine.data.remote.dto.toDomain
 import com.example.shine.domain.model.DirectMessage
 import com.example.shine.domain.repository.DirectMessageRepository
@@ -16,7 +16,7 @@ import javax.inject.Singleton
 @Singleton
 class DirectMessageRepositoryImpl @Inject constructor(
     private val chatApi: ChatApi,
-    private val userApi: UserApi,
+    private val userLocalDataSource: UserLocalDataSource,
     private val sessionLocalDataSource: SessionLocalDataSource,
     private val directMessageDataStore: DirectMessageDataStore,
 ) : DirectMessageRepository {
@@ -24,15 +24,13 @@ class DirectMessageRepositoryImpl @Inject constructor(
     override suspend fun getDirectMessages(): Result<List<DirectMessage>> = suspendRunCatching {
         try {
             val currentUserId = sessionLocalDataSource.session.firstOrNull()?.user?.id
-            val chatUsersMap = runCatching {
-                userApi.getChatUsers().associate { userDto ->
-                    val name = listOfNotNull(userDto.firstName, userDto.lastName)
-                        .joinToString(" ")
-                        .trim()
-                        .ifEmpty { userDto.email.orEmpty() }
-                    userDto.id to name
-                }
-            }.getOrDefault(emptyMap())
+            val chatUsersMap = userLocalDataSource.getUsers().associate { user ->
+                val name = listOfNotNull(user.firstName, user.lastName)
+                    .joinToString(" ")
+                    .trim()
+                    .ifEmpty { user.email.orEmpty() }
+                user.id to name
+            }
 
             val rawDms = chatApi.getDirectMessages()
             val dms = rawDms.map { it.toDomain(currentUserId, chatUsersMap) }

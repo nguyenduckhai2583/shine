@@ -4,6 +4,7 @@ import android.net.Uri
 import com.example.shine.core.util.suspendRunCatching
 import com.example.shine.data.local.ContentUriResolver
 import com.example.shine.data.local.SessionLocalDataSource
+import com.example.shine.data.local.UserLocalDataSource
 import com.example.shine.data.remote.StorageUploader
 import com.example.shine.data.remote.UserApi
 import com.example.shine.data.remote.dto.DraftMediaRequest
@@ -27,6 +28,7 @@ class UserRepositoryImpl @Inject constructor(
     private val storageUploader: StorageUploader,
     private val userApi: UserApi,
     private val local: SessionLocalDataSource,
+    private val userLocalDataSource: UserLocalDataSource,
     private val json: Json,
 ) : UserRepository {
 
@@ -37,6 +39,19 @@ class UserRepositoryImpl @Inject constructor(
             val user = profile.toDomain(fallbackAvatarUrl = currentLocalUser?.avatarUrl)
             local.updateUser(user)
             user
+        }
+    }
+
+    override suspend fun getChatUsers(): Result<List<User>> = suspendRunCatching {
+        withContext(Dispatchers.IO) {
+            try {
+                val chatUsers = userApi.getChatUsers().map { it.toDomain() }
+                userLocalDataSource.replaceUsers(chatUsers)
+                chatUsers
+            } catch (e: Exception) {
+                val localUsers = userLocalDataSource.getUsers()
+                localUsers.ifEmpty { throw e }
+            }
         }
     }
 

@@ -42,7 +42,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun activeSession_fetchesUserProfileOnLaunch() = runTest {
+    fun activeSession_fetchesUserProfileAndChatUsersOnLaunch() = runTest {
         val testSession = Session(
             token = "jwt-token",
             workspaceId = "workspace-1",
@@ -57,11 +57,12 @@ class AppViewModelTest {
         }
 
         assertEquals(1, userRepository.getProfileCalls)
+        assertEquals(1, userRepository.getChatUsersCalls)
         assertEquals(AuthState.SignedIn, viewModel.authState.value)
     }
 
     @Test
-    fun activeSession_staysLoadingUntilProfileFetchCompletes() = runTest {
+    fun activeSession_staysLoadingUntilBothApisComplete() = runTest {
         val testSession = Session(
             token = "jwt-token",
             workspaceId = "workspace-1",
@@ -69,14 +70,24 @@ class AppViewModelTest {
         sessionFlow.value = testSession
 
         var completeProfileCall: (() -> Unit)? = null
+        var completeChatUsersCall: (() -> Unit)? = null
         val deferredUserRepository = object : UserRepository {
             override suspend fun getProfile(): Result<User> {
-                suspendCancellableCoroutine { cont ->
+                suspendCancellableCoroutine<Unit> { cont ->
                     completeProfileCall = {
-                        cont.resume(Result.success(User(id = "user-1", email = "test@test.com")))
+                        cont.resume(Unit)
                     }
                 }
                 return Result.success(User(id = "user-1", email = "test@test.com"))
+            }
+
+            override suspend fun getChatUsers(): Result<List<User>> {
+                suspendCancellableCoroutine<Unit> { cont ->
+                    completeChatUsersCall = {
+                        cont.resume(Unit)
+                    }
+                }
+                return Result.success(emptyList())
             }
 
             override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()
@@ -88,16 +99,20 @@ class AppViewModelTest {
             viewModel.authState.collect {}
         }
 
-        // Before getProfile completes -> state is still Loading
+        // Before any completes -> state is still Loading
         assertEquals(AuthState.Loading, viewModel.authState.value)
 
-        // After getProfile completes -> state transitions to SignedIn
+        // After getProfile completes, but chat users still pending -> state is still Loading
         completeProfileCall?.invoke()
+        assertEquals(AuthState.Loading, viewModel.authState.value)
+
+        // After both complete -> state transitions to SignedIn
+        completeChatUsersCall?.invoke()
         assertEquals(AuthState.SignedIn, viewModel.authState.value)
     }
 
     @Test
-    fun signedOut_doesNotFetchUserProfile() = runTest {
+    fun signedOut_doesNotFetchUserProfileOrChatUsers() = runTest {
         sessionFlow.value = null
 
         val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
@@ -107,11 +122,12 @@ class AppViewModelTest {
         }
 
         assertEquals(0, userRepository.getProfileCalls)
+        assertEquals(0, userRepository.getChatUsersCalls)
         assertEquals(AuthState.SignedOut, viewModel.authState.value)
     }
 
     @Test
-    fun profileFetchError_isCaughtGracefully() = runTest {
+    fun fetchErrors_areCaughtGracefully() = runTest {
         userRepository.shouldFail = true
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
 
@@ -122,6 +138,7 @@ class AppViewModelTest {
         }
 
         assertEquals(1, userRepository.getProfileCalls)
+        assertEquals(1, userRepository.getChatUsersCalls)
         assertEquals(AuthState.SignedIn, viewModel.authState.value)
     }
 
@@ -132,12 +149,19 @@ class AppViewModelTest {
 
     private class FakeUserRepository : UserRepository {
         var getProfileCalls = 0
+        var getChatUsersCalls = 0
         var shouldFail = false
 
         override suspend fun getProfile(): Result<User> {
             getProfileCalls++
             if (shouldFail) return Result.failure(RuntimeException("Network error"))
             return Result.success(User(id = "user-1", email = "user@test.com", firstName = "Jane", lastName = "Doe"))
+        }
+
+        override suspend fun getChatUsers(): Result<List<User>> {
+            getChatUsersCalls++
+            if (shouldFail) return Result.failure(RuntimeException("Network error"))
+            return Result.success(emptyList())
         }
 
         override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()

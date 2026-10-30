@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.example.shine.data.local.ContentUriResolver
 import com.example.shine.data.local.ResolvedFile
 import com.example.shine.data.local.SessionLocalDataSource
+import com.example.shine.data.local.UserLocalDataSource
 import com.example.shine.data.remote.StorageUploader
 import com.example.shine.data.remote.UserApi
 import com.example.shine.data.remote.dto.DraftMediaRequest
@@ -49,6 +50,7 @@ class UserRepositoryImplTest {
     private lateinit var fakeApi: FakeUserApi
     private lateinit var contentUriResolver: ContentUriResolver
     private lateinit var storageUploader: StorageUploader
+    private lateinit var userLocalDataSource: UserLocalDataSource
     private lateinit var repository: UserRepositoryImpl
 
     private val json = Json {
@@ -70,12 +72,14 @@ class UserRepositoryImplTest {
         fakeApi = FakeUserApi()
         contentUriResolver = FakeContentUriResolver()
         storageUploader = StorageUploader(OkHttpClient())
+        userLocalDataSource = mock(UserLocalDataSource::class.java)
 
         repository = UserRepositoryImpl(
             contentUriResolver = contentUriResolver,
             storageUploader = storageUploader,
             userApi = fakeApi,
             local = local,
+            userLocalDataSource = userLocalDataSource,
             json = json,
         )
     }
@@ -210,6 +214,46 @@ class UserRepositoryImplTest {
         assertEquals("https://cdn.example.com/fresh-avatar.png", updatedLocalSession?.user?.avatarUrl)
     }
 
+    @Test
+    fun getChatUsers_success_savesToLocalDataSourceAndReturnsList() = runTest {
+        val chatUserDtos = listOf(
+            UserProfileDto(id = "user-1", email = "one@example.com", firstName = "User", lastName = "One"),
+            UserProfileDto(id = "user-2", email = "two@example.com", firstName = "User", lastName = "Two"),
+        )
+        fakeApi.chatUsersToReturn = chatUserDtos
+
+        val result = repository.getChatUsers().getOrThrow()
+
+        assertEquals(2, result.size)
+        assertEquals("user-1", result[0].id)
+        assertEquals("user-2", result[1].id)
+        org.mockito.Mockito.verify(userLocalDataSource).replaceUsers(org.mockito.ArgumentMatchers.anyList())
+    }
+
+    @Test
+    fun getChatUsers_apiFails_returnsCachedDataFromLocalDataSource() = runTest {
+        fakeApi.shouldFailChatUsers = true
+        val localUsers = listOf(
+            com.example.shine.domain.model.User(id = "cached-1", email = "cached@example.com")
+        )
+        `when`(userLocalDataSource.getUsers()).thenReturn(localUsers)
+
+        val result = repository.getChatUsers().getOrThrow()
+
+        assertEquals(1, result.size)
+        assertEquals("cached-1", result[0].id)
+    }
+
+    @Test
+    fun getChatUsers_apiFails_localEmpty_returnsFailure() = runTest {
+        fakeApi.shouldFailChatUsers = true
+        `when`(userLocalDataSource.getUsers()).thenReturn(emptyList())
+
+        val result = repository.getChatUsers()
+
+        org.junit.Assert.assertTrue(result.isFailure)
+    }
+
     private class FakeContentUriResolver : ContentUriResolver(org.mockito.Mockito.mock(android.content.Context::class.java)) {
         var resolvedFile = ResolvedFile("test.png", "image/png", okio.ByteString.of(1, 2, 3, 4))
         override fun resolve(uri: Uri): ResolvedFile = resolvedFile
@@ -220,6 +264,8 @@ class UserRepositoryImplTest {
         var currentProfile: UserProfileDto? = null
         var updatedProfile: UserProfileDto? = null
         var lastUpdateUserRequest: UpdateUserRequest? = null
+        var chatUsersToReturn: List<UserProfileDto> = emptyList()
+        var shouldFailChatUsers: Boolean = false
         var getProfileCalls = 0
 
         override suspend fun getProfile(): UserProfileDto {
@@ -236,6 +282,9 @@ class UserRepositoryImplTest {
             return updatedProfile ?: throw IllegalStateException("updatedProfile not set")
         }
 
-        override suspend fun getChatUsers(): List<UserProfileDto> = emptyList()
+        override suspend fun getChatUsers(): List<UserProfileDto> {
+            if (shouldFailChatUsers) throw AppException(com.example.shine.domain.model.AppErrorEnum.SERVER)
+            return chatUsersToReturn
+        }
     }
 }

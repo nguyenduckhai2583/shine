@@ -8,6 +8,8 @@ import com.example.shine.domain.repository.UserRepository
 import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
 import com.example.shine.ui.navigation.deeplink.DeepLinkParser
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.supervisorScope
 import javax.inject.Inject
 
 sealed interface AuthState {
@@ -39,7 +42,12 @@ class AppViewModel @Inject constructor(
     val authState: StateFlow<AuthState> = flow {
         val initialSession = authRepository.session.first()
         if (initialSession != null) {
-            userRepository.getProfile()
+            supervisorScope {
+                awaitAll(
+                    async { runCatching { userRepository.getProfile() } },
+                    async { runCatching { userRepository.getChatUsers() } },
+                )
+            }
         }
         emitAll(
             authRepository.session.map { session ->

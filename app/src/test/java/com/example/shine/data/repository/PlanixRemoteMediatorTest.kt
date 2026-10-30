@@ -12,6 +12,7 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import com.example.shine.data.local.ShineDatabase
 import com.example.shine.data.local.dao.ProjectDao
 import com.example.shine.data.local.dao.ProjectRemoteKeyDao
+import com.example.shine.data.local.dao.UserDao
 import com.example.shine.data.local.dao.WorkspaceDao
 import com.example.shine.data.local.entity.ProjectEntity
 import com.example.shine.data.local.entity.ProjectRemoteKeyEntity
@@ -242,6 +243,7 @@ class PlanixRemoteMediatorTest {
         private val remoteKeyDao: ProjectRemoteKeyDao,
     ) : ShineDatabase() {
         override fun workspaceDao(): WorkspaceDao = error("Not implemented")
+        override fun userDao(): UserDao = error("Not implemented")
         override fun projectDao(): ProjectDao = projectDao
         override fun projectRemoteKeyDao(): ProjectRemoteKeyDao = remoteKeyDao
         override suspend fun <R> runTransaction(block: suspend () -> R): R = block()
