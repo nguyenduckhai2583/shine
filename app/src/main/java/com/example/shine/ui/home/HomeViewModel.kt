@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.shine.core.base.BaseViewModel
 import com.example.shine.domain.model.Workspace
 import com.example.shine.domain.repository.AuthRepository
+import com.example.shine.domain.repository.UserRepository
 import com.example.shine.domain.repository.WorkspaceRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ data class HomeUiState(
     val workspaces: List<Workspace> = emptyList(),
     val selectedWorkspaceId: String? = null,
     val selectedTab: HomeTab = HomeTab.Channels,
+    val isSwitchingWorkspace: Boolean = false,
 ) {
     val currentWorkspaceName: String
         get() = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name.orEmpty()
@@ -31,6 +33,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val workspaceRepository: WorkspaceRepository,
+    private val userRepository: UserRepository,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -73,7 +76,13 @@ class HomeViewModel @Inject constructor(
     fun selectWorkspace(workspaceId: String) {
         if (workspaceId == _uiState.value.selectedWorkspaceId) return
         viewModelScope.launch {
-            workspaceRepository.selectWorkspace(workspaceId)
+            _uiState.update { it.copy(isSwitchingWorkspace = true) }
+            try {
+                workspaceRepository.selectWorkspace(workspaceId)
+                userRepository.getChatUsers()
+            } finally {
+                _uiState.update { it.copy(isSwitchingWorkspace = false) }
+            }
         }
     }
 

@@ -14,19 +14,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.supervisorScope
 import javax.inject.Inject
 
 sealed interface AuthState {
-    data object Loading : AuthState
-    data object SignedOut : AuthState
+    data object Initializing : AuthState
+    data object Unauthenticated : AuthState
     data object SelectWorkspace : AuthState
-    data object SignedIn : AuthState
+    data object Authenticated : AuthState
 }
 
 @HiltViewModel
@@ -39,26 +36,38 @@ class AppViewModel @Inject constructor(
     private val _pendingDestination = MutableStateFlow<DeepLinkDestination?>(null)
     val pendingDestination: StateFlow<DeepLinkDestination?> = _pendingDestination.asStateFlow()
 
-    val authState: StateFlow<AuthState> = flow {
-        val initialSession = authRepository.session.first()
-        if (initialSession != null) {
+    private var hasPreloaded = false
+
+    val authState: StateFlow<AuthState> = authRepository.session
+        .transform { session ->
+            when {
+                session == null -> {
+                    hasPreloaded = false
+                    emit(AuthState.Unauthenticated)
+                }
+                session.workspaceId.isNullOrEmpty() -> {
+                    hasPreloaded = false
+                    emit(AuthState.SelectWorkspace)
+                }
+                else -> {
+                    preloadInitialDataIfNeeded()
+                    emit(AuthState.Authenticated)
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AuthState.Initializing)
+
+    private suspend fun preloadInitialDataIfNeeded() {
+        if (!hasPreloaded) {
             supervisorScope {
                 awaitAll(
                     async { runCatching { userRepository.getProfile() } },
                     async { runCatching { userRepository.getChatUsers() } },
                 )
             }
+            hasPreloaded = true
         }
-        emitAll(
-            authRepository.session.map { session ->
-                when {
-                    session == null -> AuthState.SignedOut
-                    session.workspaceId.isNullOrEmpty() -> AuthState.SelectWorkspace
-                    else -> AuthState.SignedIn
-                }
-            }
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AuthState.Loading)
+    }
 
     fun handleDeepLink(uri: Uri?) {
         val destination = deepLinkParser.parse(uri)

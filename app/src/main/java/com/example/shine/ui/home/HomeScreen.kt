@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,8 +22,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.domain.model.Channel
@@ -101,15 +104,24 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
             ) {
-                when (uiState.selectedTab) {
-                    HomeTab.Channels -> ChannelsRoute(onChannelClick = onChannelClick)
-                    HomeTab.Dms -> DmsRoute()
-                    HomeTab.Settings -> SettingsContent(
-                        uiState = uiState,
-                        onPlanixClick = onPlanixClick,
-                        onSignOut = onSignOut,
-                        onProfileClick = onProfileClick,
-                    )
+                if (uiState.isSwitchingWorkspace) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    when (uiState.selectedTab) {
+                        HomeTab.Channels -> ChannelsRoute(onChannelClick = onChannelClick)
+                        HomeTab.Dms -> DmsRoute()
+                        HomeTab.Settings -> SettingsContent(
+                            uiState = uiState,
+                            onPlanixClick = onPlanixClick,
+                            onSignOut = onSignOut,
+                            onProfileClick = onProfileClick,
+                        )
+                    }
                 }
             }
         }

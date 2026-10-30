@@ -5,6 +5,7 @@ import com.example.shine.domain.model.SignInStatus
 import com.example.shine.domain.model.User
 import com.example.shine.domain.model.Workspace
 import com.example.shine.domain.repository.AuthRepository
+import com.example.shine.domain.repository.UserRepository
 import com.example.shine.domain.repository.WorkspaceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,6 +27,7 @@ class HomeViewModelTest {
 
     private val authRepository = FakeAuthRepository()
     private val workspaceRepository = FakeWorkspaceRepository()
+    private val userRepository = FakeUserRepository()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -35,7 +37,7 @@ class HomeViewModelTest {
 
     @Test
     fun init_observesSessionAndWorkspaces() = runTest {
-        val viewModel = HomeViewModel(authRepository, workspaceRepository)
+        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -51,7 +53,7 @@ class HomeViewModelTest {
 
     @Test
     fun selectWorkspace_updatesWorkspace() = runTest {
-        val viewModel = HomeViewModel(authRepository, workspaceRepository)
+        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -59,11 +61,12 @@ class HomeViewModelTest {
         viewModel.selectWorkspace("ws-2")
 
         assertEquals("ws-2", workspaceRepository.currentSelectedId.value)
+        assertEquals(1, userRepository.getChatUsersCalls)
     }
 
     @Test
     fun selectTab_updatesSelectedTab() = runTest {
-        val viewModel = HomeViewModel(authRepository, workspaceRepository)
+        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -77,7 +80,7 @@ class HomeViewModelTest {
 
     @Test
     fun signOut_invokesAuthRepositorySignOut() = runTest {
-        val viewModel = HomeViewModel(authRepository, workspaceRepository)
+        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -85,6 +88,16 @@ class HomeViewModelTest {
         viewModel.signOut()
 
         assertTrue(authRepository.signedOut)
+    }
+
+    private class FakeUserRepository : UserRepository {
+        var getChatUsersCalls = 0
+        override suspend fun getProfile(): Result<User> = throw NotImplementedError()
+        override suspend fun updateAvatar(uri: android.net.Uri): Result<User> = throw NotImplementedError()
+        override suspend fun getChatUsers(): Result<List<User>> {
+            getChatUsersCalls++
+            return Result.success(emptyList())
+        }
     }
 
     private class FakeAuthRepository : AuthRepository {

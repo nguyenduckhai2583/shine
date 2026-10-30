@@ -61,7 +61,11 @@ class AuthRepositoryImplTest {
         fakeAuthApi = FakeAuthApi()
         fakeWorkspaceApi = FakeWorkspaceApi()
         fakeWorkspaceDao = FakeWorkspaceDao()
-        workspaceRepository = WorkspaceRepositoryImpl(fakeWorkspaceApi, local, fakeWorkspaceDao)
+        workspaceRepository = WorkspaceRepositoryImpl(
+            api = fakeWorkspaceApi,
+            local = local,
+            workspaceDao = fakeWorkspaceDao,
+        )
         channelRepository = ChannelRepositoryImpl(FakeChatApi(), ChannelDataStore())
         repository = AuthRepositoryImpl(
             api = fakeAuthApi,

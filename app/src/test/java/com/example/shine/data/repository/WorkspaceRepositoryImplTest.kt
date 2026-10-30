@@ -52,7 +52,11 @@ class WorkspaceRepositoryImplTest {
         )
         fakeDao = FakeWorkspaceDao()
         fakeApi = FakeWorkspaceApi()
-        repository = WorkspaceRepositoryImpl(fakeApi, local, fakeDao)
+        repository = WorkspaceRepositoryImpl(
+            api = fakeApi,
+            local = local,
+            workspaceDao = fakeDao,
+        )
     }
 
     @After
@@ -100,6 +104,7 @@ class WorkspaceRepositoryImplTest {
 
         val session = local.session.first()
         assertEquals("ws-99", session?.workspaceId)
+        assertEquals("ws-99", repository.selectedWorkspaceId.first())
     }
 
     @Test

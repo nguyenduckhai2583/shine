@@ -31,10 +31,10 @@ import com.example.shine.ui.camera.MediaPreviewRoute
 import androidx.core.net.toUri
 
 /**
- * Login is mandatory, so signed-out and signed-in flows are separate back stacks.
+ * Login is mandatory, so unauthenticated and authenticated flows are separate back stacks.
  * A successful sign-in persists the session. If user has multiple workspaces,
  * [AppViewModel] transitions to [AuthState.SelectWorkspace]. Once selected,
- * it transitions to [AuthState.SignedIn] (Home).
+ * it transitions to [AuthState.Authenticated] (Home).
  */
 @Composable
 fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
@@ -42,12 +42,10 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
     val pendingDestination by viewModel.pendingDestination.collectAsStateWithLifecycle()
 
     when (authState) {
-        AuthState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        AuthState.SignedOut -> AuthNavigation()
+        AuthState.Initializing -> {}
+        AuthState.Unauthenticated -> AuthNavigation()
         AuthState.SelectWorkspace -> WorkspaceNavigation()
-        AuthState.SignedIn -> MainNavigation(
+        AuthState.Authenticated -> MainNavigation(
             pendingDestination = pendingDestination,
             onDestinationConsumed = viewModel::onDeepLinkConsumed,
         )

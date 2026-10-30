@@ -58,11 +58,11 @@ class AppViewModelTest {
 
         assertEquals(1, userRepository.getProfileCalls)
         assertEquals(1, userRepository.getChatUsersCalls)
-        assertEquals(AuthState.SignedIn, viewModel.authState.value)
+        assertEquals(AuthState.Authenticated, viewModel.authState.value)
     }
 
     @Test
-    fun activeSession_staysLoadingUntilBothApisComplete() = runTest {
+    fun activeSession_staysInitializingUntilBothApisComplete() = runTest {
         val testSession = Session(
             token = "jwt-token",
             workspaceId = "workspace-1",
@@ -99,20 +99,20 @@ class AppViewModelTest {
             viewModel.authState.collect {}
         }
 
-        // Before any completes -> state is still Loading
-        assertEquals(AuthState.Loading, viewModel.authState.value)
+        // Before any completes -> state is still Initializing
+        assertEquals(AuthState.Initializing, viewModel.authState.value)
 
-        // After getProfile completes, but chat users still pending -> state is still Loading
+        // After getProfile completes, but chat users still pending -> state is still Initializing
         completeProfileCall?.invoke()
-        assertEquals(AuthState.Loading, viewModel.authState.value)
+        assertEquals(AuthState.Initializing, viewModel.authState.value)
 
-        // After both complete -> state transitions to SignedIn
+        // After both complete -> state transitions to Authenticated
         completeChatUsersCall?.invoke()
-        assertEquals(AuthState.SignedIn, viewModel.authState.value)
+        assertEquals(AuthState.Authenticated, viewModel.authState.value)
     }
 
     @Test
-    fun signedOut_doesNotFetchUserProfileOrChatUsers() = runTest {
+    fun unauthenticated_doesNotFetchUserProfileOrChatUsers() = runTest {
         sessionFlow.value = null
 
         val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
@@ -123,7 +123,7 @@ class AppViewModelTest {
 
         assertEquals(0, userRepository.getProfileCalls)
         assertEquals(0, userRepository.getChatUsersCalls)
-        assertEquals(AuthState.SignedOut, viewModel.authState.value)
+        assertEquals(AuthState.Unauthenticated, viewModel.authState.value)
     }
 
     @Test
@@ -139,7 +139,51 @@ class AppViewModelTest {
 
         assertEquals(1, userRepository.getProfileCalls)
         assertEquals(1, userRepository.getChatUsersCalls)
-        assertEquals(AuthState.SignedIn, viewModel.authState.value)
+        assertEquals(AuthState.Authenticated, viewModel.authState.value)
+    }
+
+    @Test
+    fun firstTimeSignIn_fetchesUserProfileAndChatUsersBeforeTransitioningToAuthenticated() = runTest {
+        sessionFlow.value = null
+
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.authState.collect {}
+        }
+
+        assertEquals(0, userRepository.getProfileCalls)
+        assertEquals(0, userRepository.getChatUsersCalls)
+        assertEquals(AuthState.Unauthenticated, viewModel.authState.value)
+
+        // User signs in with single workspace
+        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
+
+        assertEquals(1, userRepository.getProfileCalls)
+        assertEquals(1, userRepository.getChatUsersCalls)
+        assertEquals(AuthState.Authenticated, viewModel.authState.value)
+    }
+
+    @Test
+    fun selectWorkspace_fetchesUserProfileAndChatUsersBeforeTransitioningToAuthenticated() = runTest {
+        sessionFlow.value = Session(token = "jwt-token", workspaceId = null)
+
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.authState.collect {}
+        }
+
+        assertEquals(0, userRepository.getProfileCalls)
+        assertEquals(0, userRepository.getChatUsersCalls)
+        assertEquals(AuthState.SelectWorkspace, viewModel.authState.value)
+
+        // User selects a workspace
+        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-2")
+
+        assertEquals(1, userRepository.getProfileCalls)
+        assertEquals(1, userRepository.getChatUsersCalls)
+        assertEquals(AuthState.Authenticated, viewModel.authState.value)
     }
 
     private class FakeAuthRepository(override val session: Flow<Session?>) : AuthRepository {
