@@ -15,5 +15,7 @@ interface ChannelRepository {
 
     fun getChannelFlow(id: String): Flow<Channel?> = emptyFlow()
 
+    fun onChannelCreated(channel: Channel) {}
+
     fun clear() {}
 }

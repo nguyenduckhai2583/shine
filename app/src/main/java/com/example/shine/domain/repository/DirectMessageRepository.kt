@@ -9,5 +9,7 @@ interface DirectMessageRepository {
 
     fun getDirectMessagesFlow(): Flow<List<DirectMessage>> = emptyFlow()
 
+    fun onDirectMessageCreated(message: DirectMessage) {}
+
     fun clear() {}
 }

@@ -50,6 +50,10 @@ class DirectMessageRepositoryImpl @Inject constructor(
     override fun getDirectMessagesFlow(): Flow<List<DirectMessage>> =
         directMessageDataStore.directMessagesFlow
 
+    override fun onDirectMessageCreated(message: DirectMessage) {
+        directMessageDataStore.updateDirectMessage(message)
+    }
+
     override fun clear() {
         directMessageDataStore.clear()
     }

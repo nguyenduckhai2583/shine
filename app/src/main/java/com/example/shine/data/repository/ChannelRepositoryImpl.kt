@@ -53,6 +53,10 @@ class ChannelRepositoryImpl @Inject constructor(
 
     override fun getChannelFlow(id: String): Flow<Channel?> = channelDataStore.getChannelFlow(id)
 
+    override fun onChannelCreated(channel: Channel) {
+        channelDataStore.updateChannel(channel)
+    }
+
     override fun clear() {
         channelDataStore.clear()
     }
