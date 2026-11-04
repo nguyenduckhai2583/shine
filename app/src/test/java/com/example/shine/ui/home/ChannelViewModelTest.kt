@@ -80,7 +80,7 @@ class ChannelViewModelTest {
     }
 
     @Test
-    fun createChannel_success_createsChannel_andSetsSuccessSnackbar() = runTest {
+    fun createChannel_success_createsChannel() = runTest {
         val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
@@ -89,7 +89,7 @@ class ChannelViewModelTest {
         viewModel.createChannel(name = "announcements")
 
         assertFalse(viewModel.uiState.value.isLoading)
-        assertEquals(UiText(R.string.channel_created_success, "#announcements"), viewModel.uiState.value.snackbarMessage)
+        assertNull(viewModel.uiState.value.snackbarMessage)
         assertEquals(2, viewModel.uiState.value.channels.size)
     }
 
@@ -122,13 +122,14 @@ class ChannelViewModelTest {
 
     @Test
     fun clearSnackbarMessage_clearsSnackbar() = runTest {
+        channelRepository.shouldFail = true
         val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
 
         viewModel.createChannel(name = "general-2")
-        assertEquals(UiText(R.string.channel_created_success, "#general-2"), viewModel.uiState.value.snackbarMessage)
+        assertEquals(UiText("Failed to connect"), viewModel.uiState.value.snackbarMessage)
 
         viewModel.clearSnackbarMessage()
         assertNull(viewModel.uiState.value.snackbarMessage)
@@ -167,7 +168,7 @@ class ChannelViewModelTest {
             return Result.success(Unit)
         }
 
-        override fun clear() {
+        override suspend fun clear() {
             clearCalled = true
             channelsFlow.value = emptyList()
         }

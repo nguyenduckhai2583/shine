@@ -85,14 +85,26 @@ class ChannelViewModel @Inject constructor(
 
         execute(
             task = { channelRepository.createChannel(name = trimmed) },
-            onSuccess = {
-                _uiState.update {
-                    it.copy(snackbarMessage = UiText(R.string.channel_created_success, "#$trimmed"))
-                }
-            },
+            onSuccess = {},
             onError = { error ->
                 _uiState.update { it.copy(snackbarMessage = error) }
             }
+        )
+    }
+
+    fun retrySync(channelId: String) {
+        execute(
+            task = { channelRepository.retrySync(channelId) },
+            onSuccess = {},
+            onError = {}
+        )
+    }
+
+    fun deleteChannel(channelId: String) {
+        execute(
+            task = { channelRepository.deleteChannel(channelId) },
+            onSuccess = {},
+            onError = {}
         )
     }
 }

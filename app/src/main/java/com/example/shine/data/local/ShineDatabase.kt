@@ -3,10 +3,12 @@ package com.example.shine.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.withTransaction
+import com.example.shine.data.local.dao.ChannelDao
 import com.example.shine.data.local.dao.ProjectDao
 import com.example.shine.data.local.dao.ProjectRemoteKeyDao
 import com.example.shine.data.local.dao.UserDao
 import com.example.shine.data.local.dao.WorkspaceDao
+import com.example.shine.data.local.entity.ChannelEntity
 import com.example.shine.data.local.entity.ProjectEntity
 import com.example.shine.data.local.entity.ProjectRemoteKeyEntity
 import com.example.shine.data.local.entity.UserEntity
@@ -18,8 +20,9 @@ import com.example.shine.data.local.entity.WorkspaceEntity
         ProjectEntity::class,
         ProjectRemoteKeyEntity::class,
         UserEntity::class,
+        ChannelEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class ShineDatabase : RoomDatabase() {
@@ -27,6 +30,7 @@ abstract class ShineDatabase : RoomDatabase() {
     abstract fun projectDao(): ProjectDao
     abstract fun projectRemoteKeyDao(): ProjectRemoteKeyDao
     abstract fun userDao(): UserDao
+    abstract fun channelDao(): ChannelDao
 
     open suspend fun <R> runTransaction(block: suspend () -> R): R =
         withTransaction(block)

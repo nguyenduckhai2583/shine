@@ -1,7 +1,6 @@
 package com.example.shine.data.repository
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import com.example.shine.data.local.ChannelDataStore
 import com.example.shine.data.local.SessionLocalDataSource
 import com.example.shine.data.local.dao.WorkspaceDao
 import com.example.shine.data.local.entity.WorkspaceEntity
@@ -66,7 +65,13 @@ class AuthRepositoryImplTest {
             local = local,
             workspaceDao = fakeWorkspaceDao,
         )
-        channelRepository = ChannelRepositoryImpl(FakeChatApi(), ChannelDataStore())
+        val channelDao = org.mockito.Mockito.mock(com.example.shine.data.local.dao.ChannelDao::class.java)
+        val channelScheduler = org.mockito.Mockito.mock(com.example.shine.data.sync.ChannelSyncScheduler::class.java)
+        channelRepository = ChannelRepositoryImpl(
+            api = FakeChatApi(),
+            channelDao = channelDao,
+            channelSyncScheduler = channelScheduler,
+        )
         repository = AuthRepositoryImpl(
             api = fakeAuthApi,
             local = local,

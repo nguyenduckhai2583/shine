@@ -32,3 +32,17 @@ fun ChannelDto.toDomain() = Channel(
     createdAt = createdAt,
     lastActivityAt = lastActivityAt,
 )
+
+fun ChannelDto.toEntity() = com.example.shine.data.local.entity.ChannelEntity(
+    id = id,
+    localId = id,
+    name = name.orEmpty(),
+    isPrivate = isPrivate == true,
+    isEncrypted = isEncrypted == true,
+    isDefault = isDefault == true,
+    categoryName = category?.name,
+    createdAt = createdAt ?: System.currentTimeMillis(),
+    lastActivityAt = lastActivityAt ?: System.currentTimeMillis(),
+    position = position,
+    syncStatus = com.example.shine.domain.model.SyncStatus.SYNCED,
+)

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -65,6 +66,8 @@ fun ChannelsRoute(
         uiState = uiState,
         onChannelClick = onChannelClick,
         onAddChannelClick = { showCreateChannelDialog = true },
+        onRetrySync = viewModel::retrySync,
+        onDeleteChannel = viewModel::deleteChannel,
         snackbarHostState = snackbarHostState,
         modifier = modifier,
     )
@@ -86,8 +89,12 @@ fun ChannelsContent(
     onChannelClick: (Channel) -> Unit,
     onAddChannelClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onRetrySync: (String) -> Unit = {},
+    onDeleteChannel: (String) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
+    var errorChannelToHandle by remember { mutableStateOf<Channel?>(null) }
+
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -150,7 +157,13 @@ fun ChannelsContent(
                 items(uiState.channels, key = { it.id }) { channel ->
                     ChannelItem(
                         channel = channel,
-                        onClick = { onChannelClick(channel) },
+                        onClick = {
+                            when (channel.syncStatus) {
+                                com.example.shine.domain.model.SyncStatus.SYNCED -> onChannelClick(channel)
+                                com.example.shine.domain.model.SyncStatus.ERROR -> errorChannelToHandle = channel
+                                com.example.shine.domain.model.SyncStatus.PENDING -> { /* Disabled */ }
+                            }
+                        },
                         modifier = Modifier.animateItem(),
                     )
                     HorizontalDivider(modifier = Modifier.animateItem())
@@ -178,6 +191,42 @@ fun ChannelsContent(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 16.dp),
         )
+
+        errorChannelToHandle?.let { channel ->
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { errorChannelToHandle = null },
+                title = { Text(androidx.compose.ui.res.stringResource(com.example.shine.R.string.channel_error_dialog_title)) },
+                text = {
+                    Text(
+                        channel.syncErrorMessage
+                            ?: androidx.compose.ui.res.stringResource(
+                                com.example.shine.R.string.channel_error_dialog_default_message,
+                                channel.name,
+                            )
+                    )
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            onRetrySync(channel.id)
+                            errorChannelToHandle = null
+                        }
+                    ) {
+                        Text(androidx.compose.ui.res.stringResource(com.example.shine.R.string.action_retry))
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            onDeleteChannel(channel.id)
+                            errorChannelToHandle = null
+                        }
+                    ) {
+                        Text(androidx.compose.ui.res.stringResource(com.example.shine.R.string.action_delete))
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -187,16 +236,51 @@ private fun ChannelItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isPending = channel.syncStatus == com.example.shine.domain.model.SyncStatus.PENDING
+    val isError = channel.syncStatus == com.example.shine.domain.model.SyncStatus.ERROR
+    val isEnabled = channel.syncStatus == com.example.shine.domain.model.SyncStatus.SYNCED || isError
+
     ListItem(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.clickable(enabled = isEnabled, onClick = onClick),
         leadingContent = {
             Icon(
                 imageVector = if (channel.isPrivate) Icons.Filled.Lock else Icons.Filled.Tag,
                 contentDescription = if (channel.isPrivate) "Private channel" else "Public channel",
+                tint = if (isPending) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onSurface,
             )
         },
-        headlineContent = { Text(channel.name) },
-        supportingContent = channel.categoryName?.let { category -> { Text(category) } },
+        headlineContent = {
+            Text(
+                text = channel.name,
+                color = if (isPending) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface,
+            )
+        },
+        supportingContent = channel.categoryName?.let { category ->
+            {
+                Text(
+                    text = category,
+                    color = if (isPending) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        trailingContent = {
+            when {
+                isPending -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                    )
+                }
+                isError -> {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = "Sync error",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
     )
 }
 
@@ -208,7 +292,8 @@ private fun ChannelsContentPreview() {
             uiState = ChannelUiState(
                 channels = listOf(
                     Channel("1", "general", false, false, true, null, null, null),
-                    Channel("2", "random", false, false, false, null, null, null),
+                    Channel("2", "pending-channel", false, false, false, null, null, null, syncStatus = com.example.shine.domain.model.SyncStatus.PENDING),
+                    Channel("3", "error-channel", false, false, false, null, null, null, syncStatus = com.example.shine.domain.model.SyncStatus.ERROR, syncErrorMessage = "Tên kênh đã tồn tại"),
                 ),
             ),
             onChannelClick = {},

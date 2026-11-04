@@ -1,63 +1,88 @@
 package com.example.shine.data.repository
 
 import com.example.shine.core.util.suspendRunCatching
-import com.example.shine.data.local.ChannelDataStore
+import com.example.shine.data.local.dao.ChannelDao
+import com.example.shine.data.local.entity.ChannelEntity
+import com.example.shine.data.local.entity.toDomain
+import com.example.shine.data.local.entity.toEntity
 import com.example.shine.data.remote.ChatApi
-import com.example.shine.data.remote.dto.CreateChannelRequestDto
 import com.example.shine.data.remote.dto.toDomain
+import com.example.shine.data.remote.dto.toEntity
+import com.example.shine.data.sync.ChannelSyncScheduler
 import com.example.shine.domain.model.Channel
+import com.example.shine.domain.model.SyncStatus
 import com.example.shine.domain.repository.ChannelRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ChannelRepositoryImpl @Inject constructor(
     private val api: ChatApi,
-    private val channelDataStore: ChannelDataStore,
+    private val channelDao: ChannelDao,
+    private val channelSyncScheduler: ChannelSyncScheduler,
 ) : ChannelRepository {
 
     override suspend fun getChannels(): Result<List<Channel>> = suspendRunCatching {
         try {
-            val channels = api.getChannels()
+            val responseList = api.getChannels()
                 .sortedBy { it.position ?: Long.MAX_VALUE }
-                .map { it.toDomain() }
-            channelDataStore.replaceChannels(channels)
-            channels
+            val serverEntities = responseList.map { it.toEntity() }
+            channelDao.replaceSyncedChannels(serverEntities)
+            serverEntities.map { it.toDomain() }
         } catch (e: Exception) {
-            channelDataStore.getChannels().ifEmpty { throw e }
+            val local = channelDao.getChannels().map { it.toDomain() }
+            local.ifEmpty { throw e }
         }
     }
 
     override suspend fun getChannel(id: String): Result<Channel> = suspendRunCatching {
         try {
             val channel = api.getConversation(id).toDomain()
-            channelDataStore.updateChannel(channel)
+            channelDao.upsertChannel(channel.toEntity())
             channel
         } catch (e: Exception) {
-            channelDataStore.getChannel(id) ?: throw e
+            channelDao.getChannel(id)?.toDomain() ?: throw e
         }
     }
 
     override suspend fun createChannel(name: String): Result<Unit> = suspendRunCatching {
-        val request = CreateChannelRequestDto(
-            name = name,
-            isPrivate = false,
-            isEncrypted = false,
+        channelDao.upsertChannel(
+            ChannelEntity(
+                name = name,
+                syncStatus = SyncStatus.PENDING,
+            )
         )
-        val channel = api.createChannel(request).toDomain()
-        channelDataStore.updateChannel(channel)
+        channelSyncScheduler.scheduleImmediateSync()
     }
 
-    override fun getChannelsFlow(): Flow<List<Channel>> = channelDataStore.channelsFlow
-
-    override fun getChannelFlow(id: String): Flow<Channel?> = channelDataStore.getChannelFlow(id)
-
-    override fun onChannelCreated(channel: Channel) {
-        channelDataStore.updateChannel(channel)
+    override suspend fun retrySync(channelId: String): Result<Unit> = suspendRunCatching {
+        val channel = channelDao.getChannel(channelId) ?: return@suspendRunCatching
+        channelDao.upsertChannel(
+            channel.copy(
+                syncStatus = SyncStatus.PENDING,
+                syncErrorMessage = null,
+            )
+        )
+        channelSyncScheduler.scheduleImmediateSync()
     }
 
-    override fun clear() {
-        channelDataStore.clear()
+    override suspend fun deleteChannel(channelId: String): Result<Unit> = suspendRunCatching {
+        channelDao.deleteChannel(channelId)
+    }
+
+    override fun getChannelsFlow(): Flow<List<Channel>> =
+        channelDao.observeChannels().map { entities ->
+            entities.map { it.toDomain() }
+        }
+
+    override fun getChannelFlow(id: String): Flow<Channel?> =
+        channelDao.observeChannel(id).map { it?.toDomain() }
+
+    override suspend fun clear() {
+        channelDao.clearAll()
     }
 }
+
+

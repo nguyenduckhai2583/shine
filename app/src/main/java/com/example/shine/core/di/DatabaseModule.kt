@@ -3,6 +3,7 @@ package com.example.shine.core.di
 import android.content.Context
 import androidx.room.Room
 import com.example.shine.data.local.ShineDatabase
+import com.example.shine.data.local.dao.ChannelDao
 import com.example.shine.data.local.dao.ProjectDao
 import com.example.shine.data.local.dao.ProjectRemoteKeyDao
 import com.example.shine.data.local.dao.UserDao
@@ -73,4 +74,9 @@ object DatabaseModule {
     fun provideProjectRemoteKeyDao(
         @InMemoryDatabase database: ShineDatabase,
     ): ProjectRemoteKeyDao = database.projectRemoteKeyDao()
+
+    @Provides
+    fun provideChannelDao(
+        @LocalDatabase database: ShineDatabase,
+    ): ChannelDao = database.channelDao()
 }

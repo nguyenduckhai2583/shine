@@ -9,4 +9,6 @@ data class Channel(
     val categoryName: String?,
     val createdAt: Long?,
     val lastActivityAt: Long?,
+    val syncStatus: SyncStatus = SyncStatus.SYNCED,
+    val syncErrorMessage: String? = null,
 )
