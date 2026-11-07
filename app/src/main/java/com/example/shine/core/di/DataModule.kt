@@ -49,6 +49,9 @@ abstract class DataModule {
     @Binds
     abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository
 
+    @Binds
+    abstract fun bindAppShortcutManager(impl: com.example.shine.core.shortcut.AppShortcutManagerImpl): com.example.shine.core.shortcut.AppShortcutManager
+
     companion object {
         @Provides
         @Singleton

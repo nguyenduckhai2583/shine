@@ -1,6 +1,7 @@
 package com.example.shine.ui.channel
 
 import com.example.shine.R
+import com.example.shine.core.shortcut.FakeAppShortcutManager
 import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.Channel
@@ -22,6 +23,7 @@ import org.junit.Test
 class ChannelDetailViewModelTest {
 
     private val repository = FakeChannelRepository()
+    private val shortcutManager = FakeAppShortcutManager()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -30,27 +32,31 @@ class ChannelDetailViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
-    fun load_success_showsChannel() {
+    fun load_success_showsChannelAndUpdatesShortcut() {
         repository.error = null
 
-        val viewModel = ChannelDetailViewModel("1", repository)
+        val viewModel = ChannelDetailViewModel("1", repository, shortcutManager)
 
         assertEquals("1", repository.lastId)
         assertEquals(CHANNEL, viewModel.uiState.value.channel)
         assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals("1", shortcutManager.lastUpdatedChannelId)
+        assertEquals("general", shortcutManager.lastUpdatedChannelName)
     }
 
     @Test
     fun load_failure_showsErrorThenRetrySucceeds() {
         repository.error = AppException(AppErrorEnum.NO_INTERNET)
-        val viewModel = ChannelDetailViewModel("1", repository)
+        val viewModel = ChannelDetailViewModel("1", repository, shortcutManager)
         assertEquals(UiText.Resource(R.string.error_no_internet), viewModel.uiState.value.errorMessage)
+        assertNull(shortcutManager.lastUpdatedChannelId)
 
         repository.error = null
         viewModel.load()
 
         assertNull(viewModel.uiState.value.errorMessage)
         assertEquals(CHANNEL, viewModel.uiState.value.channel)
+        assertEquals("1", shortcutManager.lastUpdatedChannelId)
     }
 
     private class FakeChannelRepository : ChannelRepository {

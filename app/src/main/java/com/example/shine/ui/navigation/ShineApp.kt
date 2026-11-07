@@ -100,6 +100,11 @@ private fun MainNavigation(
                 }
                 onDestinationConsumed()
             }
+            is DeepLinkDestination.Profile -> {
+                backStack.removeAll { it !is Home }
+                backStack.add(Profile)
+                onDestinationConsumed()
+            }
             null -> Unit
         }
     }

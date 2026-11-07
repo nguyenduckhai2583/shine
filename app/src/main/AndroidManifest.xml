@@ -42,7 +42,19 @@
                 <data android:host="@string/app_deep_link_host_wildcard" />
                 <data android:pathPrefix="/chat/channels/" />
             </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
+        <activity
+            android:name=".ui.shortcut.ShortcutTrampolineActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

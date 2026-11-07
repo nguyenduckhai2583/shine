@@ -2,6 +2,7 @@ package com.example.shine.ui.home
 
 import androidx.lifecycle.viewModelScope
 import com.example.shine.core.base.BaseViewModel
+import com.example.shine.core.shortcut.AppShortcutManager
 import com.example.shine.domain.model.Workspace
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.UserRepository
@@ -34,6 +35,7 @@ class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val workspaceRepository: WorkspaceRepository,
     private val userRepository: UserRepository,
+    private val shortcutManager: AppShortcutManager,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -78,6 +80,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSwitchingWorkspace = true) }
             try {
+                shortcutManager.removeRecentChannelShortcut()
                 workspaceRepository.selectWorkspace(workspaceId)
                 userRepository.getChatUsers()
             } finally {
@@ -87,7 +90,10 @@ class HomeViewModel @Inject constructor(
     }
 
     fun signOut() {
-        viewModelScope.launch { authRepository.signOut() }
+        viewModelScope.launch {
+            shortcutManager.removeAllDynamicShortcuts()
+            authRepository.signOut()
+        }
     }
 }
 

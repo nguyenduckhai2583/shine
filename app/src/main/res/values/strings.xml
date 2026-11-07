@@ -32,4 +32,9 @@
     <string name="widget_tap_to_sign_in">Tap to sign in</string>
     <string name="widget_no_channels">No channels yet</string>
     <string name="widget_refresh">Refresh</string>
+
+    <!-- App Shortcuts -->
+    <string name="shortcut_profile_short">Trang cá nhân</string>
+    <string name="shortcut_profile_long">Xem trang cá nhân</string>
+    <string name="shortcut_recent_channel_long">Mở kênh %1$s</string>
 </resources>

@@ -1,8 +1,10 @@
 package com.example.shine.ui.navigation
 
+import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import com.example.shine.core.base.BaseViewModel
+import com.example.shine.core.shortcut.AppShortcutManager
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.UserRepository
 import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
@@ -73,6 +75,24 @@ class AppViewModel @Inject constructor(
         val destination = deepLinkParser.parse(uri)
         if (destination != null) {
             _pendingDestination.value = destination
+        }
+    }
+
+    fun handleIntent(intent: Intent?) {
+        if (intent == null) return
+        val shortcutAction = intent.getStringExtra(AppShortcutManager.EXTRA_SHORTCUT_ACTION)
+        val channelId = intent.getStringExtra(AppShortcutManager.EXTRA_CHANNEL_ID)
+
+        when {
+            shortcutAction == AppShortcutManager.ACTION_OPEN_PROFILE -> {
+                _pendingDestination.value = DeepLinkDestination.Profile
+            }
+            !channelId.isNullOrBlank() -> {
+                _pendingDestination.value = DeepLinkDestination.Channel(channelId = channelId)
+            }
+            intent.data != null -> {
+                handleDeepLink(intent.data)
+            }
         }
     }
 

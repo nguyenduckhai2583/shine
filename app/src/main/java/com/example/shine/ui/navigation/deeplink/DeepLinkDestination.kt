@@ -21,4 +21,6 @@ sealed interface DeepLinkDestination {
         val messageId: String? = null,
         val workspaceSubdomain: String? = null,
     ) : DeepLinkDestination
+
+    data object Profile : DeepLinkDestination
 }

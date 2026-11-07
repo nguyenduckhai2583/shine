@@ -1,6 +1,7 @@
 package com.example.shine.ui.channel
 
 import com.example.shine.core.base.BaseViewModel
+import com.example.shine.core.shortcut.AppShortcutManager
 import com.example.shine.domain.model.Channel
 import com.example.shine.domain.repository.ChannelRepository
 import com.example.shine.ui.common.UiText
@@ -23,6 +24,7 @@ data class ChannelDetailUiState(
 class ChannelDetailViewModel @AssistedInject constructor(
     @Assisted private val channelId: String,
     private val channelRepository: ChannelRepository,
+    private val shortcutManager: AppShortcutManager,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(ChannelDetailUiState(isLoading = true))
@@ -38,6 +40,7 @@ class ChannelDetailViewModel @AssistedInject constructor(
             task = { channelRepository.getChannel(channelId) },
             onSuccess = { channel ->
                 _uiState.update { it.copy(channel = channel, isLoading = false) }
+                shortcutManager.updateRecentChannelShortcut(channel.id, channel.name)
             },
             onError = { error ->
                 _uiState.update { it.copy(isLoading = false, errorMessage = error) }

@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        appViewModel.handleDeepLink(intent?.data)
+        appViewModel.handleIntent(intent)
 
         val content: View = findViewById(android.R.id.content)
         content.viewTreeObserver.addOnPreDrawListener(
@@ -48,6 +48,6 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        appViewModel.handleDeepLink(intent.data)
+        appViewModel.handleIntent(intent)
     }
 }

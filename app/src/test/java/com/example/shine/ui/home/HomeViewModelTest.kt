@@ -1,5 +1,6 @@
 package com.example.shine.ui.home
 
+import com.example.shine.core.shortcut.FakeAppShortcutManager
 import com.example.shine.domain.model.Session
 import com.example.shine.domain.model.SignInStatus
 import com.example.shine.domain.model.User
@@ -28,6 +29,7 @@ class HomeViewModelTest {
     private val authRepository = FakeAuthRepository()
     private val workspaceRepository = FakeWorkspaceRepository()
     private val userRepository = FakeUserRepository()
+    private val shortcutManager = FakeAppShortcutManager()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -37,7 +39,7 @@ class HomeViewModelTest {
 
     @Test
     fun init_observesSessionAndWorkspaces() = runTest {
-        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository)
+        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -53,7 +55,7 @@ class HomeViewModelTest {
 
     @Test
     fun selectWorkspace_updatesWorkspace() = runTest {
-        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository)
+        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -62,11 +64,12 @@ class HomeViewModelTest {
 
         assertEquals("ws-2", workspaceRepository.currentSelectedId.value)
         assertEquals(1, userRepository.getChatUsersCalls)
+        assertEquals(1, shortcutManager.removeRecentCalls)
     }
 
     @Test
     fun selectTab_updatesSelectedTab() = runTest {
-        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository)
+        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -80,7 +83,7 @@ class HomeViewModelTest {
 
     @Test
     fun signOut_invokesAuthRepositorySignOut() = runTest {
-        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository)
+        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -88,6 +91,7 @@ class HomeViewModelTest {
         viewModel.signOut()
 
         assertTrue(authRepository.signedOut)
+        assertEquals(1, shortcutManager.removeAllCalls)
     }
 
     private class FakeUserRepository : UserRepository {

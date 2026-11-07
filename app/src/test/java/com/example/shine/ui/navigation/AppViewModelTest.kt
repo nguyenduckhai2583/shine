@@ -1,12 +1,17 @@
 package com.example.shine.ui.navigation
 
+import android.content.Intent
 import android.net.Uri
+import com.example.shine.core.shortcut.AppShortcutManager
 import com.example.shine.domain.model.Session
 import com.example.shine.domain.model.SignInStatus
 import com.example.shine.domain.model.User
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.UserRepository
+import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
 import com.example.shine.ui.navigation.deeplink.DeepLinkParser
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -184,6 +189,29 @@ class AppViewModelTest {
         assertEquals(1, userRepository.getProfileCalls)
         assertEquals(1, userRepository.getChatUsersCalls)
         assertEquals(AuthState.Authenticated, viewModel.authState.value)
+    }
+
+    @Test
+    fun handleIntent_profileShortcut_setsPendingDestination() = runTest {
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
+        val intent = mock(Intent::class.java)
+        `when`(intent.getStringExtra(AppShortcutManager.EXTRA_SHORTCUT_ACTION)).thenReturn(AppShortcutManager.ACTION_OPEN_PROFILE)
+
+        viewModel.handleIntent(intent)
+
+        assertEquals(DeepLinkDestination.Profile, viewModel.pendingDestination.value)
+    }
+
+    @Test
+    fun handleIntent_recentChannelShortcut_setsPendingDestination() = runTest {
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
+        val intent = mock(Intent::class.java)
+        `when`(intent.getStringExtra(AppShortcutManager.EXTRA_SHORTCUT_ACTION)).thenReturn(AppShortcutManager.ACTION_OPEN_CHANNEL)
+        `when`(intent.getStringExtra(AppShortcutManager.EXTRA_CHANNEL_ID)).thenReturn("channel-123")
+
+        viewModel.handleIntent(intent)
+
+        assertEquals(DeepLinkDestination.Channel("channel-123"), viewModel.pendingDestination.value)
     }
 
     private class FakeAuthRepository(override val session: Flow<Session?>) : AuthRepository {
