@@ -92,9 +92,9 @@ private fun MainNavigation(
     val backStack = rememberNavBackStack(Home)
 
     LaunchedEffect(pendingDestination) {
-        when (val destination = pendingDestination) {
+        when (pendingDestination) {
             is DeepLinkDestination.Channel -> {
-                val targetKey = ChannelDetail(destination.channelId)
+                val targetKey = ChannelDetail(pendingDestination.channelId)
                 if (backStack.lastOrNull() != targetKey) {
                     backStack.add(targetKey)
                 }

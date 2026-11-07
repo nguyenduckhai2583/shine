@@ -12,14 +12,14 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ChannelDao {
 
-    @Query("SELECT * FROM channels ORDER BY CASE WHEN position IS NULL THEN 1 ELSE 0 END, position ASC, createdAt ASC")
-    fun observeChannels(): Flow<List<ChannelEntity>>
+    @Query("SELECT * FROM channels ORDER BY createdAt DESC, lastActivityAt DESC LIMIT :limit")
+    fun observeChannels(limit: Int = -1): Flow<List<ChannelEntity>>
 
     @Query("SELECT * FROM channels WHERE localId = :idOrLocalId OR id = :idOrLocalId LIMIT 1")
     fun observeChannel(idOrLocalId: String): Flow<ChannelEntity?>
 
-    @Query("SELECT * FROM channels ORDER BY CASE WHEN position IS NULL THEN 1 ELSE 0 END, position ASC, createdAt ASC")
-    suspend fun getChannels(): List<ChannelEntity>
+    @Query("SELECT * FROM channels ORDER BY createdAt DESC, lastActivityAt DESC LIMIT :limit")
+    suspend fun getChannels(limit: Int = -1): List<ChannelEntity>
 
     @Query("SELECT * FROM channels WHERE localId = :idOrLocalId OR id = :idOrLocalId LIMIT 1")
     suspend fun getChannel(idOrLocalId: String): ChannelEntity?

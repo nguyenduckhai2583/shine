@@ -24,4 +24,12 @@
     <string name="camera_use">Use</string>
     <string name="camera_use_photo">Use Photo</string>
     <string name="camera_use_video">Use Video</string>
+
+    <!-- Glance Widget -->
+    <string name="widget_channels_title">Shine Channels</string>
+    <string name="widget_channels_description">Display recent Shine channels</string>
+    <string name="widget_welcome_shine">Welcome Shine</string>
+    <string name="widget_tap_to_sign_in">Tap to sign in</string>
+    <string name="widget_no_channels">No channels yet</string>
+    <string name="widget_refresh">Refresh</string>
 </resources>

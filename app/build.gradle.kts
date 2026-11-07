@@ -82,6 +82,10 @@ dependencies {
     ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.work.runtime.ktx)
 
+    implementation(libs.androidx.glance)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)

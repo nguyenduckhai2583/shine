@@ -9,6 +9,7 @@ import com.example.shine.data.local.dao.ChannelDao
 import com.example.shine.data.local.entity.ChannelEntity
 import com.example.shine.data.remote.ChatApi
 import com.example.shine.data.remote.dto.CreateChannelRequestDto
+import com.example.shine.widget.ChannelsWidgetUpdater
 import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.SyncStatus
@@ -36,6 +37,11 @@ class SyncChannelsWorker @AssistedInject constructor(
         val results = pendingChannels.map { channel ->
             async { syncChannel(channel) }
         }.awaitAll()
+
+        val anySuccess = results.any { it is SyncResult.Success }
+        if (anySuccess) {
+            ChannelsWidgetUpdater.update(appContext)
+        }
 
         val hasRetry = results.any { it is SyncResult.Retry }
         if (hasRetry) Result.retry() else Result.success()
@@ -88,7 +94,7 @@ class SyncChannelsWorker @AssistedInject constructor(
 
     companion object {
         const val UNIQUE_WORK_NAME = "SYNC_PENDING_CHANNELS"
-        const val DAILY_SYNC_WORK_NAME = "DAILY_7AM_CHANNEL_SYNC"
+        const val DAILY_SYNC_WORK_NAME = "DAILY_CHANNEL_SYNC"
     }
 }
 

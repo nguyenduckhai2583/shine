@@ -27,7 +27,6 @@ class ChannelRepositoryImpl @Inject constructor(
     override suspend fun getChannels(): Result<List<Channel>> = suspendRunCatching {
         try {
             val responseList = api.getChannels()
-                .sortedBy { it.position ?: Long.MAX_VALUE }
             val serverEntities = responseList.map { it.toEntity() }
             channelDao.replaceSyncedChannels(serverEntities)
             serverEntities.map { it.toDomain() }
@@ -36,6 +35,9 @@ class ChannelRepositoryImpl @Inject constructor(
             local.ifEmpty { throw e }
         }
     }
+
+    override suspend fun getRecentChannels(limit: Int): List<Channel> =
+        channelDao.getChannels(limit).map { it.toDomain() }
 
     override suspend fun getChannel(id: String): Result<Channel> = suspendRunCatching {
         try {
@@ -72,8 +74,10 @@ class ChannelRepositoryImpl @Inject constructor(
         channelDao.deleteChannel(channelId)
     }
 
-    override fun getChannelsFlow(): Flow<List<Channel>> =
-        channelDao.observeChannels().map { entities ->
+    override fun getChannelsFlow(): Flow<List<Channel>> = getChannelsFlow(limit = -1)
+
+    override fun getChannelsFlow(limit: Int): Flow<List<Channel>> =
+        channelDao.observeChannels(limit).map { entities ->
             entities.map { it.toDomain() }
         }
 

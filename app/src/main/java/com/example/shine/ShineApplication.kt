@@ -9,6 +9,7 @@ import androidx.work.Configuration
 import com.example.shine.data.remote.TokenRefreshScheduler
 import com.example.shine.data.remote.socket.SocketLifecycleManager
 import com.example.shine.data.sync.ChannelSyncScheduler
+import com.example.shine.widget.ChannelsWidgetSyncManager
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -25,6 +26,9 @@ class ShineApplication : Application(), CameraXConfig.Provider, Configuration.Pr
     lateinit var channelSyncScheduler: ChannelSyncScheduler
 
     @Inject
+    lateinit var channelsWidgetSyncManager: ChannelsWidgetSyncManager
+
+    @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
     override val workManagerConfiguration: Configuration
@@ -36,7 +40,8 @@ class ShineApplication : Application(), CameraXConfig.Provider, Configuration.Pr
         super.onCreate()
         tokenRefreshScheduler.start()
         socketLifecycleManager.start()
-        channelSyncScheduler.scheduleDaily7AmSync()
+        channelSyncScheduler.scheduleDailySync()
+        channelsWidgetSyncManager.start()
     }
 
     override fun getCameraXConfig(): CameraXConfig {

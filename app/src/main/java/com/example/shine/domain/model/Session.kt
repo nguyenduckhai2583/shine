@@ -9,7 +9,13 @@ data class Session(
     val expireAt: Long? = null,
     val user: User? = null,
     val workspaceId: String? = null,
-)
+) {
+    val isSignedIn: Boolean
+        get() = token.isNotBlank() && !workspaceId.isNullOrBlank()
+}
+
+val Session?.isSignedIn: Boolean
+    get() = this?.isSignedIn == true
 
 @Serializable
 data class User(

@@ -1,7 +1,6 @@
 package com.example.shine.ui.home
 
 import androidx.lifecycle.viewModelScope
-import com.example.shine.R
 import com.example.shine.core.base.BaseViewModel
 import com.example.shine.domain.model.Channel
 import com.example.shine.domain.repository.ChannelRepository

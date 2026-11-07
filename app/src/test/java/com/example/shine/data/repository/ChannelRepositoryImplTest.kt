@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -103,6 +104,20 @@ class ChannelRepositoryImplTest {
     }
 
     @Test
+    fun getRecentChannels_returnsLatestChannelsLimited() = runTest {
+        dao.upsertChannel(ChannelEntity(localId = "c1", name = "Old", createdAt = 1000L))
+        dao.upsertChannel(ChannelEntity(localId = "c2", name = "Medium", createdAt = 2000L))
+        dao.upsertChannel(ChannelEntity(localId = "c3", name = "Newest", createdAt = 3000L))
+        dao.upsertChannel(ChannelEntity(localId = "c4", name = "Older", createdAt = 500L))
+
+        val recent = repository.getRecentChannels(limit = 3)
+        assertEquals(3, recent.size)
+        assertEquals("Newest", recent[0].name)
+        assertEquals("Medium", recent[1].name)
+        assertEquals("Old", recent[2].name)
+    }
+
+    @Test
     fun clear_clearsRoom() = runTest {
         dao.upsertChannel(ChannelEntity(localId = "c1", id = "c1", name = "Test"))
         repository.clear()
@@ -137,11 +152,24 @@ class ChannelRepositoryImplTest {
         val channelList = mutableListOf<ChannelEntity>()
         private val _flow = MutableStateFlow<List<ChannelEntity>>(emptyList())
 
-        override fun observeChannels(): Flow<List<ChannelEntity>> = _flow.asStateFlow()
+        override fun observeChannels(limit: Int): Flow<List<ChannelEntity>> =
+            _flow.map { list ->
+                val sorted = list.sortedWith(
+                    compareByDescending<ChannelEntity> { it.createdAt }
+                        .thenByDescending { it.lastActivityAt }
+                )
+                if (limit > 0) sorted.take(limit) else sorted
+            }
 
         override fun observeChannel(idOrLocalId: String): Flow<ChannelEntity?> = error("Not implemented")
 
-        override suspend fun getChannels(): List<ChannelEntity> = channelList.toList()
+        override suspend fun getChannels(limit: Int): List<ChannelEntity> {
+            val sorted = channelList.sortedWith(
+                compareByDescending<ChannelEntity> { it.createdAt }
+                    .thenByDescending { it.lastActivityAt }
+            )
+            return if (limit > 0) sorted.take(limit) else sorted
+        }
 
         override suspend fun getChannel(idOrLocalId: String): ChannelEntity? =
             channelList.firstOrNull { it.id == idOrLocalId || it.localId == idOrLocalId }

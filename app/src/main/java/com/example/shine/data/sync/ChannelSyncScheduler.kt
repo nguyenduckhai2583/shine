@@ -36,7 +36,7 @@ class ChannelSyncScheduler @Inject constructor(
         )
     }
 
-    fun scheduleDaily7AmSync() {
+    fun scheduleDailySync() {
         val delayMillis = calculateDelayUntilNext7Am()
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
