@@ -63,7 +63,7 @@ class ChannelDetailViewModelTest {
         var error: AppException? = null
         var lastId: String? = null
 
-        override suspend fun getChannels(): Result<List<Channel>> = Result.success(listOf(CHANNEL))
+        override suspend fun getChannels(): Result<Unit> = Result.success(Unit)
 
         override suspend fun getChannel(id: String): Result<Channel> {
             lastId = id

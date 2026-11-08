@@ -29,7 +29,7 @@ import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -201,12 +201,8 @@ class UserRepositoryImplTest {
             avatar = FileDto(signedUrl = "https://cdn.example.com/fresh-avatar.png"),
         )
 
-        val result = repository.getProfile().getOrThrow()
-
-        assertEquals("user-1", result.id)
-        assertEquals("new@example.com", result.email)
-        assertEquals("New", result.firstName)
-        assertEquals("https://cdn.example.com/fresh-avatar.png", result.avatarUrl)
+        val result = repository.getProfile()
+        assertTrue(result.isSuccess)
 
         val updatedLocalSession = local.session.first()
         assertEquals("new@example.com", updatedLocalSession?.user?.email)
@@ -215,43 +211,23 @@ class UserRepositoryImplTest {
     }
 
     @Test
-    fun getChatUsers_success_savesToLocalDataSourceAndReturnsList() = runTest {
+    fun getChatUsers_success_savesToLocalDataSource() = runTest {
         val chatUserDtos = listOf(
             UserProfileDto(id = "user-1", email = "one@example.com", firstName = "User", lastName = "One"),
             UserProfileDto(id = "user-2", email = "two@example.com", firstName = "User", lastName = "Two"),
         )
         fakeApi.chatUsersToReturn = chatUserDtos
 
-        val result = repository.getChatUsers().getOrThrow()
-
-        assertEquals(2, result.size)
-        assertEquals("user-1", result[0].id)
-        assertEquals("user-2", result[1].id)
+        val result = repository.getChatUsers()
+        assertTrue(result.isSuccess)
         org.mockito.Mockito.verify(userLocalDataSource).replaceUsers(org.mockito.ArgumentMatchers.anyList())
     }
 
     @Test
-    fun getChatUsers_apiFails_returnsCachedDataFromLocalDataSource() = runTest {
+    fun getChatUsers_apiFails_returnsFailure() = runTest {
         fakeApi.shouldFailChatUsers = true
-        val localUsers = listOf(
-            com.example.shine.domain.model.User(id = "cached-1", email = "cached@example.com")
-        )
-        `when`(userLocalDataSource.getUsers()).thenReturn(localUsers)
-
-        val result = repository.getChatUsers().getOrThrow()
-
-        assertEquals(1, result.size)
-        assertEquals("cached-1", result[0].id)
-    }
-
-    @Test
-    fun getChatUsers_apiFails_localEmpty_returnsFailure() = runTest {
-        fakeApi.shouldFailChatUsers = true
-        `when`(userLocalDataSource.getUsers()).thenReturn(emptyList())
-
         val result = repository.getChatUsers()
-
-        org.junit.Assert.assertTrue(result.isFailure)
+        assertTrue(result.isFailure)
     }
 
     private class FakeContentUriResolver : ContentUriResolver(org.mockito.Mockito.mock(android.content.Context::class.java)) {

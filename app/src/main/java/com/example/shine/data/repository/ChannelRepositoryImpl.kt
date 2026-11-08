@@ -24,16 +24,10 @@ class ChannelRepositoryImpl @Inject constructor(
     private val channelSyncScheduler: ChannelSyncScheduler,
 ) : ChannelRepository {
 
-    override suspend fun getChannels(): Result<List<Channel>> = suspendRunCatching {
-        try {
-            val responseList = api.getChannels()
-            val serverEntities = responseList.map { it.toEntity() }
-            channelDao.replaceSyncedChannels(serverEntities)
-            serverEntities.map { it.toDomain() }
-        } catch (e: Exception) {
-            val local = channelDao.getChannels().map { it.toDomain() }
-            local.ifEmpty { throw e }
-        }
+    override suspend fun getChannels(): Result<Unit> = suspendRunCatching {
+        val responseList = api.getChannels()
+        val serverEntities = responseList.map { it.toEntity() }
+        channelDao.replaceSyncedChannels(serverEntities)
     }
 
     override suspend fun getRecentChannels(limit: Int): List<Channel> =

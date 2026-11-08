@@ -77,22 +77,22 @@ class AppViewModelTest {
         var completeProfileCall: (() -> Unit)? = null
         var completeChatUsersCall: (() -> Unit)? = null
         val deferredUserRepository = object : UserRepository {
-            override suspend fun getProfile(): Result<User> {
+            override suspend fun getProfile(): Result<Unit> {
                 suspendCancellableCoroutine<Unit> { cont ->
                     completeProfileCall = {
                         cont.resume(Unit)
                     }
                 }
-                return Result.success(User(id = "user-1", email = "test@test.com"))
+                return Result.success(Unit)
             }
 
-            override suspend fun getChatUsers(): Result<List<User>> {
+            override suspend fun getChatUsers(): Result<Unit> {
                 suspendCancellableCoroutine<Unit> { cont ->
                     completeChatUsersCall = {
                         cont.resume(Unit)
                     }
                 }
-                return Result.success(emptyList())
+                return Result.success(Unit)
             }
 
             override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()
@@ -224,16 +224,16 @@ class AppViewModelTest {
         var getChatUsersCalls = 0
         var shouldFail = false
 
-        override suspend fun getProfile(): Result<User> {
+        override suspend fun getProfile(): Result<Unit> {
             getProfileCalls++
             if (shouldFail) return Result.failure(RuntimeException("Network error"))
-            return Result.success(User(id = "user-1", email = "user@test.com", firstName = "Jane", lastName = "Doe"))
+            return Result.success(Unit)
         }
 
-        override suspend fun getChatUsers(): Result<List<User>> {
+        override suspend fun getChatUsers(): Result<Unit> {
             getChatUsersCalls++
             if (shouldFail) return Result.failure(RuntimeException("Network error"))
-            return Result.success(emptyList())
+            return Result.success(Unit)
         }
 
         override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()

@@ -112,20 +112,14 @@ class ProfileViewModelTest {
         var lastUpdatedUri: Uri? = null
         var shouldFail: Boolean = false
 
-        override suspend fun getProfile(): Result<User> {
+        override suspend fun getProfile(): Result<Unit> {
             if (shouldFail) {
                 return Result.failure(RuntimeException("Network request failed"))
             }
-            return Result.success(
-                User(
-                    id = "1",
-                    email = "jane@example.com",
-                    firstName = "Jane",
-                    lastName = "Doe",
-                    avatarUrl = "https://example.com/avatar.jpg",
-                )
-            )
+            return Result.success(Unit)
         }
+
+        override suspend fun getChatUsers(): Result<Unit> = Result.success(Unit)
 
         override suspend fun updateAvatar(uri: Uri): Result<User> {
             lastUpdatedUri = uri
@@ -142,7 +136,5 @@ class ProfileViewModelTest {
                 )
             )
         }
-
-        override suspend fun getChatUsers(): Result<List<User>> = Result.success(emptyList())
     }
 }

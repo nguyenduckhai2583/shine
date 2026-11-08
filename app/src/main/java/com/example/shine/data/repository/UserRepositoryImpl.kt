@@ -30,23 +30,16 @@ class UserRepositoryImpl @Inject constructor(
     private val json: Json,
 ) : UserRepository {
 
-    override suspend fun getProfile(): Result<User> = suspendRunCatching {
+    override suspend fun getProfile(): Result<Unit> = suspendRunCatching {
         val currentLocalUser = local.session.first()?.user
         val profile = userApi.getProfile()
         val user = profile.toDomain(fallbackAvatarUrl = currentLocalUser?.avatarUrl)
         local.updateUser(user)
-        user
     }
 
-    override suspend fun getChatUsers(): Result<List<User>> = suspendRunCatching {
-        try {
-            val chatUsers = userApi.getChatUsers().map { it.toDomain() }
-            userLocalDataSource.replaceUsers(chatUsers)
-            chatUsers
-        } catch (e: Exception) {
-            val localUsers = userLocalDataSource.getUsers()
-            localUsers.ifEmpty { throw e }
-        }
+    override suspend fun getChatUsers(): Result<Unit> = suspendRunCatching {
+        val chatUsers = userApi.getChatUsers().map { it.toDomain() }
+        userLocalDataSource.replaceUsers(chatUsers)
     }
 
     override suspend fun updateAvatar(uri: Uri): Result<User> = suspendRunCatching {

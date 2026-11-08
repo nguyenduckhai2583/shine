@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
 interface ChannelRepository {
-    suspend fun getChannels(): Result<List<Channel>>
+    suspend fun getChannels(): Result<Unit>
 
     suspend fun getRecentChannels(limit: Int = 3): List<Channel> = emptyList()
 

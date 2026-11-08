@@ -44,36 +44,21 @@ class ChannelRepositoryImplTest {
     }
 
     @Test
-    fun getChannels_fetchesFromApi_savesToRoom_andReturns() = runTest {
+    fun getChannels_fetchesFromApi_savesToRoom() = runTest {
         val dto = ChannelDto(id = "c1", name = "General", position = 1L)
         api.channelsToReturn = listOf(dto)
 
-        val result = repository.getChannels().getOrThrow()
-
-        assertEquals(1, result.size)
-        assertEquals("c1", result[0].id)
-        assertEquals("General", result[0].name)
+        val result = repository.getChannels()
+        assertTrue(result.isSuccess)
 
         val daoChannels = dao.getChannels()
         assertEquals(1, daoChannels.size)
         assertEquals("c1", daoChannels[0].id)
+        assertEquals("General", daoChannels[0].name)
     }
 
     @Test
-    fun getChannels_apiFails_returnsCachedDataFromRoom() = runTest {
-        val entity = ChannelEntity(localId = "c1", id = "c1", name = "Cached Channel")
-        dao.upsertChannel(entity)
-
-        api.shouldFail = true
-
-        val result = repository.getChannels().getOrThrow()
-
-        assertEquals(1, result.size)
-        assertEquals("Cached Channel", result[0].name)
-    }
-
-    @Test
-    fun getChannels_apiFails_roomEmpty_returnsFailure() = runTest {
+    fun getChannels_apiFails_returnsFailure() = runTest {
         api.shouldFail = true
         val result = repository.getChannels()
         assertTrue(result.isFailure)

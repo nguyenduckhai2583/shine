@@ -143,10 +143,10 @@ class ChannelViewModelTest {
 
         override fun getChannelsFlow(): Flow<List<Channel>> = channelsFlow
 
-        override suspend fun getChannels(): Result<List<Channel>> {
+        override suspend fun getChannels(): Result<Unit> {
             getChannelsCallCount++
             if (shouldFail) return Result.failure(Exception("Failed to connect"))
-            return Result.success(channelsFlow.value)
+            return Result.success(Unit)
         }
 
         override suspend fun getChannel(id: String): Result<Channel> =

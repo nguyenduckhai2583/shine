@@ -96,11 +96,11 @@ class HomeViewModelTest {
 
     private class FakeUserRepository : UserRepository {
         var getChatUsersCalls = 0
-        override suspend fun getProfile(): Result<User> = throw NotImplementedError()
+        override suspend fun getProfile(): Result<Unit> = Result.success(Unit)
         override suspend fun updateAvatar(uri: android.net.Uri): Result<User> = throw NotImplementedError()
-        override suspend fun getChatUsers(): Result<List<User>> {
+        override suspend fun getChatUsers(): Result<Unit> {
             getChatUsersCalls++
-            return Result.success(emptyList())
+            return Result.success(Unit)
         }
     }
 

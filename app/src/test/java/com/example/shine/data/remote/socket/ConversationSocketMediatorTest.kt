@@ -33,7 +33,7 @@ class ConversationSocketMediatorTest {
     private class FakeChannelRepository : ChannelRepository {
         val createdChannels = mutableListOf<Channel>()
 
-        override suspend fun getChannels(): Result<List<Channel>> = Result.success(emptyList())
+        override suspend fun getChannels(): Result<Unit> = Result.success(Unit)
         override suspend fun getChannel(id: String): Result<Channel> = Result.failure(Exception())
         override suspend fun createChannel(name: String): Result<Unit> = Result.success(Unit)
 
