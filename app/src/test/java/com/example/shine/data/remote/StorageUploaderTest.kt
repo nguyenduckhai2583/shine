@@ -2,6 +2,7 @@ package com.example.shine.data.remote
 
 import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
+import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
@@ -31,7 +32,7 @@ class StorageUploaderTest {
     }
 
     @Test
-    fun upload_success_postsMultipartToGivenUrl() {
+    fun upload_success_postsMultipartToGivenUrl() = runTest {
         mockWebServer.enqueue(MockResponse(code = 204))
 
         val storageUrl = mockWebServer.url("/upload").toString()
@@ -60,7 +61,7 @@ class StorageUploaderTest {
     }
 
     @Test
-    fun upload_serverError_throwsAppException() {
+    fun upload_serverError_throwsAppException() = runTest {
         mockWebServer.enqueue(MockResponse(code = 403))
 
         val storageUrl = mockWebServer.url("/upload").toString()

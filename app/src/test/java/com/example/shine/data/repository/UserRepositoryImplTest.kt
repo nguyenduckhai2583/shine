@@ -256,7 +256,7 @@ class UserRepositoryImplTest {
 
     private class FakeContentUriResolver : ContentUriResolver(org.mockito.Mockito.mock(android.content.Context::class.java)) {
         var resolvedFile = ResolvedFile("test.png", "image/png", okio.ByteString.of(1, 2, 3, 4))
-        override fun resolve(uri: Uri): ResolvedFile = resolvedFile
+        override suspend fun resolve(uri: Uri): ResolvedFile = resolvedFile
     }
 
     private class FakeUserApi : UserApi {

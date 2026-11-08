@@ -5,9 +5,13 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
+import com.example.shine.core.di.IoDispatcher
 import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
 import javax.inject.Inject
@@ -22,8 +26,9 @@ data class ResolvedFile(
 @Singleton
 open class ContentUriResolver @Inject constructor(
     @ApplicationContext private val context: Context,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    open fun resolve(uri: Uri): ResolvedFile {
+    open suspend fun resolve(uri: Uri): ResolvedFile = withContext(ioDispatcher) {
         val contentResolver = context.contentResolver
         val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
 
@@ -54,7 +59,7 @@ open class ContentUriResolver @Inject constructor(
             throw AppException(type = AppErrorEnum.UNKNOWN, cause = e)
         } ?: throw AppException(AppErrorEnum.UNKNOWN)
 
-        return ResolvedFile(
+        ResolvedFile(
             fileName = fileName,
             mimeType = mimeType,
             bytes = bytes,

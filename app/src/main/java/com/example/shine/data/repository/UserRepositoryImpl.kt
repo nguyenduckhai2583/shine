@@ -15,9 +15,7 @@ import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
 import com.example.shine.domain.model.User
 import com.example.shine.domain.repository.UserRepository
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,37 +31,32 @@ class UserRepositoryImpl @Inject constructor(
 ) : UserRepository {
 
     override suspend fun getProfile(): Result<User> = suspendRunCatching {
-        withContext(Dispatchers.IO) {
-            val currentLocalUser = local.session.first()?.user
-            val profile = userApi.getProfile()
-            val user = profile.toDomain(fallbackAvatarUrl = currentLocalUser?.avatarUrl)
-            local.updateUser(user)
-            user
-        }
+        val currentLocalUser = local.session.first()?.user
+        val profile = userApi.getProfile()
+        val user = profile.toDomain(fallbackAvatarUrl = currentLocalUser?.avatarUrl)
+        local.updateUser(user)
+        user
     }
 
     override suspend fun getChatUsers(): Result<List<User>> = suspendRunCatching {
-        withContext(Dispatchers.IO) {
-            try {
-                val chatUsers = userApi.getChatUsers().map { it.toDomain() }
-                userLocalDataSource.replaceUsers(chatUsers)
-                chatUsers
-            } catch (e: Exception) {
-                val localUsers = userLocalDataSource.getUsers()
-                localUsers.ifEmpty { throw e }
-            }
+        try {
+            val chatUsers = userApi.getChatUsers().map { it.toDomain() }
+            userLocalDataSource.replaceUsers(chatUsers)
+            chatUsers
+        } catch (e: Exception) {
+            val localUsers = userLocalDataSource.getUsers()
+            localUsers.ifEmpty { throw e }
         }
     }
 
     override suspend fun updateAvatar(uri: Uri): Result<User> = suspendRunCatching {
-        withContext(Dispatchers.IO) {
-            val file = contentUriResolver.resolve(uri)
-            val fileName = file.fileName
-            val mimeType = file.mimeType
-            val bytes = file.bytes
+        val file = contentUriResolver.resolve(uri)
+        val fileName = file.fileName
+        val mimeType = file.mimeType
+        val bytes = file.bytes
 
-            // 1. Request draft avatar to obtain draft ID and storage presigned POST metadata
-            val draft = userApi.createAvatarDraft(
+        // 1. Request draft avatar to obtain draft ID and storage presigned POST metadata
+        val draft = userApi.createAvatarDraft(
                 DraftMediaRequest(
                     name = fileName,
                     mimeType = mimeType,
@@ -102,7 +95,6 @@ class UserRepositoryImpl @Inject constructor(
 
             local.updateUser(updatedUser)
             updatedUser
-        }
     }
 }
 

@@ -1,8 +1,12 @@
 package com.example.shine.data.remote
 
+import com.example.shine.core.di.IoDispatcher
 import com.example.shine.core.di.Unauthenticated
 import com.example.shine.domain.model.AppErrorEnum
 import com.example.shine.domain.model.AppException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -16,14 +20,15 @@ import javax.inject.Singleton
 @Singleton
 open class StorageUploader @Inject constructor(
     @Unauthenticated private val unauthenticatedClient: OkHttpClient,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    open fun upload(
+    open suspend fun upload(
         url: String,
         fields: Map<String, String>,
         fileName: String,
         mimeType: String,
         bytes: ByteString,
-    ) {
+    ) = withContext(ioDispatcher) {
         val multipartBuilder = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
 
