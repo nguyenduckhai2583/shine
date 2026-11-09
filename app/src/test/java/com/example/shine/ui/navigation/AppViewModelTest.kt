@@ -90,7 +90,7 @@ class AppViewModelTest {
                 return Result.success(Unit)
             }
 
-            override suspend fun getChatUsers(): Result<Unit> {
+            override suspend fun getChatUsers(workspaceId: String?): Result<Unit> {
                 suspendCancellableCoroutine<Unit> { cont ->
                     completeChatUsersCall = {
                         cont.resume(Unit)
@@ -250,7 +250,7 @@ class AppViewModelTest {
             return Result.success(Unit)
         }
 
-        override suspend fun getChatUsers(): Result<Unit> {
+        override suspend fun getChatUsers(workspaceId: String?): Result<Unit> {
             getChatUsersCalls++
             if (shouldFail) return Result.failure(RuntimeException("Network error"))
             return Result.success(Unit)

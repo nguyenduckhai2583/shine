@@ -6,6 +6,7 @@ import com.example.shine.data.remote.dto.UpdateUserRequest
 import com.example.shine.data.remote.dto.UserProfileDto
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
 
@@ -20,5 +21,7 @@ interface UserApi {
     suspend fun updateProfile(@Body request: UpdateUserRequest): UserProfileDto
 
     @GET("user-services/users/chat-users")
-    suspend fun getChatUsers(): List<UserProfileDto>
+    suspend fun getChatUsers(
+        @Header("x-workspace-id") workspaceId: String? = null,
+    ): List<UserProfileDto>
 }

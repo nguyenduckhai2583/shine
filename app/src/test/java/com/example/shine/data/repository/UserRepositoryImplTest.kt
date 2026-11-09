@@ -230,6 +230,14 @@ class UserRepositoryImplTest {
         assertTrue(result.isFailure)
     }
 
+    @Test
+    fun getChatUsers_withWorkspaceId_passesWorkspaceIdToApi() = runTest {
+        fakeApi.chatUsersToReturn = emptyList()
+        val result = repository.getChatUsers("ws-custom-123")
+        assertTrue(result.isSuccess)
+        assertEquals("ws-custom-123", fakeApi.lastWorkspaceId)
+    }
+
     private class FakeContentUriResolver : ContentUriResolver(org.mockito.Mockito.mock(android.content.Context::class.java)) {
         var resolvedFile = ResolvedFile("test.png", "image/png", okio.ByteString.of(1, 2, 3, 4))
         override suspend fun resolve(uri: Uri): ResolvedFile = resolvedFile
@@ -258,7 +266,10 @@ class UserRepositoryImplTest {
             return updatedProfile ?: throw IllegalStateException("updatedProfile not set")
         }
 
-        override suspend fun getChatUsers(): List<UserProfileDto> {
+        var lastWorkspaceId: String? = null
+
+        override suspend fun getChatUsers(workspaceId: String?): List<UserProfileDto> {
+            lastWorkspaceId = workspaceId
             if (shouldFailChatUsers) throw AppException(com.example.shine.domain.model.AppErrorEnum.SERVER)
             return chatUsersToReturn
         }

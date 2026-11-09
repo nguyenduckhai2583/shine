@@ -37,8 +37,8 @@ class UserRepositoryImpl @Inject constructor(
         local.updateUser(user)
     }
 
-    override suspend fun getChatUsers(): Result<Unit> = suspendRunCatching {
-        val chatUsers = userApi.getChatUsers().map { it.toDomain() }
+    override suspend fun getChatUsers(workspaceId: String?): Result<Unit> = suspendRunCatching {
+        val chatUsers = userApi.getChatUsers(workspaceId).map { it.toDomain() }
         userLocalDataSource.replaceUsers(chatUsers)
     }
 

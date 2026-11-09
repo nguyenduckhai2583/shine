@@ -64,7 +64,29 @@ class HomeViewModelTest {
 
         assertEquals("ws-2", workspaceRepository.currentSelectedId.value)
         assertEquals(1, userRepository.getChatUsersCalls)
+        assertEquals("ws-2", userRepository.lastWorkspaceId)
         assertEquals(1, shortcutManager.removeRecentCalls)
+    }
+
+    @Test
+    fun selectWorkspace_runsPreloadBeforeEmittingSelectedWorkspace() = runTest {
+        var chatUsersCalled = false
+        var selectedIdDuringPreload: String? = null
+        userRepository.onGetChatUsers = {
+            chatUsersCalled = true
+            selectedIdDuringPreload = workspaceRepository.currentSelectedId.value
+        }
+
+        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository, shortcutManager)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        viewModel.selectWorkspace("ws-2")
+
+        assertTrue(chatUsersCalled)
+        assertEquals("ws-1", selectedIdDuringPreload)
+        assertEquals("ws-2", workspaceRepository.currentSelectedId.value)
     }
 
     @Test
@@ -82,10 +104,15 @@ class HomeViewModelTest {
 
     private class FakeUserRepository : UserRepository {
         var getChatUsersCalls = 0
+        var lastWorkspaceId: String? = null
+        var onGetChatUsers: (() -> Unit)? = null
+
         override suspend fun getProfile(): Result<Unit> = Result.success(Unit)
         override suspend fun updateAvatar(uri: android.net.Uri): Result<User> = throw NotImplementedError()
-        override suspend fun getChatUsers(): Result<Unit> {
+        override suspend fun getChatUsers(workspaceId: String?): Result<Unit> {
             getChatUsersCalls++
+            lastWorkspaceId = workspaceId
+            onGetChatUsers?.invoke()
             return Result.success(Unit)
         }
     }
@@ -115,6 +142,7 @@ class HomeViewModelTest {
     }
 
     private class FakeWorkspaceRepository : WorkspaceRepository {
+        var onSelectWorkspace: (() -> Unit)? = null
         val currentWorkspaces = MutableStateFlow(
             listOf(
                 Workspace("ws-1", "Default Workspace", true, "default"),
@@ -130,6 +158,7 @@ class HomeViewModelTest {
             Result.success(currentWorkspaces.value)
 
         override suspend fun selectWorkspace(workspaceId: String) {
+            onSelectWorkspace?.invoke()
             currentSelectedId.value = workspaceId
         }
 

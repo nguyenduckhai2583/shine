@@ -114,7 +114,7 @@ class ProfileViewModelTest {
             return Result.success(Unit)
         }
 
-        override suspend fun getChatUsers(): Result<Unit> = Result.success(Unit)
+        override suspend fun getChatUsers(workspaceId: String?): Result<Unit> = Result.success(Unit)
 
         override suspend fun updateAvatar(uri: Uri): Result<User> {
             lastUpdatedUri = uri

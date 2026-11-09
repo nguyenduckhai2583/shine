@@ -73,8 +73,8 @@ class HomeViewModel @Inject constructor(
             isSwitchingWorkspace.value = true
             try {
                 shortcutManager.removeRecentChannelShortcut()
+                userRepository.getChatUsers(workspaceId)
                 workspaceRepository.selectWorkspace(workspaceId)
-                userRepository.getChatUsers()
             } finally {
                 isSwitchingWorkspace.value = false
             }
