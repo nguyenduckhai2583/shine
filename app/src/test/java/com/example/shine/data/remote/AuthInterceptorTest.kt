@@ -76,12 +76,23 @@ class AuthInterceptorTest {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(TokenRefreshApi::class.java)
+        val channelDao = org.mockito.Mockito.mock(com.example.shine.data.local.dao.ChannelDao::class.java)
+        val workspaceDao = org.mockito.Mockito.mock(com.example.shine.data.local.dao.WorkspaceDao::class.java)
+        val userDao = org.mockito.Mockito.mock(com.example.shine.data.local.dao.UserDao::class.java)
+        val directMessageDataStore = com.example.shine.data.local.DirectMessageDataStore()
         client = OkHttpClient.Builder()
             .addInterceptor(
                 AuthInterceptor(
                     TokenProvider(local, scope),
                     WorkspaceProvider(local, scope),
-                    TokenRefresher(refreshApi, local),
+                    TokenRefresher(
+                        api = refreshApi,
+                        local = local,
+                        channelDao = channelDao,
+                        workspaceDao = workspaceDao,
+                        userDao = userDao,
+                        directMessageDataStore = directMessageDataStore,
+                    ),
                 ),
             )
             .build()

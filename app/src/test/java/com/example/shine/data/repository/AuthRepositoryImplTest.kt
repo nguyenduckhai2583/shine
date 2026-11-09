@@ -2,6 +2,7 @@ package com.example.shine.data.repository
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.example.shine.data.local.SessionLocalDataSource
+import com.example.shine.data.local.dao.ChannelDao
 import com.example.shine.data.local.dao.WorkspaceDao
 import com.example.shine.data.local.entity.WorkspaceEntity
 import com.example.shine.data.remote.AuthApi
@@ -14,21 +15,27 @@ import com.example.shine.data.remote.dto.UserDto
 import com.example.shine.data.remote.dto.WorkspaceDto
 import com.example.shine.data.security.PasswordHasher
 import com.example.shine.domain.model.SignInStatus
+import com.example.shine.domain.model.User
+import com.example.shine.domain.repository.DirectMessageRepository
+import com.example.shine.domain.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.mockito.Mockito
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthRepositoryImplTest {
@@ -36,7 +43,8 @@ class AuthRepositoryImplTest {
     @get:Rule
     val tempFolder = TemporaryFolder()
 
-    private val scope = CoroutineScope(UnconfinedTestDispatcher())
+    private val testDispatcher = UnconfinedTestDispatcher()
+    private val scope = CoroutineScope(testDispatcher)
     private val json = kotlinx.serialization.json.Json {
         ignoreUnknownKeys = true
         explicitNulls = false
@@ -45,8 +53,11 @@ class AuthRepositoryImplTest {
     private lateinit var fakeAuthApi: FakeAuthApi
     private lateinit var fakeWorkspaceApi: FakeWorkspaceApi
     private lateinit var fakeWorkspaceDao: FakeWorkspaceDao
+    private lateinit var mockChannelDao: ChannelDao
     private lateinit var workspaceRepository: WorkspaceRepositoryImpl
     private lateinit var channelRepository: ChannelRepositoryImpl
+    private lateinit var fakeDirectMessageRepository: FakeDirectMessageRepository
+    private lateinit var fakeUserRepository: FakeUserRepository
     private lateinit var repository: AuthRepositoryImpl
 
     @Before
@@ -65,19 +76,24 @@ class AuthRepositoryImplTest {
             local = local,
             workspaceDao = fakeWorkspaceDao,
         )
-        val channelDao = org.mockito.Mockito.mock(com.example.shine.data.local.dao.ChannelDao::class.java)
-        val channelScheduler = org.mockito.Mockito.mock(com.example.shine.data.sync.ChannelSyncScheduler::class.java)
+        mockChannelDao = Mockito.mock(ChannelDao::class.java)
+        val channelScheduler = Mockito.mock(com.example.shine.data.sync.ChannelSyncScheduler::class.java)
         channelRepository = ChannelRepositoryImpl(
             api = FakeChatApi(),
-            channelDao = channelDao,
+            channelDao = mockChannelDao,
             channelSyncScheduler = channelScheduler,
         )
+        fakeDirectMessageRepository = FakeDirectMessageRepository()
+        fakeUserRepository = FakeUserRepository()
         repository = AuthRepositoryImpl(
             api = fakeAuthApi,
             local = local,
             workspaceRepository = workspaceRepository,
             channelRepository = channelRepository,
+            directMessageRepository = fakeDirectMessageRepository,
+            userRepository = fakeUserRepository,
             passwordHasher = PasswordHasher(),
+            ioDispatcher = testDispatcher,
         )
     }
 
@@ -116,6 +132,15 @@ class AuthRepositoryImplTest {
     }
 
     @Test
+    fun signIn_clearsPreviousLocalDataBeforeSavingSession() = runTest {
+        repository.signIn("user@test.com", "password").getOrThrow()
+
+        Mockito.verify(mockChannelDao).clearAll()
+        assertTrue(fakeDirectMessageRepository.clearCalled)
+        assertTrue(fakeUserRepository.clearCalled)
+    }
+
+    @Test
     fun signIn_tmpToken_returnsTwoFactorRequired() = runTest {
         fakeAuthApi.sessionToReturn = SessionDto(
             token = "temp-token",
@@ -123,19 +148,51 @@ class AuthRepositoryImplTest {
         )
 
         val status = repository.signIn("user@test.com", "password").getOrThrow()
-        org.junit.Assert.assertTrue(status is SignInStatus.TwoFactorRequired)
+        assertTrue(status is SignInStatus.TwoFactorRequired)
         assertEquals("temp-token", (status as SignInStatus.TwoFactorRequired).tmpToken)
     }
 
     @Test
-    fun signOut_clearsLocalSession() = runTest {
+    fun signOut_clearsAllLocalDataAndSession() = runTest {
         fakeWorkspaceApi.workspacesToReturn = listOf(
             WorkspaceDto(id = "ws-single", name = "Single Workspace", isActive = true),
         )
         repository.signIn("user@test.com", "password").getOrThrow()
         assertEquals("ws-single", local.session.first()?.workspaceId)
 
+        fakeDirectMessageRepository.clearCalled = false
+        fakeUserRepository.clearCalled = false
+
         repository.signOut()
+
+        Mockito.verify(mockChannelDao, Mockito.atLeastOnce()).clearAll()
+        assertTrue(fakeWorkspaceDao.getWorkspaces().isEmpty())
+        assertTrue(fakeDirectMessageRepository.clearCalled)
+        assertTrue(fakeUserRepository.clearCalled)
+        assertNull(local.session.first())
+    }
+
+    @Test
+    fun signOut_completesEvenIfCallingJobIsCancelled() = runTest(testDispatcher) {
+        fakeWorkspaceApi.workspacesToReturn = listOf(
+            WorkspaceDto(id = "ws-single", name = "Single Workspace", isActive = true),
+        )
+        repository.signIn("user@test.com", "password").getOrThrow()
+
+        fakeDirectMessageRepository.clearCalled = false
+        fakeUserRepository.clearCalled = false
+
+        // Launch with UNDISPATCHED so it enters signOut immediately, then cancel the job
+        val job = launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
+            repository.signOut()
+        }
+        job.cancel()
+        job.join()
+
+        Mockito.verify(mockChannelDao, Mockito.atLeastOnce()).clearAll()
+        assertTrue(fakeWorkspaceDao.getWorkspaces().isEmpty())
+        assertTrue(fakeDirectMessageRepository.clearCalled)
+        assertTrue(fakeUserRepository.clearCalled)
         assertNull(local.session.first())
     }
 
@@ -183,6 +240,30 @@ class AuthRepositoryImplTest {
 
         override suspend fun clear() {
             workspacesFlow.value = emptyList()
+        }
+    }
+
+    private class FakeDirectMessageRepository : DirectMessageRepository {
+        var clearCalled = false
+
+        override suspend fun getDirectMessages(): Result<Unit> = Result.success(Unit)
+
+        override fun clear() {
+            clearCalled = true
+        }
+    }
+
+    private class FakeUserRepository : UserRepository {
+        var clearCalled = false
+
+        override suspend fun getProfile(): Result<Unit> = Result.success(Unit)
+
+        override suspend fun updateAvatar(uri: android.net.Uri): Result<User> = throw NotImplementedError()
+
+        override suspend fun getChatUsers(workspaceId: String?): Result<Unit> = Result.success(Unit)
+
+        override suspend fun clear() {
+            clearCalled = true
         }
     }
 }

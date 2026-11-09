@@ -1,5 +1,6 @@
 package com.example.shine.data.repository
 
+import com.example.shine.core.di.IoDispatcher
 import com.example.shine.core.util.suspendRunCatching
 import com.example.shine.data.local.SessionLocalDataSource
 import com.example.shine.data.remote.AuthApi
@@ -10,8 +11,14 @@ import com.example.shine.domain.model.Session
 import com.example.shine.domain.model.SignInStatus
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.ChannelRepository
+import com.example.shine.domain.repository.DirectMessageRepository
+import com.example.shine.domain.repository.UserRepository
 import com.example.shine.domain.repository.WorkspaceRepository
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,7 +28,10 @@ class AuthRepositoryImpl @Inject constructor(
     private val local: SessionLocalDataSource,
     private val workspaceRepository: WorkspaceRepository,
     private val channelRepository: ChannelRepository,
+    private val directMessageRepository: DirectMessageRepository,
+    private val userRepository: UserRepository,
     private val passwordHasher: PasswordHasher,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AuthRepository {
 
     override val session: Flow<Session?> = local.session
@@ -30,8 +40,13 @@ class AuthRepositoryImpl @Inject constructor(
         val dto = api.signIn(SignInRequest(email = email, password = passwordHasher.sha1(password)))
 
         if (dto.isTmpToken == true) {
-            return@suspendRunCatching SignInStatus.TwoFactorRequired(tmpToken = dto.token.orEmpty())
+            return@suspendRunCatching SignInStatus.TwoFactorRequired(tmpToken = dto.token)
         }
+
+        channelRepository.clear()
+        workspaceRepository.clear()
+        directMessageRepository.clear()
+        userRepository.clear()
 
         val session = dto.toDomain()
         local.save(session)
@@ -48,8 +63,12 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun signOut() {
-        local.clear()
-        workspaceRepository.clear()
-        channelRepository.clear()
+        withContext(NonCancellable + ioDispatcher) {
+            channelRepository.clear()
+            workspaceRepository.clear()
+            directMessageRepository.clear()
+            userRepository.clear()
+            local.clear()
+        }
     }
 }

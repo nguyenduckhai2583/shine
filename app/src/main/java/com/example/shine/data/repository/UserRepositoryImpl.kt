@@ -89,5 +89,9 @@ class UserRepositoryImpl @Inject constructor(
             local.updateUser(updatedUser)
             updatedUser
     }
+
+    override suspend fun clear() {
+        userLocalDataSource.clear()
+    }
 }
 
