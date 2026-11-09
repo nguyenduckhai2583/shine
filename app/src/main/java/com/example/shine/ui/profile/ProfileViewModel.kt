@@ -5,74 +5,69 @@ import androidx.lifecycle.viewModelScope
 import com.example.shine.core.base.BaseViewModel
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.UserRepository
+import com.example.shine.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+
+sealed interface UploadState {
+    data object Idle : UploadState
+    data class Uploading(val selectedUri: Uri) : UploadState
+    data class Error(val message: UiText) : UploadState
+}
+
+data class ProfileUiState(
+    val name: String = "",
+    val avatarUrl: String? = null,
+    val isLoading: Boolean = false,
+    val uploadState: UploadState = UploadState.Idle,
+)
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val authRepository: AuthRepository,
+    authRepository: AuthRepository,
     private val userRepository: UserRepository,
 ) : BaseViewModel() {
 
-    private val _uiState = MutableStateFlow(ProfileUiState(isLoading = true))
-    val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+    private val uploadState = MutableStateFlow<UploadState>(UploadState.Idle)
 
-    init {
-        observeUserSession()
-    }
-
-    private fun observeUserSession() {
-        viewModelScope.launch {
-            authRepository.session.collectLatest { session ->
-                val user = session?.user
-                _uiState.update { current ->
-                    current.copy(
-                        name = user?.displayName.orEmpty(),
-                        avatarUrl = user?.avatarUrl,
-                        isLoading = false,
-                    )
-                }
-            }
-        }
-    }
+    val uiState: StateFlow<ProfileUiState> = combine(
+        authRepository.session,
+        uploadState,
+    ) { session, upload ->
+        val user = session?.user
+        ProfileUiState(
+            name = user?.displayName.orEmpty(),
+            avatarUrl = user?.avatarUrl,
+            isLoading = session == null,
+            uploadState = upload,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = ProfileUiState(isLoading = true),
+    )
 
     fun onAvatarSelected(uri: Uri) {
-        _uiState.update {
-            it.copy(
-                selectedAvatarUri = uri,
-                isUploading = true,
-                errorMessage = null,
-            )
-        }
+        uploadState.value = UploadState.Uploading(uri)
         execute(
             task = { userRepository.updateAvatar(uri) },
             onSuccess = {
-                _uiState.update {
-                    it.copy(
-                        isUploading = false,
-                        selectedAvatarUri = null,
-                    )
-                }
+                uploadState.value = UploadState.Idle
             },
             onError = { error ->
-                _uiState.update {
-                    it.copy(
-                        isUploading = false,
-                        selectedAvatarUri = null,
-                        errorMessage = error,
-                    )
-                }
-            }
+                uploadState.value = UploadState.Error(error)
+            },
         )
     }
 
     fun clearErrorMessage() {
-        _uiState.update { it.copy(errorMessage = null) }
+        if (uploadState.value is UploadState.Error) {
+            uploadState.value = UploadState.Idle
+        }
     }
 }

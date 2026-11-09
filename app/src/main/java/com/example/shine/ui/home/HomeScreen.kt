@@ -22,6 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -43,25 +46,29 @@ fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Channels) }
+
     HomeScreen(
         uiState = uiState,
+        selectedTab = selectedTab,
+        onSelectTab = { selectedTab = it },
         onChannelClick = onChannelClick,
         onPlanixClick = onPlanixClick,
         onProfileClick = onProfileClick,
         onSignOut = viewModel::signOut,
         onSelectWorkspace = viewModel::selectWorkspace,
-        onSelectTab = viewModel::selectTab,
     )
 }
 
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
+    selectedTab: HomeTab,
+    onSelectTab: (HomeTab) -> Unit,
     onChannelClick: (Channel) -> Unit,
     onPlanixClick: () -> Unit,
     onSignOut: () -> Unit,
     onSelectWorkspace: (String) -> Unit,
-    onSelectTab: (HomeTab) -> Unit,
     modifier: Modifier = Modifier,
     onProfileClick: () -> Unit = {},
     state: HomeScreenState = rememberHomeScreenState(),
@@ -86,14 +93,14 @@ fun HomeScreen(
         Scaffold(
             topBar = {
                 HomeTopAppBar(
-                    selectedTab = uiState.selectedTab,
+                    selectedTab = selectedTab,
                     uiState = uiState,
                     onOpenDrawer = state::openDrawer,
                 )
             },
             bottomBar = {
                 HomeBottomBar(
-                    selectedTab = uiState.selectedTab,
+                    selectedTab = selectedTab,
                     onSelectTab = onSelectTab,
                 )
             },
@@ -111,7 +118,7 @@ fun HomeScreen(
                         CircularProgressIndicator()
                     }
                 } else {
-                    when (uiState.selectedTab) {
+                    when (selectedTab) {
                         HomeTab.Channels -> ChannelsRoute(onChannelClick = onChannelClick)
                         HomeTab.Dms -> DmsRoute()
                         HomeTab.Settings -> SettingsContent(
@@ -198,11 +205,12 @@ private fun HomeScreenPreview() {
                 ),
                 selectedWorkspaceId = "1",
             ),
+            selectedTab = HomeTab.Channels,
+            onSelectTab = {},
             onChannelClick = {},
             onPlanixClick = {},
             onSignOut = {},
             onSelectWorkspace = {},
-            onSelectTab = {},
         )
     }
 }

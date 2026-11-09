@@ -9,11 +9,10 @@ import com.example.shine.domain.repository.UserRepository
 import com.example.shine.domain.repository.WorkspaceRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -23,7 +22,6 @@ data class HomeUiState(
     val avatarUrl: String? = null,
     val workspaces: List<Workspace> = emptyList(),
     val selectedWorkspaceId: String? = null,
-    val selectedTab: HomeTab = HomeTab.Channels,
     val isSwitchingWorkspace: Boolean = false,
 ) {
     val currentWorkspaceName: String
@@ -38,35 +36,29 @@ class HomeViewModel @Inject constructor(
     private val shortcutManager: AppShortcutManager,
 ) : BaseViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    private val isSwitchingWorkspace = MutableStateFlow(false)
+
+    val uiState: StateFlow<HomeUiState> = combine(
+        authRepository.session,
+        workspaceRepository.workspaces,
+        isSwitchingWorkspace,
+    ) { session, workspaces, switching ->
+        HomeUiState(
+            displayName = session?.user?.displayName.orEmpty(),
+            userEmail = session?.user?.email.orEmpty(),
+            avatarUrl = session?.user?.avatarUrl,
+            workspaces = workspaces,
+            selectedWorkspaceId = session?.workspaceId,
+            isSwitchingWorkspace = switching,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = HomeUiState(),
+    )
 
     init {
-        observeData()
         loadWorkspaces()
-    }
-
-    private fun observeData() {
-        viewModelScope.launch {
-            combine(
-                authRepository.session,
-                workspaceRepository.workspaces,
-            ) { session, workspaces ->
-                _uiState.update { current ->
-                    current.copy(
-                        displayName = session?.user?.displayName.orEmpty(),
-                        userEmail = session?.user?.email.orEmpty(),
-                        avatarUrl = session?.user?.avatarUrl,
-                        workspaces = workspaces,
-                        selectedWorkspaceId = session?.workspaceId,
-                    )
-                }
-            }.collectLatest {}
-        }
-    }
-
-    fun selectTab(tab: HomeTab) {
-        _uiState.update { it.copy(selectedTab = tab) }
     }
 
     fun loadWorkspaces() {
@@ -76,15 +68,15 @@ class HomeViewModel @Inject constructor(
     }
 
     fun selectWorkspace(workspaceId: String) {
-        if (workspaceId == _uiState.value.selectedWorkspaceId) return
+        if (workspaceId == uiState.value.selectedWorkspaceId) return
         viewModelScope.launch {
-            _uiState.update { it.copy(isSwitchingWorkspace = true) }
+            isSwitchingWorkspace.value = true
             try {
                 shortcutManager.removeRecentChannelShortcut()
                 workspaceRepository.selectWorkspace(workspaceId)
                 userRepository.getChatUsers()
             } finally {
-                _uiState.update { it.copy(isSwitchingWorkspace = false) }
+                isSwitchingWorkspace.value = false
             }
         }
     }
@@ -96,4 +88,3 @@ class HomeViewModel @Inject constructor(
         }
     }
 }
-

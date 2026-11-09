@@ -32,13 +32,13 @@ abstract class BaseViewModel : ViewModel() {
      * Executes a task returning [Result].
      * - On success, calls [onSuccess] with the resulting data.
      * - On failure, converts the error message into a [UiText] and calls [onError].
-     * - [onFinally] always runs at the end (e.g. to dismiss dialogs, reset loading).
+     * - [onComplete] always runs at the end (e.g. to dismiss dialogs, reset loading).
      */
     protected fun <T> execute(
         task: suspend () -> Result<T>,
         onSuccess: (T) -> Unit = {},
         onError: (UiText) -> Unit = {},
-        onFinally: () -> Unit = {},
+        onComplete: () -> Unit = {},
     ): Job = viewModelScope.launch {
         try {
             task()
@@ -51,7 +51,7 @@ abstract class BaseViewModel : ViewModel() {
                     onError(message)
                 }
         } finally {
-            onFinally()
+            onComplete()
         }
     }
 

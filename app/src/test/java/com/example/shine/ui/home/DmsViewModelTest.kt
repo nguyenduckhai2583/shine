@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -37,6 +38,27 @@ class DmsViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
+    fun initialState_hasLoadingTrue() {
+        val viewModel = DmsViewModel(dmRepository, workspaceRepository)
+        assertTrue(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
+    fun init_whenFlowInitiallyEmpty_maintainsLoadingUntilRemoteFetchCompletes() = runTest {
+        dmRepository.dmsFlow.value = emptyList()
+        val viewModel = DmsViewModel(dmRepository, workspaceRepository)
+        assertTrue(viewModel.uiState.value.isLoading)
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertTrue(state.dms.isEmpty())
+    }
+
+    @Test
     fun init_observesDmsFromFlowAndLoadsRemote() = runTest {
         val viewModel = DmsViewModel(dmRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -47,22 +69,41 @@ class DmsViewModelTest {
         assertEquals(1, state.dms.size)
         assertEquals("Alice Smith", state.dms[0].name)
         assertFalse(state.isLoading)
+        assertFalse(state.isRefreshing)
+        assertNull(state.userError)
     }
 
     @Test
-    fun loadDms_error_updatesErrorMessage() = runTest {
-        dmRepository.shouldFail = true
-        dmRepository.dmsFlow.value = emptyList()
-
+    fun refresh_success_updatesDmsAndResetsIsRefreshing() = runTest {
         val viewModel = DmsViewModel(dmRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
 
+        viewModel.refresh()
+
         val state = viewModel.uiState.value
-        assertEquals(0, state.dms.size)
-        assertEquals(UiText.Resource(R.string.error_no_internet), state.errorMessage)
-        assertFalse(state.isLoading)
+        assertFalse(state.isRefreshing)
+        assertNull(state.userError)
+        assertEquals(1, state.dms.size)
+    }
+
+    @Test
+    fun refresh_error_setsUserErrorAndResetsIsRefreshing() = runTest {
+        val viewModel = DmsViewModel(dmRepository, workspaceRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        dmRepository.shouldFail = true
+        viewModel.refresh()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isRefreshing)
+        assertEquals(UiText.Resource(R.string.error_no_internet), state.userError)
+
+        viewModel.clearUserError()
+        assertNull(viewModel.uiState.value.userError)
     }
 
     @Test
@@ -88,12 +129,12 @@ class DmsViewModelTest {
 
         override fun getDirectMessagesFlow(): Flow<List<DirectMessage>> = dmsFlow
 
-        override suspend fun getDirectMessages(): Result<List<DirectMessage>> {
+        override suspend fun getDirectMessages(): Result<Unit> {
             getDmsCallCount++
             return if (shouldFail) {
                 Result.failure(AppException(AppErrorEnum.NO_INTERNET))
             } else {
-                Result.success(dmsFlow.value)
+                Result.success(Unit)
             }
         }
 

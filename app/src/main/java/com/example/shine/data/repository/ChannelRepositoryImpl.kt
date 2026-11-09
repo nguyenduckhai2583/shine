@@ -33,14 +33,9 @@ class ChannelRepositoryImpl @Inject constructor(
     override suspend fun getRecentChannels(limit: Int): List<Channel> =
         channelDao.getChannels(limit).map { it.toDomain() }
 
-    override suspend fun getChannel(id: String): Result<Channel> = suspendRunCatching {
-        try {
-            val channel = api.getConversation(id).toDomain()
-            channelDao.upsertChannel(channel.toEntity())
-            channel
-        } catch (e: Exception) {
-            channelDao.getChannel(id)?.toDomain() ?: throw e
-        }
+    override suspend fun getChannel(id: String): Result<Unit> = suspendRunCatching {
+        val channel = api.getConversation(id).toDomain()
+        channelDao.upsertChannel(channel.toEntity())
     }
 
     override suspend fun createChannel(name: String): Result<Unit> = suspendRunCatching {
@@ -82,5 +77,3 @@ class ChannelRepositoryImpl @Inject constructor(
         channelDao.clearAll()
     }
 }
-
-

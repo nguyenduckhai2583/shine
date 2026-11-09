@@ -19,10 +19,8 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
-
 import org.mockito.Mockito.mock
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -48,6 +46,7 @@ class ProfileViewModelTest {
         assertEquals("Jane Doe", state.name)
         assertEquals("https://example.com/avatar.jpg", state.avatarUrl)
         assertFalse(state.isLoading)
+        assertEquals(UploadState.Idle, state.uploadState)
     }
 
     @Test
@@ -61,9 +60,7 @@ class ProfileViewModelTest {
         viewModel.onAvatarSelected(uri)
 
         val state = viewModel.uiState.value
-        assertFalse(state.isUploading)
-        assertNull(state.selectedAvatarUri)
-        assertNull(state.errorMessage)
+        assertEquals(UploadState.Idle, state.uploadState)
         assertEquals(uri, userRepository.lastUpdatedUri)
     }
 
@@ -79,12 +76,10 @@ class ProfileViewModelTest {
         viewModel.onAvatarSelected(uri)
 
         val state = viewModel.uiState.value
-        assertFalse(state.isUploading)
-        assertNull(state.selectedAvatarUri)
-        assertEquals(UiText.Raw("Network upload failed"), state.errorMessage)
+        assertEquals(UploadState.Error(UiText.Raw("Network upload failed")), state.uploadState)
 
         viewModel.clearErrorMessage()
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertEquals(UploadState.Idle, viewModel.uiState.value.uploadState)
     }
 
     private class FakeAuthRepository : AuthRepository {

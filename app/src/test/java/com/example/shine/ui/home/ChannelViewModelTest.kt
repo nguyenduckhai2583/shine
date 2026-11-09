@@ -1,6 +1,5 @@
 package com.example.shine.ui.home
 
-import com.example.shine.R
 import com.example.shine.domain.model.Channel
 import com.example.shine.domain.model.Workspace
 import com.example.shine.domain.repository.ChannelRepository
@@ -36,6 +35,12 @@ class ChannelViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
+    fun initialState_hasLoadingTrue() {
+        val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
+        assertTrue(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
     fun init_observesChannelsFromFlowAndLoadsRemote() = runTest {
         val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -46,22 +51,67 @@ class ChannelViewModelTest {
         assertEquals(1, state.channels.size)
         assertEquals("general", state.channels[0].name)
         assertFalse(state.isLoading)
+        assertFalse(state.isRefreshing)
+        assertNull(state.userError)
     }
 
     @Test
-    fun loadChannels_error_updatesErrorMessage() = runTest {
-        channelRepository.shouldFail = true
+    fun init_whenFlowInitiallyEmpty_maintainsLoadingUntilRemoteFetchCompletes() = runTest {
         channelRepository.channelsFlow.value = emptyList()
+        val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
+        assertTrue(viewModel.uiState.value.isLoading)
 
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertTrue(state.channels.isEmpty())
+    }
+
+    @Test
+    fun init_initialLoadError_setsUserError() = runTest {
+        channelRepository.channelsFlow.value = emptyList()
+        channelRepository.shouldFail = true
         val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
 
         val state = viewModel.uiState.value
-        assertEquals(0, state.channels.size)
-        assertEquals(UiText("Failed to connect"), state.errorMessage)
         assertFalse(state.isLoading)
+        assertEquals(UiText("Failed to connect"), state.userError)
+    }
+
+    @Test
+    fun refresh_success_updatesChannelsAndResetsIsRefreshing() = runTest {
+        val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        viewModel.refresh()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isRefreshing)
+        assertNull(state.userError)
+        assertEquals(1, state.channels.size)
+    }
+
+    @Test
+    fun refresh_error_setsUserErrorAndResetsIsRefreshing() = runTest {
+        val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        channelRepository.shouldFail = true
+        viewModel.refresh()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isRefreshing)
+        assertEquals(UiText("Failed to connect"), state.userError)
     }
 
     @Test
@@ -88,13 +138,13 @@ class ChannelViewModelTest {
 
         viewModel.createChannel(name = "announcements")
 
-        assertFalse(viewModel.uiState.value.isLoading)
-        assertNull(viewModel.uiState.value.snackbarMessage)
-        assertEquals(2, viewModel.uiState.value.channels.size)
+        assertNull(viewModel.uiState.value.userError)
+        val state = viewModel.uiState.value
+        assertEquals(2, state.channels.size)
     }
 
     @Test
-    fun createChannel_error_setsErrorSnackbar() = runTest {
+    fun createChannel_error_setsUserError() = runTest {
         channelRepository.shouldFail = true
 
         val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
@@ -104,8 +154,7 @@ class ChannelViewModelTest {
 
         viewModel.createChannel(name = "engineering")
 
-        assertFalse(viewModel.uiState.value.isLoading)
-        assertEquals(UiText("Failed to connect"), viewModel.uiState.value.snackbarMessage)
+        assertEquals(UiText("Failed to connect"), viewModel.uiState.value.userError)
     }
 
     @Test
@@ -116,12 +165,12 @@ class ChannelViewModelTest {
         }
 
         viewModel.createChannel(name = "   ")
-        assertFalse(viewModel.uiState.value.isLoading)
-        assertEquals(1, viewModel.uiState.value.channels.size)
+        val state = viewModel.uiState.value
+        assertEquals(1, state.channels.size)
     }
 
     @Test
-    fun clearSnackbarMessage_clearsSnackbar() = runTest {
+    fun clearUserError_clearsError() = runTest {
         channelRepository.shouldFail = true
         val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -129,10 +178,21 @@ class ChannelViewModelTest {
         }
 
         viewModel.createChannel(name = "general-2")
-        assertEquals(UiText("Failed to connect"), viewModel.uiState.value.snackbarMessage)
+        assertEquals(UiText("Failed to connect"), viewModel.uiState.value.userError)
 
-        viewModel.clearSnackbarMessage()
-        assertNull(viewModel.uiState.value.snackbarMessage)
+        viewModel.clearUserError()
+        assertNull(viewModel.uiState.value.userError)
+    }
+
+    @Test
+    fun deleteChannel_callsRepositoryDelete() = runTest {
+        val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+
+        viewModel.deleteChannel("1")
+        assertEquals("1", channelRepository.deletedChannelId)
     }
 
     private class FakeChannelRepository : ChannelRepository {
@@ -140,6 +200,7 @@ class ChannelViewModelTest {
         var shouldFail = false
         var clearCalled = false
         var getChannelsCallCount = 0
+        var deletedChannelId: String? = null
 
         override fun getChannelsFlow(): Flow<List<Channel>> = channelsFlow
 
@@ -149,8 +210,7 @@ class ChannelViewModelTest {
             return Result.success(Unit)
         }
 
-        override suspend fun getChannel(id: String): Result<Channel> =
-            Result.success(channelsFlow.value.first { it.id == id })
+        override suspend fun getChannel(id: String): Result<Unit> = Result.success(Unit)
 
         override suspend fun createChannel(name: String): Result<Unit> {
             if (shouldFail) return Result.failure(Exception("Failed to connect"))
@@ -165,6 +225,12 @@ class ChannelViewModelTest {
                 lastActivityAt = null,
             )
             channelsFlow.value = channelsFlow.value + newChannel
+            return Result.success(Unit)
+        }
+
+        override suspend fun deleteChannel(channelId: String): Result<Unit> {
+            deletedChannelId = channelId
+            channelsFlow.value = channelsFlow.value.filterNot { it.id == channelId }
             return Result.success(Unit)
         }
 

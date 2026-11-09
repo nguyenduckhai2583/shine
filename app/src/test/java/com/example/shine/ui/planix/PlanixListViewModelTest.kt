@@ -31,12 +31,18 @@ class PlanixListViewModelTest {
     @Test
     fun init_initialStateHasEmptySearchQuery() = runTest {
         val viewModel = PlanixListViewModel(planixRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
         assertEquals("", viewModel.uiState.value.searchQuery)
     }
 
     @Test
     fun onSearchQueryChanged_updatesSearchQuery() = runTest {
         val viewModel = PlanixListViewModel(planixRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
         viewModel.onSearchQueryChanged("Test")
         assertEquals("Test", viewModel.uiState.value.searchQuery)
     }

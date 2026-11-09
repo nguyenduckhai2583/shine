@@ -8,25 +8,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import com.example.shine.ui.common.ShineTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.shine.R
 import com.example.shine.domain.model.Channel
+import com.example.shine.ui.common.ShineTopAppBar
 import com.example.shine.ui.theme.ShineTheme
 import java.text.DateFormat
 import java.util.Date
@@ -40,10 +37,13 @@ fun ChannelDetailRoute(
     ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    ChannelDetailScreen(uiState = uiState, onBack = onBack, onRetry = viewModel::load)
+    ChannelDetailScreen(
+        uiState = uiState,
+        onBack = onBack,
+        onRetry = viewModel::load,
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChannelDetailScreen(
     uiState: ChannelDetailUiState,
@@ -55,7 +55,10 @@ fun ChannelDetailScreen(
         modifier = modifier,
         topBar = {
             ShineTopAppBar(
-                title = uiState.channel?.let { "#${it.name}" } ?: "Channel info",
+                title = when (uiState) {
+                    is ChannelDetailUiState.Success -> "#${uiState.channel.name}"
+                    else -> "Channel info"
+                },
                 onBack = onBack,
             )
         },
@@ -66,17 +69,16 @@ fun ChannelDetailScreen(
                 .padding(innerPadding),
             contentAlignment = Alignment.Center,
         ) {
-            val channel = uiState.channel
-            when {
-                channel != null -> ChannelInfo(channel)
-                uiState.isLoading -> CircularProgressIndicator()
-                else -> Column(
+            when (uiState) {
+                ChannelDetailUiState.Loading -> CircularProgressIndicator()
+                is ChannelDetailUiState.Success -> ChannelInfo(uiState.channel)
+                is ChannelDetailUiState.Error -> Column(
                     modifier = Modifier.padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        uiState.errorMessage?.asString() ?: stringResource(R.string.error_unknown),
+                        uiState.message.asString(),
                         color = MaterialTheme.colorScheme.error,
                     )
                     OutlinedButton(onClick = onRetry) { Text("Retry") }
@@ -120,7 +122,7 @@ private fun formatEpochSeconds(seconds: Long): String =
 private fun ChannelDetailScreenPreview() {
     ShineTheme(dynamicColor = false) {
         ChannelDetailScreen(
-            uiState = ChannelDetailUiState(
+            uiState = ChannelDetailUiState.Success(
                 channel = Channel(
                     id = "1",
                     name = "devops-support",

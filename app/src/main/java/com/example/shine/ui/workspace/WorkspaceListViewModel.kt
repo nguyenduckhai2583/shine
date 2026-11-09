@@ -2,16 +2,28 @@ package com.example.shine.ui.workspace
 
 import androidx.lifecycle.viewModelScope
 import com.example.shine.core.base.BaseViewModel
+import com.example.shine.domain.model.Workspace
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.WorkspaceRepository
+import com.example.shine.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class WorkspaceListUiState(
+    val workspaces: List<Workspace> = emptyList(),
+    val selectedWorkspaceId: String? = null,
+    val isLoading: Boolean = false,
+    val errorMessage: UiText? = null,
+) {
+    val canSubmit: Boolean
+        get() = selectedWorkspaceId != null && !isLoading
+}
 
 @HiltViewModel
 class WorkspaceListViewModel @Inject constructor(
@@ -19,43 +31,54 @@ class WorkspaceListViewModel @Inject constructor(
     private val authRepository: AuthRepository,
 ) : BaseViewModel() {
 
-    private val _uiState = MutableStateFlow(WorkspaceListUiState(isLoading = true))
-    val uiState: StateFlow<WorkspaceListUiState> = _uiState.asStateFlow()
+    private val selectedWorkspaceId = MutableStateFlow<String?>(null)
+    private val isSyncing = MutableStateFlow(true)
+    private val errorMessage = MutableStateFlow<UiText?>(null)
+
+    val uiState: StateFlow<WorkspaceListUiState> = combine(
+        workspaceRepository.workspaces,
+        selectedWorkspaceId,
+        isSyncing,
+        errorMessage,
+    ) { workspaces, selectedId, syncing, error ->
+        val effectiveSelectedId = selectedId ?: workspaces.firstOrNull()?.id
+        WorkspaceListUiState(
+            workspaces = workspaces,
+            selectedWorkspaceId = effectiveSelectedId,
+            isLoading = syncing && workspaces.isEmpty(),
+            errorMessage = error,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = WorkspaceListUiState(isLoading = true),
+    )
 
     init {
-        viewModelScope.launch {
-            workspaceRepository.workspaces.collectLatest { workspaces ->
-                _uiState.update { current ->
-                    current.copy(
-                        workspaces = workspaces,
-                        selectedWorkspaceId = current.selectedWorkspaceId ?: workspaces.firstOrNull()?.id,
-                        isLoading = current.isLoading && workspaces.isEmpty(),
-                    )
-                }
-            }
-        }
         loadWorkspaces()
     }
 
     fun loadWorkspaces() {
-        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        isSyncing.value = true
+        errorMessage.value = null
         execute(
             task = { workspaceRepository.fetchWorkspaces() },
             onSuccess = {
-                _uiState.update { it.copy(isLoading = false) }
+                isSyncing.value = false
             },
             onError = { error ->
-                _uiState.update { it.copy(isLoading = false, errorMessage = error) }
-            }
+                isSyncing.value = false
+                errorMessage.value = error
+            },
         )
     }
 
     fun onSelectWorkspace(workspaceId: String) {
-        _uiState.update { it.copy(selectedWorkspaceId = workspaceId) }
+        selectedWorkspaceId.value = workspaceId
     }
 
     fun confirmSelection() {
-        val id = _uiState.value.selectedWorkspaceId ?: return
+        val id = uiState.value.selectedWorkspaceId ?: return
         viewModelScope.launch {
             workspaceRepository.selectWorkspace(id)
         }

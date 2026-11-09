@@ -8,20 +8,21 @@ import com.example.shine.domain.repository.WorkspaceRepository
 import com.example.shine.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ChannelUiState(
     val channels: List<Channel> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: UiText? = null,
-    val snackbarMessage: UiText? = null,
+    val isRefreshing: Boolean = false,
+    val userError: UiText? = null,
 )
 
 @HiltViewModel
@@ -30,23 +31,31 @@ class ChannelViewModel @Inject constructor(
     private val workspaceRepository: WorkspaceRepository,
 ) : BaseViewModel() {
 
-    private val _uiState = MutableStateFlow(ChannelUiState(isLoading = true))
-    val uiState: StateFlow<ChannelUiState> = _uiState.asStateFlow()
+    private val isLoading = MutableStateFlow(true)
+    private val isRefreshing = MutableStateFlow(false)
+    private val userError = MutableStateFlow<UiText?>(null)
+
+    val uiState: StateFlow<ChannelUiState> = combine(
+        channelRepository.getChannelsFlow(),
+        isLoading,
+        isRefreshing,
+        userError,
+    ) { channels, loading, refreshing, error ->
+        ChannelUiState(
+            channels = channels,
+            isLoading = loading && channels.isEmpty(),
+            isRefreshing = refreshing,
+            userError = error,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = ChannelUiState(isLoading = true),
+    )
 
     private var currentWorkspaceId: String? = null
 
     init {
-        viewModelScope.launch {
-            channelRepository.getChannelsFlow().collectLatest { channels ->
-                _uiState.update { current ->
-                    current.copy(
-                        channels = channels,
-                        isLoading = current.isLoading && channels.isEmpty(),
-                    )
-                }
-            }
-        }
-
         viewModelScope.launch {
             workspaceRepository.selectedWorkspaceId
                 .filterNotNull()
@@ -56,26 +65,29 @@ class ChannelViewModel @Inject constructor(
                         channelRepository.clear()
                     }
                     currentWorkspaceId = workspaceId
-                    loadChannels()
+                    load()
                 }
         }
     }
 
-    fun loadChannels() {
-        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+    private fun load() {
+        isLoading.value = true
+        userError.value = null
         execute(
             task = { channelRepository.getChannels() },
-            onSuccess = {
-                _uiState.update { it.copy(isLoading = false) }
-            },
-            onError = { error ->
-                _uiState.update { it.copy(isLoading = false, errorMessage = error) }
-            }
+            onError = { userError.value = it },
+            onComplete = { isLoading.value = false },
         )
     }
 
-    fun clearSnackbarMessage() {
-        _uiState.update { it.copy(snackbarMessage = null) }
+    fun refresh() {
+        isRefreshing.value = true
+        userError.value = null
+        execute(
+            task = { channelRepository.getChannels() },
+            onError = { userError.value = it },
+            onComplete = { isRefreshing.value = false },
+        )
     }
 
     fun createChannel(name: String) {
@@ -84,26 +96,15 @@ class ChannelViewModel @Inject constructor(
 
         execute(
             task = { channelRepository.createChannel(name = trimmed) },
-            onSuccess = {},
-            onError = { error ->
-                _uiState.update { it.copy(snackbarMessage = error) }
-            }
-        )
-    }
-
-    fun retrySync(channelId: String) {
-        execute(
-            task = { channelRepository.retrySync(channelId) },
-            onSuccess = {},
-            onError = {}
+            onError = { userError.value = it },
         )
     }
 
     fun deleteChannel(channelId: String) {
-        execute(
-            task = { channelRepository.deleteChannel(channelId) },
-            onSuccess = {},
-            onError = {}
-        )
+        execute(task = { channelRepository.deleteChannel(channelId) })
+    }
+
+    fun clearUserError() {
+        userError.value = null
     }
 }

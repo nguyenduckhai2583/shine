@@ -1,12 +1,34 @@
 package com.example.shine.ui.navigation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -16,19 +38,18 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.runtime.result.LocalResultEventBus
 import androidx.navigation3.runtime.result.rememberResultEventBusNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import androidx.compose.runtime.LaunchedEffect
-import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
-import com.example.shine.ui.channel.ChannelDetailRoute
-import com.example.shine.ui.home.HomeRoute
-import com.example.shine.ui.planix.PlanixListRoute
-import com.example.shine.ui.profile.ProfileRoute
-import com.example.shine.ui.signin.SignInRoute
-import com.example.shine.ui.workspace.WorkspaceListRoute
+import com.example.shine.R
 import com.example.shine.ui.camera.CameraCaptureMode
 import com.example.shine.ui.camera.CameraRoute
 import com.example.shine.ui.camera.CapturedMedia
 import com.example.shine.ui.camera.MediaPreviewRoute
-import androidx.core.net.toUri
+import com.example.shine.ui.channel.ChannelDetailRoute
+import com.example.shine.ui.home.HomeRoute
+import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
+import com.example.shine.ui.planix.PlanixListRoute
+import com.example.shine.ui.profile.ProfileRoute
+import com.example.shine.ui.signin.SignInRoute
+import com.example.shine.ui.workspace.WorkspaceListRoute
 
 /**
  * Login is mandatory, so unauthenticated and authenticated flows are separate back stacks.
@@ -40,15 +61,54 @@ import androidx.core.net.toUri
 fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val pendingDestination by viewModel.pendingDestination.collectAsStateWithLifecycle()
+    val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
 
-    when (authState) {
-        AuthState.Initializing -> {}
-        AuthState.Unauthenticated -> AuthNavigation()
-        AuthState.SelectWorkspace -> WorkspaceNavigation()
-        AuthState.Authenticated -> MainNavigation(
-            pendingDestination = pendingDestination,
-            onDestinationConsumed = viewModel::onDeepLinkConsumed,
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (authState) {
+            AuthState.Initializing -> {}
+            AuthState.Unauthenticated -> AuthNavigation()
+            AuthState.SelectWorkspace -> WorkspaceNavigation()
+            AuthState.Authenticated -> MainNavigation(
+                pendingDestination = pendingDestination,
+                onDestinationConsumed = viewModel::onDeepLinkConsumed,
+            )
+        }
+
+        AnimatedVisibility(
+            visible = isOffline,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter),
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding(),
+                shadowElevation = 4.dp,
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.error_no_internet),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+        }
     }
 }
 

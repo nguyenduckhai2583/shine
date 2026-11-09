@@ -68,20 +68,6 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun selectTab_updatesSelectedTab() = runTest {
-        val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository, shortcutManager)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
-        }
-
-        assertEquals(HomeTab.Channels, viewModel.uiState.value.selectedTab)
-
-        viewModel.selectTab(HomeTab.Settings)
-
-        assertEquals(HomeTab.Settings, viewModel.uiState.value.selectedTab)
-    }
-
-    @Test
     fun signOut_invokesAuthRepositorySignOut() = runTest {
         val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {

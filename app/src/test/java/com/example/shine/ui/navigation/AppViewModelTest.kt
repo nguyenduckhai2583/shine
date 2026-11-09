@@ -3,6 +3,7 @@ package com.example.shine.ui.navigation
 import android.content.Intent
 import android.net.Uri
 import com.example.shine.core.shortcut.AppShortcutManager
+import com.example.shine.core.util.NetworkMonitor
 import com.example.shine.domain.model.Session
 import com.example.shine.domain.model.SignInStatus
 import com.example.shine.domain.model.User
@@ -10,8 +11,6 @@ import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.UserRepository
 import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
 import com.example.shine.ui.navigation.deeplink.DeepLinkParser
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -24,8 +23,12 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 import kotlin.coroutines.resume
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -35,6 +38,7 @@ class AppViewModelTest {
     private val authRepository = FakeAuthRepository(sessionFlow)
     private val userRepository = FakeUserRepository()
     private val deepLinkParser = DeepLinkParser()
+    private val networkMonitor = FakeNetworkMonitor()
 
     @Before
     fun setUp() {
@@ -55,7 +59,7 @@ class AppViewModelTest {
         )
         sessionFlow.value = testSession
 
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.authState.collect {}
@@ -98,7 +102,7 @@ class AppViewModelTest {
             override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()
         }
 
-        val viewModel = AppViewModel(authRepository, deferredUserRepository, deepLinkParser)
+        val viewModel = AppViewModel(authRepository, deferredUserRepository, deepLinkParser, networkMonitor)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.authState.collect {}
@@ -120,7 +124,7 @@ class AppViewModelTest {
     fun unauthenticated_doesNotFetchUserProfileOrChatUsers() = runTest {
         sessionFlow.value = null
 
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.authState.collect {}
@@ -136,7 +140,7 @@ class AppViewModelTest {
         userRepository.shouldFail = true
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
 
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.authState.collect {}
@@ -151,7 +155,7 @@ class AppViewModelTest {
     fun firstTimeSignIn_fetchesUserProfileAndChatUsersBeforeTransitioningToAuthenticated() = runTest {
         sessionFlow.value = null
 
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.authState.collect {}
@@ -173,7 +177,7 @@ class AppViewModelTest {
     fun selectWorkspace_fetchesUserProfileAndChatUsersBeforeTransitioningToAuthenticated() = runTest {
         sessionFlow.value = Session(token = "jwt-token", workspaceId = null)
 
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.authState.collect {}
@@ -193,7 +197,7 @@ class AppViewModelTest {
 
     @Test
     fun handleIntent_profileShortcut_setsPendingDestination() = runTest {
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
         val intent = mock(Intent::class.java)
         `when`(intent.getStringExtra(AppShortcutManager.EXTRA_SHORTCUT_ACTION)).thenReturn(AppShortcutManager.ACTION_OPEN_PROFILE)
 
@@ -204,7 +208,7 @@ class AppViewModelTest {
 
     @Test
     fun handleIntent_recentChannelShortcut_setsPendingDestination() = runTest {
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser)
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
         val intent = mock(Intent::class.java)
         `when`(intent.getStringExtra(AppShortcutManager.EXTRA_SHORTCUT_ACTION)).thenReturn(AppShortcutManager.ACTION_OPEN_CHANNEL)
         `when`(intent.getStringExtra(AppShortcutManager.EXTRA_CHANNEL_ID)).thenReturn("channel-123")
@@ -212,6 +216,22 @@ class AppViewModelTest {
         viewModel.handleIntent(intent)
 
         assertEquals(DeepLinkDestination.Channel("channel-123"), viewModel.pendingDestination.value)
+    }
+
+    @Test
+    fun isOffline_tracksNetworkStatus() = runTest {
+        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.isOffline.collect {}
+        }
+
+        assertFalse(viewModel.isOffline.value)
+
+        networkMonitor.isOnlineFlow.value = false
+        assertTrue(viewModel.isOffline.value)
+
+        networkMonitor.isOnlineFlow.value = true
+        assertFalse(viewModel.isOffline.value)
     }
 
     private class FakeAuthRepository(override val session: Flow<Session?>) : AuthRepository {
@@ -237,5 +257,10 @@ class AppViewModelTest {
         }
 
         override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()
+    }
+
+    private class FakeNetworkMonitor : NetworkMonitor {
+        val isOnlineFlow = MutableStateFlow(true)
+        override val isOnline: Flow<Boolean> = isOnlineFlow
     }
 }

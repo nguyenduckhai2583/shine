@@ -46,31 +46,19 @@ class DirectMessageRepositoryImplTest {
             DirectMessageDto(id = "dm-2", recipientIds = listOf("user-2"), lastActivityAt = 200L),
         )
 
-        val result = repository.getDirectMessages().getOrThrow()
-
-        assertEquals(2, result.size)
-        // sorted descending by time
-        assertEquals("dm-2", result[0].id)
-        assertEquals("Alice Smith", result[0].name)
-        assertEquals("dm-1", result[1].id)
+        val result = repository.getDirectMessages()
+        assertTrue(result.isSuccess)
 
         val cached = dataStore.getDirectMessages()
         assertEquals(2, cached.size)
+        // sorted descending by time
+        assertEquals("dm-2", cached[0].id)
+        assertEquals("Alice Smith", cached[0].name)
+        assertEquals("dm-1", cached[1].id)
     }
 
     @Test
-    fun getDirectMessages_apiFails_returnsCachedData() = runTest {
-        `when`(sessionLocal.session).thenReturn(flowOf(null))
-        dataStore.replaceDirectMessages(listOf(DirectMessage("cached-1", "Cached DM", 50L)))
-        chatApi.shouldFail = true
-
-        val result = repository.getDirectMessages().getOrThrow()
-        assertEquals(1, result.size)
-        assertEquals("cached-1", result[0].id)
-    }
-
-    @Test
-    fun getDirectMessages_apiFails_emptyCache_returnsFailure() = runTest {
+    fun getDirectMessages_apiFails_returnsFailure() = runTest {
         `when`(sessionLocal.session).thenReturn(flowOf(null))
         chatApi.shouldFail = true
 

@@ -66,6 +66,27 @@ class ChannelRepositoryImplTest {
     }
 
     @Test
+    fun getChannel_fetchesFromApi_savesToRoom() = runTest {
+        val dto = ChannelDto(id = "c1", name = "General Channel")
+        api.conversationToReturn = dto
+
+        val result = repository.getChannel("c1")
+        assertTrue(result.isSuccess)
+
+        val daoChannel = dao.getChannel("c1")
+        assertEquals("c1", daoChannel?.id)
+        assertEquals("General Channel", daoChannel?.name)
+    }
+
+    @Test
+    fun getChannel_apiFails_returnsFailure() = runTest {
+        api.shouldFail = true
+        val result = repository.getChannel("c1")
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is AppException)
+    }
+
+    @Test
     fun createChannel_savesPendingLocally_andSchedulesImmediateSync() = runTest {
         val result = repository.createChannel("New Channel")
         assertTrue(result.isSuccess)

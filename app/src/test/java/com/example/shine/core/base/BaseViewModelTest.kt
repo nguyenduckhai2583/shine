@@ -40,11 +40,11 @@ class BaseViewModelTest {
             )
         }
 
-        fun runFailureTask(errorMessage: String, errorCallback: (UiText) -> Unit, finallyCallback: () -> Unit) {
+        fun runFailureTask(errorMessage: String, errorCallback: (UiText) -> Unit, completeCallback: () -> Unit) {
             execute(
                 task = { Result.failure<String>(Exception(errorMessage)) },
                 onError = errorCallback,
-                onFinally = finallyCallback,
+                onComplete = completeCallback,
             )
         }
     }
@@ -68,18 +68,18 @@ class BaseViewModelTest {
     }
 
     @Test
-    fun execute_failure_callsOnErrorAndOnFinally() = runTest {
+    fun execute_failure_callsOnErrorAndOnComplete() = runTest {
         val viewModel = TestViewModel()
         var capturedError: UiText? = null
-        var finallyRan = false
+        var completeRan = false
 
         viewModel.runFailureTask(
             errorMessage = "Server down",
             errorCallback = { capturedError = it },
-            finallyCallback = { finallyRan = true },
+            completeCallback = { completeRan = true },
         )
 
         assertEquals(UiText("Server down"), capturedError)
-        assertTrue(finallyRan)
+        assertTrue(completeRan)
     }
 }

@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
 interface DirectMessageRepository {
-    suspend fun getDirectMessages(): Result<List<DirectMessage>>
+    suspend fun getDirectMessages(): Result<Unit>
 
     fun getDirectMessagesFlow(): Flow<List<DirectMessage>> = emptyFlow()
 

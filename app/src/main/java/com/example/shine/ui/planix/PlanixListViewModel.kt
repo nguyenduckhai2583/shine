@@ -11,12 +11,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -30,12 +30,17 @@ class PlanixListViewModel @Inject constructor(
     private val planixRepository: PlanixRepository,
 ) : BaseViewModel() {
 
-    private val _uiState = MutableStateFlow(PlanixListUiState())
-    val uiState: StateFlow<PlanixListUiState> = _uiState.asStateFlow()
+    private val searchQuery = MutableStateFlow("")
 
-    val projectsPagingFlow: Flow<PagingData<Project>> = _uiState
-        .map { it.searchQuery }
-        .distinctUntilChanged()
+    val uiState: StateFlow<PlanixListUiState> = searchQuery
+        .map { PlanixListUiState(it) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = PlanixListUiState(),
+        )
+
+    val projectsPagingFlow: Flow<PagingData<Project>> = searchQuery
         .debounce { query -> if (query.isEmpty()) 0.milliseconds else 300L.milliseconds }
         .flatMapLatest { keyword ->
             planixRepository.getProjectsPagingFlow(searchKey = keyword.trim().ifEmpty { null })
@@ -43,6 +48,6 @@ class PlanixListViewModel @Inject constructor(
         .cachedIn(viewModelScope)
 
     fun onSearchQueryChanged(newQuery: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = newQuery)
+        searchQuery.value = newQuery
     }
 }

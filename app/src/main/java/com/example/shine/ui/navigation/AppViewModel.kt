@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import com.example.shine.core.base.BaseViewModel
 import com.example.shine.core.shortcut.AppShortcutManager
+import com.example.shine.core.util.NetworkMonitor
 import com.example.shine.domain.repository.AuthRepository
 import com.example.shine.domain.repository.UserRepository
 import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
@@ -16,8 +17,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.supervisorScope
 import javax.inject.Inject
 
@@ -33,7 +35,16 @@ class AppViewModel @Inject constructor(
     authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val deepLinkParser: DeepLinkParser,
+    networkMonitor: NetworkMonitor,
 ) : BaseViewModel() {
+
+    val isOffline: StateFlow<Boolean> = networkMonitor.isOnline
+        .map { !it }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = false,
+        )
 
     private val _pendingDestination = MutableStateFlow<DeepLinkDestination?>(null)
     val pendingDestination: StateFlow<DeepLinkDestination?> = _pendingDestination.asStateFlow()

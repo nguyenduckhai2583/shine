@@ -34,7 +34,7 @@ class ConversationSocketMediatorTest {
         val createdChannels = mutableListOf<Channel>()
 
         override suspend fun getChannels(): Result<Unit> = Result.success(Unit)
-        override suspend fun getChannel(id: String): Result<Channel> = Result.failure(Exception())
+        override suspend fun getChannel(id: String): Result<Unit> = Result.failure(Exception())
         override suspend fun createChannel(name: String): Result<Unit> = Result.success(Unit)
 
         override fun onChannelCreated(channel: Channel) {
@@ -45,7 +45,7 @@ class ConversationSocketMediatorTest {
     private class FakeDirectMessageRepository : DirectMessageRepository {
         val createdDms = mutableListOf<DirectMessage>()
 
-        override suspend fun getDirectMessages(): Result<List<DirectMessage>> = Result.success(emptyList())
+        override suspend fun getDirectMessages(): Result<Unit> = Result.success(Unit)
 
         override fun onDirectMessageCreated(message: DirectMessage) {
             createdDms.add(message)

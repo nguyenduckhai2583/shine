@@ -9,7 +9,7 @@ interface ChannelRepository {
 
     suspend fun getRecentChannels(limit: Int = 3): List<Channel> = emptyList()
 
-    suspend fun getChannel(id: String): Result<Channel>
+    suspend fun getChannel(id: String): Result<Unit>
 
     suspend fun createChannel(name: String): Result<Unit>
 

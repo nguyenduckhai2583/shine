@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.result.ResultEffect
@@ -51,7 +52,6 @@ import coil.compose.AsyncImage
 import com.example.shine.ui.common.ImagePickerBottomSheet
 import com.example.shine.ui.theme.ShineTheme
 import kotlin.math.sqrt
-import androidx.core.net.toUri
 
 @Composable
 fun ProfileRoute(
@@ -86,11 +86,14 @@ fun ProfileScreen(
     var showImagePicker by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val isUploading = uiState.uploadState is UploadState.Uploading
+    val selectedAvatarUri = (uiState.uploadState as? UploadState.Uploading)?.selectedUri
+
     val context = LocalContext.current
-    LaunchedEffect(uiState.errorMessage) {
-        val message = uiState.errorMessage
-        if (message != null) {
-            snackbarHostState.showSnackbar(message.asString(context))
+    LaunchedEffect(uiState.uploadState) {
+        val upload = uiState.uploadState
+        if (upload is UploadState.Error) {
+            snackbarHostState.showSnackbar(upload.message.asString(context))
             onDismissError()
         }
     }
@@ -122,7 +125,6 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(48.dp))
 
             val avatarRadius = 64.dp
-            // Dịch chuyển theo góc 45 độ: x = y = radius * sqrt(0.5f)
             val edgeOffset = avatarRadius * sqrt(0.5f)
 
             // Avatar container with camera action badge
@@ -136,10 +138,10 @@ fun ProfileScreen(
                         .size(avatarRadius * 2)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primaryContainer)
-                        .clickable(enabled = !uiState.isUploading) { showImagePicker = true },
+                        .clickable(enabled = !isUploading) { showImagePicker = true },
                     contentAlignment = Alignment.Center,
                 ) {
-                    val avatarSource = uiState.selectedAvatarUri ?: uiState.avatarUrl
+                    val avatarSource = selectedAvatarUri ?: uiState.avatarUrl
                     if (avatarSource != null) {
                         AsyncImage(
                             model = avatarSource,
@@ -159,7 +161,7 @@ fun ProfileScreen(
                         )
                     }
 
-                    if (uiState.isUploading) {
+                    if (isUploading) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -176,7 +178,7 @@ fun ProfileScreen(
                     }
                 }
 
-                // Camera action badge overlay - đặt tại tâm mép viền avatar
+                // Camera action badge overlay
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -184,7 +186,7 @@ fun ProfileScreen(
                         .size(38.dp)
                         .clip(CircleShape)
                         .background(
-                            if (uiState.isUploading) MaterialTheme.colorScheme.outline
+                            if (isUploading) MaterialTheme.colorScheme.outline
                             else MaterialTheme.colorScheme.primary
                         )
                         .border(
@@ -192,7 +194,7 @@ fun ProfileScreen(
                             color = MaterialTheme.colorScheme.surface,
                             shape = CircleShape,
                         )
-                        .clickable(enabled = !uiState.isUploading) { showImagePicker = true },
+                        .clickable(enabled = !isUploading) { showImagePicker = true },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -209,7 +211,7 @@ fun ProfileScreen(
             // Button for updating avatar
             FilledTonalButton(
                 onClick = { showImagePicker = true },
-                enabled = !uiState.isUploading,
+                enabled = !isUploading,
                 modifier = Modifier.padding(top = 4.dp),
             ) {
                 Icon(
@@ -218,7 +220,7 @@ fun ProfileScreen(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.size(8.dp))
-                Text(text = if (uiState.isUploading) "Uploading..." else "Change Avatar")
+                Text(text = if (isUploading) "Uploading..." else "Change Avatar")
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -252,7 +254,7 @@ private fun ProfileScreenPreview() {
             uiState = ProfileUiState(
                 name = "Jane Doe",
                 avatarUrl = null,
-                selectedAvatarUri = null,
+                uploadState = UploadState.Idle,
             ),
             onBack = {},
             onAvatarSelected = {},
