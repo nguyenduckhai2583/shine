@@ -1,23 +1,10 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.ksp)
-    alias(libs.plugins.hilt)
+    alias(libs.plugins.shine.android.library)
+    alias(libs.plugins.shine.hilt)
 }
 
 android {
     namespace = "com.example.shine.core.database"
-    compileSdk {
-        version = release(37)
-    }
-
-    defaultConfig {
-        minSdk = 24
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
 }
 
 dependencies {
@@ -31,10 +18,4 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.androidx.paging.runtime)
-
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
 }

@@ -78,6 +78,13 @@ androidx-camera-video = { group = "androidx.camera", name = "camera-video", vers
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 socket-io-client = { group = "io.socket", name = "socket.io-client", version.ref = "socketIo" }
 
+# Dependencies cho build-logic
+android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
+kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+compose-compiler-gradlePlugin = { group = "org.jetbrains.kotlin", name = "compose-compiler-gradle-plugin", version.ref = "kotlin" }
+ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+hilt-gradlePlugin = { group = "com.google.dagger", name = "hilt-android-gradle-plugin", version.ref = "hilt" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -85,3 +92,9 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+
+# Convention plugins tự chế
+shine-android-library = { id = "shine.android.library" }
+shine-android-library-compose = { id = "shine.android.library.compose" }
+shine-android-feature = { id = "shine.android.feature" }
+shine-hilt = { id = "shine.hilt" }
