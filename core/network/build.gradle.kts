@@ -35,10 +35,10 @@ android {
 }
 
 dependencies {
-    api(project(":core:model"))
-    api(project(":core:datastore"))
-    implementation(project(":core:common"))
-    implementation(project(":core:database"))
+    api(projects.core.model)
+    api(projects.core.datastore)
+    implementation(projects.core.common)
+    implementation(projects.core.database)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.serialization.json)
