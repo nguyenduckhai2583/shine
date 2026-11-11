@@ -79,7 +79,7 @@ Shine/
 - **Quản lý BackStack:** Sử dụng `rememberNavBackStack(...)`, `NavDisplay(...)`, phối hợp với decorators:
   - `rememberSaveableStateHolderNavEntryDecorator()`
   - `rememberViewModelStoreNavEntryDecorator()`
-- **Phân tách luồng xác thực:** Trong `ShineApp.kt`, back stack của trạng thái `SignedOut` (SignIn), `SelectWorkspace`, và `SignedIn` (Home) được tách biệt hoàn toàn để tránh rò rỉ trạng thái giữa các phiên đăng nhập.
+- **Quản lý luồng xác thực:** Trong `ShineApp.kt`, ứng dụng sử dụng một `NavDisplay` duy nhất kết hợp `LaunchedEffect(authState)` để tự động điều hướng và làm sạch `backStack` giữa các trạng thái `Unauthenticated` (SignIn), `SelectWorkspace`, và `Authenticated` (Home).
 
 ### 4.3. Quản lý Phiên (Session) & Xác thực
 - **SessionLocalDataSource:** Quản lý `Session` (Token, RefreshToken, User, WorkspaceId) lưu trữ bảo mật trong DataStore.
