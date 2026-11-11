@@ -27,10 +27,7 @@ gradlePlugin {
             id = "shine.android.library.compose"
             implementationClass = "AndroidLibraryComposeConventionPlugin"
         }
-        register("androidFeature") {
-            id = "shine.android.feature"
-            implementationClass = "AndroidFeatureConventionPlugin"
-        }
+
         register("androidHilt") {
             id = "shine.hilt"
             implementationClass = "AndroidHiltConventionPlugin"

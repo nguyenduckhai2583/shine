@@ -96,5 +96,4 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 # Convention plugins tự chế
 shine-android-library = { id = "shine.android.library" }
 shine-android-library-compose = { id = "shine.android.library.compose" }
-shine-android-feature = { id = "shine.android.feature" }
 shine-hilt = { id = "shine.hilt" }

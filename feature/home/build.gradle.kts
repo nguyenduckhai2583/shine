@@ -1,5 +1,7 @@
 plugins {
-    alias(libs.plugins.shine.android.feature)
+    alias(libs.plugins.shine.android.library)
+    alias(libs.plugins.shine.android.library.compose)
+    alias(libs.plugins.shine.hilt)
 }
 
 android {
@@ -7,5 +9,11 @@ android {
 }
 
 dependencies {
+    implementation(projects.core.common)
+    implementation(projects.core.data)
+    implementation(projects.core.model)
+    implementation(projects.core.designsystem)
+
     implementation(libs.coil.compose)
+    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
 }
