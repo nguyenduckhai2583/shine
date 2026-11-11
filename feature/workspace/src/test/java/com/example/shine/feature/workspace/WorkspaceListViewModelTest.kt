@@ -12,14 +12,17 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import com.example.shine.core.shortcut.FakeAppShortcutManager
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import com.example.shine.core.domain.FakeSignOutUseCase
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -28,6 +31,8 @@ class WorkspaceListViewModelTest {
 
     private val workspaceRepository = FakeWorkspaceRepository()
     private val authRepository = FakeAuthRepository()
+    private val shortcutManager = FakeAppShortcutManager()
+    private val signOutUseCase = FakeSignOutUseCase(onSignOut = { authRepository.signedOut = true })
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -37,7 +42,7 @@ class WorkspaceListViewModelTest {
 
     @Test
     fun init_loadsWorkspacesAndSetsSelected() = runTest {
-        val viewModel = WorkspaceListViewModel(workspaceRepository, authRepository)
+        val viewModel = WorkspaceListViewModel(workspaceRepository, signOutUseCase, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -50,7 +55,7 @@ class WorkspaceListViewModelTest {
 
     @Test
     fun onSelectWorkspace_changesSelectedWorkspaceId() = runTest {
-        val viewModel = WorkspaceListViewModel(workspaceRepository, authRepository)
+        val viewModel = WorkspaceListViewModel(workspaceRepository, signOutUseCase, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -61,7 +66,7 @@ class WorkspaceListViewModelTest {
 
     @Test
     fun confirmSelection_callsRepositorySelectWorkspace() = runTest {
-        val viewModel = WorkspaceListViewModel(workspaceRepository, authRepository)
+        val viewModel = WorkspaceListViewModel(workspaceRepository, signOutUseCase, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -73,9 +78,19 @@ class WorkspaceListViewModelTest {
     }
 
     @Test
+    fun signOut_clearsShortcutsAndSignsOut() = runTest {
+        val viewModel = WorkspaceListViewModel(workspaceRepository, signOutUseCase, shortcutManager)
+        viewModel.signOut()
+
+        assertTrue(shortcutManager.removeAllCalls > 0)
+        assertTrue(signOutUseCase.signOutCalled)
+        assertTrue(authRepository.signedOut)
+    }
+
+    @Test
     fun loadWorkspaces_failure_setsErrorMessage() = runTest {
         workspaceRepository.shouldFail = true
-        val viewModel = WorkspaceListViewModel(workspaceRepository, authRepository)
+        val viewModel = WorkspaceListViewModel(workspaceRepository, signOutUseCase, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -113,8 +128,11 @@ class WorkspaceListViewModelTest {
     }
 
     private class FakeAuthRepository : AuthRepository {
+        var signedOut = false
         override val session: Flow<Session?> = MutableStateFlow(null)
         override suspend fun signIn(email: String, password: String): Result<SignInStatus> = throw NotImplementedError()
-        override suspend fun signOut() {}
+        override suspend fun signOut() {
+            signedOut = true
+        }
     }
 }

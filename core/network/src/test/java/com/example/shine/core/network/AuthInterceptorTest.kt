@@ -2,7 +2,7 @@ package com.example.shine.core.network
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.example.shine.core.datastore.SessionLocalDataSource
-import com.example.shine.core.datastore.TokenProvider
+import com.example.shine.core.datastore.SessionProvider
 import com.example.shine.core.model.Session
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,7 +30,6 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.example.shine.core.datastore.WorkspaceProvider
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthInterceptorTest {
@@ -76,22 +75,14 @@ class AuthInterceptorTest {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(TokenRefreshApi::class.java)
-        val channelDao = org.mockito.Mockito.mock(com.example.shine.core.database.dao.ChannelDao::class.java)
-        val workspaceDao = org.mockito.Mockito.mock(com.example.shine.core.database.dao.WorkspaceDao::class.java)
-        val userDao = org.mockito.Mockito.mock(com.example.shine.core.database.dao.UserDao::class.java)
-        val directMessageDataStore = com.example.shine.core.datastore.DirectMessageDataStore()
+        val sessionProvider = SessionProvider(local, scope)
         client = OkHttpClient.Builder()
             .addInterceptor(
                 AuthInterceptor(
-                    TokenProvider(local, scope),
-                    WorkspaceProvider(local, scope),
-                    TokenRefresher(
+                    sessionProvider = sessionProvider,
+                    tokenRefresher = TokenRefresher(
                         api = refreshApi,
                         local = local,
-                        channelDao = channelDao,
-                        workspaceDao = workspaceDao,
-                        userDao = userDao,
-                        directMessageDataStore = directMessageDataStore,
                     ),
                 ),
             )

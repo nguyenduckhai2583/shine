@@ -10,7 +10,6 @@ import com.example.shine.core.model.Channel
 import com.example.shine.core.model.SyncStatus
 import com.example.shine.core.network.ChatApi
 import com.example.shine.core.network.dto.toDomain
-import com.example.shine.core.network.dto.toEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -76,5 +75,6 @@ class ChannelRepositoryImpl @Inject constructor(
 
     override suspend fun clear() {
         channelDao.clearAll()
+        channelSyncScheduler.cancelSync()
     }
 }

@@ -7,6 +7,7 @@ import com.example.shine.core.model.Workspace
 import com.example.shine.core.data.repository.AuthRepository
 import com.example.shine.core.data.repository.UserRepository
 import com.example.shine.core.data.repository.WorkspaceRepository
+import com.example.shine.core.domain.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,10 +31,11 @@ data class HomeUiState(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val authRepository: AuthRepository,
+    authRepository: AuthRepository,
     private val workspaceRepository: WorkspaceRepository,
     private val userRepository: UserRepository,
     private val shortcutManager: AppShortcutManager,
+    private val signOutUseCase: SignOutUseCase,
 ) : BaseViewModel() {
 
     private val isSwitchingWorkspace = MutableStateFlow(false)
@@ -84,7 +86,7 @@ class HomeViewModel @Inject constructor(
     fun signOut() {
         viewModelScope.launch {
             shortcutManager.removeAllDynamicShortcuts()
-            authRepository.signOut()
+            signOutUseCase()
         }
     }
 }

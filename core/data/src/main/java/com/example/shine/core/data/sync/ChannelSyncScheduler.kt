@@ -54,6 +54,11 @@ class ChannelSyncScheduler @Inject constructor(
         )
     }
 
+    fun cancelSync() {
+        workManager.cancelUniqueWork(SyncChannelsWorker.UNIQUE_WORK_NAME)
+        workManager.cancelUniqueWork(SyncChannelsWorker.DAILY_SYNC_WORK_NAME)
+    }
+
     private fun calculateDelayUntilNext7Am(): Long {
         val now = Calendar.getInstance()
         val target = Calendar.getInstance().apply {

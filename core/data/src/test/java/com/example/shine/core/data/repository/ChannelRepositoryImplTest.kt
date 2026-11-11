@@ -12,11 +12,16 @@ import com.example.shine.core.network.dto.ChannelDto
 import com.example.shine.core.network.dto.CreateChannelRequestDto
 import com.example.shine.core.network.dto.DirectMessageDto
 import kotlinx.coroutines.flow.Flow
+import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.model.Session
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -127,6 +132,7 @@ class ChannelRepositoryImplTest {
         dao.upsertChannel(ChannelEntity(localId = "c1", id = "c1", name = "Test"))
         repository.clear()
         assertTrue(dao.getChannels().isEmpty())
+        verify(syncScheduler).cancelSync()
     }
 
     private class FakeChatApi : ChatApi {

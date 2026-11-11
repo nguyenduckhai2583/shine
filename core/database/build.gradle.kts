@@ -12,7 +12,7 @@ dependencies {
     implementation(projects.core.common)
 
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.room.runtime)
+    api(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.paging)
     ksp(libs.androidx.room.compiler)

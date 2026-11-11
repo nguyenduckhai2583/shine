@@ -61,9 +61,6 @@ class ChannelViewModel @Inject constructor(
                 .filterNotNull()
                 .distinctUntilChanged()
                 .collectLatest { workspaceId ->
-                    if (currentWorkspaceId != null) {
-                        channelRepository.clear()
-                    }
                     currentWorkspaceId = workspaceId
                     loadChannels(isRefresh = false)
                 }

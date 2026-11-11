@@ -3,9 +3,10 @@ package com.example.shine.feature.workspace
 import androidx.lifecycle.viewModelScope
 import com.example.shine.core.common.base.BaseViewModel
 import com.example.shine.core.model.Workspace
-import com.example.shine.core.data.repository.AuthRepository
 import com.example.shine.core.data.repository.WorkspaceRepository
 import com.example.shine.core.common.ui.UiText
+import com.example.shine.core.shortcut.AppShortcutManager
+import com.example.shine.core.domain.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,7 +29,8 @@ data class WorkspaceListUiState(
 @HiltViewModel
 class WorkspaceListViewModel @Inject constructor(
     private val workspaceRepository: WorkspaceRepository,
-    private val authRepository: AuthRepository,
+    private val signOutUseCase: SignOutUseCase,
+    private val shortcutManager: AppShortcutManager,
 ) : BaseViewModel() {
 
     private val selectedWorkspaceId = MutableStateFlow<String?>(null)
@@ -86,7 +88,8 @@ class WorkspaceListViewModel @Inject constructor(
 
     fun signOut() {
         viewModelScope.launch {
-            authRepository.signOut()
+            shortcutManager.removeAllDynamicShortcuts()
+            signOutUseCase()
         }
     }
 }

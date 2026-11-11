@@ -21,10 +21,6 @@ import javax.inject.Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val api: AuthApi,
     private val local: SessionLocalDataSource,
-    private val workspaceRepository: WorkspaceRepository,
-    private val channelRepository: ChannelRepository,
-    private val directMessageRepository: DirectMessageRepository,
-    private val userRepository: UserRepository,
     private val passwordHasher: PasswordHasher,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AuthRepository {
@@ -38,31 +34,13 @@ class AuthRepositoryImpl @Inject constructor(
             return@suspendRunCatching SignInStatus.TwoFactorRequired(tmpToken = dto.token)
         }
 
-        channelRepository.clear()
-        workspaceRepository.clear()
-        directMessageRepository.clear()
-        userRepository.clear()
-
         val session = dto.toDomain()
         local.save(session)
-
-        val workspaces = workspaceRepository.fetchWorkspaces().getOrElse { emptyList() }
-
-        if (workspaces.size == 1) {
-            val single = workspaces.first()
-            local.setWorkspaceId(single.id)
-            return@suspendRunCatching SignInStatus.Authenticated(session.copy(workspaceId = single.id))
-        }
-
         SignInStatus.Authenticated(session)
     }
 
     override suspend fun signOut() {
         withContext(NonCancellable + ioDispatcher) {
-            channelRepository.clear()
-            workspaceRepository.clear()
-            directMessageRepository.clear()
-            userRepository.clear()
             local.clear()
         }
     }

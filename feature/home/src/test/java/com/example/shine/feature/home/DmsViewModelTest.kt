@@ -107,7 +107,7 @@ class DmsViewModelTest {
     }
 
     @Test
-    fun workspaceChange_clearsAndReloadsDms() = runTest {
+    fun workspaceChange_reloadsDmsWithoutClearing() = runTest {
         val viewModel = DmsViewModel(dmRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
@@ -117,7 +117,7 @@ class DmsViewModelTest {
 
         workspaceRepository.currentSelectedId.value = "ws-2"
 
-        assertTrue(dmRepository.clearCalled)
+        assertFalse(dmRepository.clearCalled)
         assertEquals(2, dmRepository.getDmsCallCount)
     }
 

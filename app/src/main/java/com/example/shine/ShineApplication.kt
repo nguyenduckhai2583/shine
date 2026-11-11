@@ -6,15 +6,19 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraXConfig
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.example.shine.core.data.session.SessionManager
+import com.example.shine.core.data.sync.ChannelSyncScheduler
 import com.example.shine.core.network.TokenRefreshScheduler
 import com.example.shine.core.network.socket.SocketLifecycleManager
-import com.example.shine.core.data.sync.ChannelSyncScheduler
 import com.example.shine.widget.ChannelsWidgetSyncManager
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 @HiltAndroidApp
 class ShineApplication : Application(), CameraXConfig.Provider, Configuration.Provider {
+
+    @Inject
+    lateinit var sessionManager: SessionManager
 
     @Inject
     lateinit var tokenRefreshScheduler: TokenRefreshScheduler
@@ -38,6 +42,7 @@ class ShineApplication : Application(), CameraXConfig.Provider, Configuration.Pr
 
     override fun onCreate() {
         super.onCreate()
+        sessionManager.start()
         tokenRefreshScheduler.start()
         socketLifecycleManager.start()
         channelSyncScheduler.scheduleDailySync()

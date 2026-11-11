@@ -115,7 +115,7 @@ class ChannelViewModelTest {
     }
 
     @Test
-    fun workspaceChange_clearsAndReloadsChannels() = runTest {
+    fun workspaceChange_reloadsChannelsWithoutClearing() = runTest {
         val viewModel = ChannelViewModel(channelRepository, workspaceRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
@@ -125,7 +125,7 @@ class ChannelViewModelTest {
 
         workspaceRepository.currentSelectedId.value = "ws-2"
 
-        assertTrue(channelRepository.clearCalled)
+        assertFalse(channelRepository.clearCalled)
         assertEquals(2, channelRepository.getChannelsCallCount)
     }
 

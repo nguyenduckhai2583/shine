@@ -43,7 +43,8 @@ Shine/
 │   ├── database/                  # Room Database (ShineDatabase), Entities, DAOs, DatabaseModule
 │   ├── datastore/                 # DataStore Preferences (Session, Tokens, Workspace, DMs), DataStoreModule
 │   ├── network/                   # Retrofit APIs, DTOs & Mappers, OkHttp Interceptors, Socket.IO engine, NetworkModule
-│   └── data/                      # Repository (interfaces & impls), Paging (PlanixRemoteMediator), Sync (Worker & Scheduler), DataModule
+│   ├── data/                      # Repository (interfaces & impls), Paging (PlanixRemoteMediator), Sync (Worker & Scheduler), DataModule
+│   └── domain/                    # Use Cases (SignOutUseCase), Domain Interactors & Coordinators, DomainModule
 └── app/
     ├── src/main/java/com/example/shine/
     │   ├── ShineApplication.kt    # Application class, @HiltAndroidApp
@@ -83,9 +84,11 @@ Shine/
 
 ### 4.3. Quản lý Phiên (Session) & Xác thực
 - **SessionLocalDataSource:** Quản lý `Session` (Token, RefreshToken, User, WorkspaceId) lưu trữ bảo mật trong DataStore.
+- **SessionProvider (:core:datastore):** In-memory cache (`StateFlow<Session?>`) cung cấp token và workspaceId đồng bộ tức thì cho `AuthInterceptor` mà không block disk I/O.
+- **SessionManager (:core:data):** Quản lý vòng đời phiên toàn ứng dụng trên `ApplicationScope`. Lắng nghe sự thay đổi của session, tự động dọn dẹp tập trung toàn bộ Room Database (`ShineDatabase.clearAll()`), in-memory database, cache DMs và WorkManager sync tasks khi phiên bị hủy (Sign out hoặc 401 token refresh fail).
 - **Tự động làm mới Token:** 
   - `AuthInterceptor` thêm header `Authorization: Bearer <token>` vào request.
-  - `TokenRefreshScheduler` / `TokenRefresher` quản lý chu kỳ làm mới token trước khi hết hạn.
+  - `TokenRefreshScheduler` / `TokenRefresher` quản lý chu kỳ làm mới token trước khi hết hạn. Khi refresh thất bại, `TokenRefresher` chỉ cần xóa session và để `SessionManager` tự động kích hoạt dọn dẹp.
 
 ### 4.4. Xử lý Lỗi (Error Handling)
 - **Tập trung hóa AppException:** Tất cả lỗi mạng, máy chủ và không có Internet đều được chuyển đổi thành `AppException(val error: AppError, val serverMessage: String? = null)`.

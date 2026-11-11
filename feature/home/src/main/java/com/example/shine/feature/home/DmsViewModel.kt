@@ -61,9 +61,6 @@ class DmsViewModel @Inject constructor(
                 .filterNotNull()
                 .distinctUntilChanged()
                 .collectLatest { workspaceId ->
-                    if (currentWorkspaceId != null && currentWorkspaceId != workspaceId) {
-                        directMessageRepository.clear()
-                    }
                     currentWorkspaceId = workspaceId
                     loadInitial()
                 }

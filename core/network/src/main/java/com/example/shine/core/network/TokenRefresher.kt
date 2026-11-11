@@ -1,10 +1,6 @@
 package com.example.shine.core.network
 
-import com.example.shine.core.datastore.DirectMessageDataStore
 import com.example.shine.core.datastore.SessionLocalDataSource
-import com.example.shine.core.database.dao.ChannelDao
-import com.example.shine.core.database.dao.UserDao
-import com.example.shine.core.database.dao.WorkspaceDao
 import com.example.shine.core.network.dto.RefreshTokenRequest
 import com.example.shine.core.network.dto.toDomain
 import kotlinx.coroutines.flow.first
@@ -21,10 +17,6 @@ import javax.inject.Singleton
 class TokenRefresher @Inject constructor(
     private val api: TokenRefreshApi,
     private val local: SessionLocalDataSource,
-    private val channelDao: ChannelDao,
-    private val workspaceDao: WorkspaceDao,
-    private val userDao: UserDao,
-    private val directMessageDataStore: DirectMessageDataStore,
 ) {
     private val lock = Any()
 
@@ -60,10 +52,6 @@ class TokenRefresher @Inject constructor(
     fun signOut(invalidToken: String): String? = synchronized(lock) {
         runBlocking {
             if (local.session.first()?.token == invalidToken) {
-                channelDao.clearAll()
-                workspaceDao.clear()
-                userDao.clear()
-                directMessageDataStore.clear()
                 local.clear()
             }
         }

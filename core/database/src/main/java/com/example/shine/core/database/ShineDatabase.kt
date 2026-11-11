@@ -34,4 +34,8 @@ abstract class ShineDatabase : RoomDatabase() {
 
     open suspend fun <R> runTransaction(block: suspend () -> R): R =
         withTransaction(block)
+
+    open fun clearAll() {
+        clearAllTables()
+    }
 }

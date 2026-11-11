@@ -59,6 +59,7 @@ dependencies {
     implementation(projects.core.datastore)
     implementation(projects.core.network)
     implementation(projects.core.data)
+    implementation(projects.core.domain)
     implementation(projects.core.designsystem)
     implementation(projects.feature.auth)
     implementation(projects.feature.planix)

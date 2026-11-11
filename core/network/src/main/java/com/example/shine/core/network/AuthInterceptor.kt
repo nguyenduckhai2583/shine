@@ -1,7 +1,6 @@
 package com.example.shine.core.network
 
-import com.example.shine.core.datastore.TokenProvider
-import com.example.shine.core.datastore.WorkspaceProvider
+import com.example.shine.core.datastore.SessionProvider
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
@@ -9,19 +8,18 @@ import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import javax.inject.Inject
 
 class AuthInterceptor @Inject constructor(
-    private val tokenProvider: TokenProvider,
-    private val workspaceProvider: WorkspaceProvider,
+    private val sessionProvider: SessionProvider,
     private val tokenRefresher: TokenRefresher,
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val token = tokenProvider.current()
+        val token = sessionProvider.currentToken()
         if (token == null || request.header(AUTHORIZATION) != null) {
             return chain.proceed(request)
         }
 
-        val workspaceId = workspaceProvider.current()
+        val workspaceId = sessionProvider.currentWorkspaceId()
         val response = chain.proceed(request.withAuth(token, workspaceId))
         return when (response.code) {
             HTTP_UNAUTHORIZED, HTTP_TOKEN_EXPIRED -> {
