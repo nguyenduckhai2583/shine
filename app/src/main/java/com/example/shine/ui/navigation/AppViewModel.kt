@@ -3,11 +3,11 @@ package com.example.shine.ui.navigation
 import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.viewModelScope
-import com.example.shine.core.base.BaseViewModel
+import com.example.shine.core.common.base.BaseViewModel
 import com.example.shine.core.shortcut.AppShortcutManager
-import com.example.shine.core.util.NetworkMonitor
-import com.example.shine.domain.repository.AuthRepository
-import com.example.shine.domain.repository.UserRepository
+import com.example.shine.core.common.network.NetworkMonitor
+import com.example.shine.core.data.repository.AuthRepository
+import com.example.shine.core.data.repository.UserRepository
 import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
 import com.example.shine.ui.navigation.deeplink.DeepLinkParser
 import dagger.hilt.android.lifecycle.HiltViewModel

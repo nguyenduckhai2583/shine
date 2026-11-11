@@ -53,6 +53,21 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:model"))
+    implementation(project(":core:common"))
+    implementation(project(":core:database"))
+    implementation(project(":core:datastore"))
+    implementation(project(":core:network"))
+    implementation(project(":core:data"))
+    implementation(project(":core:designsystem"))
+    implementation(project(":feature:auth"))
+    implementation(project(":feature:planix"))
+    implementation(project(":feature:workspace"))
+    implementation(project(":feature:profile"))
+    implementation(project(":feature:channel"))
+    implementation(project(":feature:camera"))
+    implementation(project(":feature:home"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
 

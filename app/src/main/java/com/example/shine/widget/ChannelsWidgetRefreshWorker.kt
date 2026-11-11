@@ -4,11 +4,11 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.shine.data.local.SessionLocalDataSource
-import com.example.shine.data.local.dao.ChannelDao
-import com.example.shine.data.remote.ChatApi
-import com.example.shine.data.remote.dto.toEntity
-import com.example.shine.domain.model.isSignedIn
+import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.database.dao.ChannelDao
+import com.example.shine.core.network.ChatApi
+import com.example.shine.core.network.dto.toEntity
+import com.example.shine.core.model.isSignedIn
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.firstOrNull

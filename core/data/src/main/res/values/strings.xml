@@ -1,0 +1,3 @@
+<resources>
+    <string name="channel_create_failed">Failed to create channel</string>
+</resources>

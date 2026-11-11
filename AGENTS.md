@@ -33,45 +33,32 @@ Tài liệu này cung cấp toàn bộ hướng dẫn, quy chuẩn kiến trúc,
 
 ## 3. Cấu trúc Thư mục (Project Structure)
 
-Dự án áp dụng **Clean Architecture** kết hợp phân tách theo tính năng (feature-based) ở tầng UI:
+Dự án đang áp dụng **Multi-module Architecture (theo chuẩn Google Now in Android)** kết hợp **Clean Architecture** & UDF:
 
 ```
-app/src/main/java/com/example/shine/
-├── ShineApplication.kt            # Application class, khởi tạo @HiltAndroidApp
-├── MainActivity.kt                # Single Activity, khởi tạo giao diện Compose & Deep Links
+Shine/
 ├── core/
-│   └── di/                        # Hilt DI Modules (NetworkModule, DatabaseModule, CoroutinesModule, DataModule)
-├── data/
-│   ├── local/                     # Room Database, DataStore, Providers, DAOs, Entities
-│   │   ├── dao/                   # ProjectDao, WorkspaceDao, ProjectRemoteKeyDao,...
-│   │   ├── entity/                # Room entities (@Entity)
-│   │   └── *DataStore.kt          # SharedPreferences / DataStore wrapper (Session, Channel, Planix)
-│   ├── remote/                    # Retrofit APIs, Interceptors, CallAdapters, StorageUploader
-│   │   └── dto/                   # Data Transfer Objects (DTOs), Mappers (@Serializable)
-│   ├── repository/                # Triển khai Repository (AuthRepositoryImpl, UserRepositoryImpl,...)
-│   └── security/                  # Tiện ích bảo mật (PasswordHasher,...)
-├── domain/
-│   ├── model/                     # Core business models (User, Session, Workspace, Channel, AppException)
-│   └── repository/                # Interfaces định nghĩa Repository (AuthRepository, UserRepository,...)
-└── ui/
-    ├── common/                    # UI Components dùng chung (TopAppBar, BottomSheet, UiText,...)
-    ├── navigation/                # Điều hướng Navigation 3, AppViewModel, NavKeys, DeepLink
-    ├── theme/                     # Compose Material 3 Theme, Typography, Colors
-    ├── signin/                    # Màn hình đăng nhập & UI State & ViewModel
-    ├── workspace/                 # Danh sách & lựa chọn Workspace
-    ├── home/                      # Màn hình chính (Tabs: Channels, DMs, Settings, Drawer)
-    ├── channel/                   # Chi tiết Channel / Chat
-    ├── planix/                    # Quản lý Planix / Tasks (Paging 3)
-    └── profile/                   # Thông tin cá nhân & Upload Avatar
+│   ├── model/                     # Pure data models (Channel, User, Workspace, Project, Session, SyncStatus, SignInStatus)
+│   ├── common/                    # Core utilities, Dispatchers, NetworkMonitor, AppLifecycleMonitor, AppException, UiText
+│   ├── database/                  # Room Database (ShineDatabase), Entities, DAOs, DatabaseModule
+│   ├── datastore/                 # DataStore Preferences (Session, Tokens, Workspace, DMs), DataStoreModule
+│   ├── network/                   # Retrofit APIs, DTOs & Mappers, OkHttp Interceptors, Socket.IO engine, NetworkModule
+│   └── data/                      # Repository (interfaces & impls), Paging (PlanixRemoteMediator), Sync (Worker & Scheduler), DataModule
+└── app/
+    ├── src/main/java/com/example/shine/
+    │   ├── ShineApplication.kt    # Application class, @HiltAndroidApp
+    │   ├── MainActivity.kt        # Single Activity, Compose & Deep Links
+    │   ├── core/                  # App-level di (ShortcutModule, WidgetSyncListenerModule) & shortcuts
+    │   ├── ui/                    # Feature screens (home, channel, dms, planix, profile, signin, workspace, navigation)
+    │   └── widget/                # Glance AppWidget & sync managers
 ```
 
 ---
 
 ## 4. Quy tắc Thiết kế & Kiến trúc (Architectural Guidelines)
 
-### 4.1. Clean Architecture & Unidirectional Data Flow (UDF)
-- **Tầng Domain độc lập:** `domain/model` và `domain/repository` là code Kotlin thuần túy, không phụ thuộc Android framework hoặc UI.
-- **Tầng Data:** Triển khai các interface từ Domain. Chịu trách nhiệm tương tác với API (Retrofit) hoặc Cache/DB (Room, DataStore), đồng thời chuyển đổi từ `DTO/Entity` sang `Domain Model` thông qua Mapper.
+### 4.1. Modern Android Architecture & Unidirectional Data Flow (UDF)
+- **Tầng Data (:core:data):** Đóng vai trò là *Single Source of Truth* cho toàn bộ ứng dụng. Cung cấp các Repository interfaces (Public API) cho các tầng UI/Feature tiêu thụ, và đóng gói chi tiết triển khai (Room, Network, DataStore, Paging 3, Sync Worker).
 - **Tầng UI:** 
   - Chỉ quan sát trạng thái qua `StateFlow<UiState>` từ `ViewModel`.
   - Mọi sự kiện từ người dùng (User Actions) gửi tới ViewModel thông qua các public method.

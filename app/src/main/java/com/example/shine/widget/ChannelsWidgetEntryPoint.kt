@@ -1,7 +1,7 @@
 package com.example.shine.widget
 
-import com.example.shine.data.local.SessionLocalDataSource
-import com.example.shine.domain.repository.ChannelRepository
+import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.data.repository.ChannelRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent

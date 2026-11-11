@@ -1,0 +1,277 @@
+package com.example.shine.core.data.repository
+
+import android.net.Uri
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.example.shine.core.common.error.AppErrorEnum
+import com.example.shine.core.common.error.AppException
+import com.example.shine.core.data.source.local.ContentUriResolver
+import com.example.shine.core.data.source.local.ResolvedFile
+import com.example.shine.core.data.source.local.UserLocalDataSource
+import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.model.Session
+import com.example.shine.core.model.User
+import com.example.shine.core.network.StorageUploader
+import com.example.shine.core.network.UserApi
+import com.example.shine.core.network.dto.DraftMediaRequest
+import com.example.shine.core.network.dto.DraftMediaResponse
+import com.example.shine.core.network.dto.FileDto
+import com.example.shine.core.network.dto.PresignedPostDto
+import com.example.shine.core.network.dto.UpdateUserRequest
+import com.example.shine.core.network.dto.UserProfileDto
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import okhttp3.OkHttpClient
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import org.mockito.Mockito.mock
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class UserRepositoryImplTest {
+
+    @get:Rule
+    val tempFolder = TemporaryFolder()
+
+    private val scope = CoroutineScope(UnconfinedTestDispatcher())
+    private lateinit var mockWebServer: MockWebServer
+    private lateinit var local: SessionLocalDataSource
+    private lateinit var fakeApi: FakeUserApi
+    private lateinit var contentUriResolver: ContentUriResolver
+    private lateinit var storageUploader: StorageUploader
+    private lateinit var userLocalDataSource: UserLocalDataSource
+    private lateinit var repository: UserRepositoryImpl
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+    }
+
+    @Before
+    fun setUp() {
+        mockWebServer = MockWebServer()
+        mockWebServer.start()
+
+        local = SessionLocalDataSource(
+            PreferenceDataStoreFactory.create(scope = scope) {
+                tempFolder.newFile("test_session.preferences_pb")
+            },
+            json,
+        )
+        fakeApi = FakeUserApi()
+        contentUriResolver = FakeContentUriResolver()
+        storageUploader = StorageUploader(OkHttpClient())
+        userLocalDataSource = mock(UserLocalDataSource::class.java)
+
+        repository = UserRepositoryImpl(
+            contentUriResolver = contentUriResolver,
+            storageUploader = storageUploader,
+            userApi = fakeApi,
+            local = local,
+            userLocalDataSource = userLocalDataSource,
+            json = json,
+        )
+    }
+
+    @After
+    fun tearDown() {
+        mockWebServer.close()
+        scope.cancel()
+    }
+
+    @Test
+    fun updateAvatar_success_uploadsToS3UpdatesProfileAndPersistsLocally() = runTest {
+        local.save(
+            Session(
+                token = "token",
+                refreshToken = null,
+                expireAt = null,
+                user = User(
+                    id = "user-1",
+                    email = "user@example.com",
+                    firstName = "John",
+                    lastName = "Doe",
+                ),
+            ),
+        )
+
+        val s3Url = mockWebServer.url("/").toString()
+        fakeApi.draftResponse = DraftMediaResponse(
+            id = "avatar-123",
+            name = "test.png",
+            path = "images/avatar-123.png",
+            presignedPost = PresignedPostDto(
+                url = s3Url,
+                fields = """{"x-amz-meta-id":"avatar-123","bucket":"test-bucket"}""",
+            ),
+            presignedUrl = "https://cdn.example.com/avatar-123.png",
+        )
+
+        fakeApi.currentProfile = UserProfileDto(
+            id = "user-1",
+            email = "user@example.com",
+            firstName = "John",
+            lastName = "Doe",
+            avatarId = null,
+        )
+
+        fakeApi.updatedProfile = UserProfileDto(
+            id = "user-1",
+            email = "user@example.com",
+            firstName = "John",
+            lastName = "Doe",
+            avatarId = "avatar-123",
+            avatar = FileDto(signedUrl = "https://cdn.example.com/signed-avatar-123.png"),
+        )
+
+        // Mock S3 response (204 No Content)
+        mockWebServer.enqueue(MockResponse(code = 204))
+
+        val resultUser = repository.updateAvatar(mock(Uri::class.java)).getOrThrow()
+
+        // Verify S3 request
+        val recordedS3Request = mockWebServer.takeRequest()
+        assertEquals("POST", recordedS3Request.method)
+        val bodyContent = recordedS3Request.body?.utf8().orEmpty()
+        assertNotNull(bodyContent)
+        assert(bodyContent.contains("avatar-123"))
+
+        // Verify API calls
+        assertEquals(1, fakeApi.getProfileCalls)
+        assertEquals("avatar-123", fakeApi.lastUpdateUserRequest?.avatarId)
+        assertEquals("John", fakeApi.lastUpdateUserRequest?.firstName)
+
+        // Verify result
+        assertEquals("https://cdn.example.com/signed-avatar-123.png", resultUser.avatarUrl)
+
+        // Verify local update
+        val updatedSession = local.session.first()
+        assertEquals("https://cdn.example.com/signed-avatar-123.png", updatedSession?.user?.avatarUrl)
+    }
+
+    @Test
+    fun updateAvatar_s3Fails_returnsFailure() = runTest {
+        val s3Url = mockWebServer.url("/").toString()
+        fakeApi.draftResponse = DraftMediaResponse(
+            id = "avatar-123",
+            presignedPost = PresignedPostDto(
+                url = s3Url,
+                fields = "{}",
+            ),
+        )
+
+        // S3 returns 403 Forbidden
+        mockWebServer.enqueue(MockResponse(code = 403))
+
+        val result = repository.updateAvatar(mock(Uri::class.java))
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is AppException)
+    }
+
+    @Test
+    fun getProfile_success_updatesLocalDataSourceAndReturnsUser() = runTest {
+        local.save(
+            Session(
+                token = "token",
+                user = User(
+                    id = "user-1",
+                    email = "old@example.com",
+                    firstName = "Old",
+                    lastName = "Name",
+                ),
+            ),
+        )
+
+        fakeApi.currentProfile = UserProfileDto(
+            id = "user-1",
+            email = "new@example.com",
+            firstName = "New",
+            lastName = "Name",
+            avatar = FileDto(signedUrl = "https://cdn.example.com/fresh-avatar.png"),
+        )
+
+        val result = repository.getProfile()
+        assertTrue(result.isSuccess)
+
+        val updatedLocalSession = local.session.first()
+        assertEquals("new@example.com", updatedLocalSession?.user?.email)
+        assertEquals("New", updatedLocalSession?.user?.firstName)
+        assertEquals("https://cdn.example.com/fresh-avatar.png", updatedLocalSession?.user?.avatarUrl)
+    }
+
+    @Test
+    fun getChatUsers_success_savesToLocalDataSource() = runTest {
+        val chatUserDtos = listOf(
+            UserProfileDto(id = "user-1", email = "one@example.com", firstName = "User", lastName = "One"),
+            UserProfileDto(id = "user-2", email = "two@example.com", firstName = "User", lastName = "Two"),
+        )
+        fakeApi.chatUsersToReturn = chatUserDtos
+
+        val result = repository.getChatUsers()
+        assertTrue(result.isSuccess)
+        org.mockito.Mockito.verify(userLocalDataSource).replaceUsers(org.mockito.ArgumentMatchers.anyList())
+    }
+
+    @Test
+    fun getChatUsers_apiFails_returnsFailure() = runTest {
+        fakeApi.shouldFailChatUsers = true
+        val result = repository.getChatUsers()
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun getChatUsers_withWorkspaceId_passesWorkspaceIdToApi() = runTest {
+        fakeApi.chatUsersToReturn = emptyList()
+        val result = repository.getChatUsers("ws-custom-123")
+        assertTrue(result.isSuccess)
+        assertEquals("ws-custom-123", fakeApi.lastWorkspaceId)
+    }
+
+    private class FakeContentUriResolver : ContentUriResolver(mock(android.content.Context::class.java)) {
+        var resolvedFile = ResolvedFile("test.png", "image/png", okio.ByteString.of(1, 2, 3, 4))
+        override suspend fun resolve(uri: Uri): ResolvedFile = resolvedFile
+    }
+
+    private class FakeUserApi : UserApi {
+        var draftResponse: DraftMediaResponse? = null
+        var currentProfile: UserProfileDto? = null
+        var updatedProfile: UserProfileDto? = null
+        var lastUpdateUserRequest: UpdateUserRequest? = null
+        var chatUsersToReturn: List<UserProfileDto> = emptyList()
+        var shouldFailChatUsers: Boolean = false
+        var getProfileCalls = 0
+
+        override suspend fun getProfile(): UserProfileDto {
+            getProfileCalls++
+            return currentProfile ?: throw IllegalStateException("currentProfile not set")
+        }
+
+        override suspend fun createAvatarDraft(request: DraftMediaRequest): DraftMediaResponse {
+            return draftResponse ?: throw IllegalStateException("draftResponse not set")
+        }
+
+        override suspend fun updateProfile(request: UpdateUserRequest): UserProfileDto {
+            lastUpdateUserRequest = request
+            return updatedProfile ?: throw IllegalStateException("updatedProfile not set")
+        }
+
+        var lastWorkspaceId: String? = null
+
+        override suspend fun getChatUsers(workspaceId: String?): List<UserProfileDto> {
+            lastWorkspaceId = workspaceId
+            if (shouldFailChatUsers) throw AppException(AppErrorEnum.SERVER)
+            return chatUsersToReturn
+        }
+    }
+}

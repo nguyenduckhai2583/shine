@@ -1,4 +1,4 @@
-pluginManagement {
+modulizationpluginManagement {
     repositories {
         google {
             content {
@@ -24,4 +24,18 @@ dependencyResolutionManagement {
 
 rootProject.name = "Shine"
 include(":app")
+include(":core:model")
+include(":core:common")
+include(":core:database")
+include(":core:datastore")
+include(":core:network")
+include(":core:data")
+include(":core:designsystem")
+include(":feature:auth")
+include(":feature:planix")
+include(":feature:workspace")
+include(":feature:profile")
+include(":feature:channel")
+include(":feature:camera")
+include(":feature:home")
  

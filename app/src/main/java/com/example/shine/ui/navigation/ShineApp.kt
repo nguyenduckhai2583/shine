@@ -39,17 +39,17 @@ import androidx.navigation3.runtime.result.LocalResultEventBus
 import androidx.navigation3.runtime.result.rememberResultEventBusNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.example.shine.R
-import com.example.shine.ui.camera.CameraCaptureMode
-import com.example.shine.ui.camera.CameraRoute
-import com.example.shine.ui.camera.CapturedMedia
-import com.example.shine.ui.camera.MediaPreviewRoute
-import com.example.shine.ui.channel.ChannelDetailRoute
-import com.example.shine.ui.home.HomeRoute
+import com.example.shine.feature.camera.CameraCaptureMode
+import com.example.shine.feature.camera.CameraRoute
+import com.example.shine.feature.camera.CapturedMedia
+import com.example.shine.feature.camera.MediaPreviewRoute
+import com.example.shine.feature.channel.ChannelDetailRoute
+import com.example.shine.feature.home.HomeRoute
 import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
-import com.example.shine.ui.planix.PlanixListRoute
-import com.example.shine.ui.profile.ProfileRoute
-import com.example.shine.ui.signin.SignInRoute
-import com.example.shine.ui.workspace.WorkspaceListRoute
+import com.example.shine.feature.planix.PlanixListRoute
+import com.example.shine.feature.profile.ProfileRoute
+import com.example.shine.feature.auth.SignInRoute
+import com.example.shine.feature.workspace.WorkspaceListRoute
 
 /**
  * Login is mandatory, so unauthenticated and authenticated flows are separate back stacks.

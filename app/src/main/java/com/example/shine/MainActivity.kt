@@ -11,7 +11,7 @@ import androidx.activity.viewModels
 import com.example.shine.ui.navigation.AuthState
 import com.example.shine.ui.navigation.AppViewModel
 import com.example.shine.ui.navigation.ShineApp
-import com.example.shine.ui.theme.ShineTheme
+import com.example.shine.core.designsystem.theme.ShineTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

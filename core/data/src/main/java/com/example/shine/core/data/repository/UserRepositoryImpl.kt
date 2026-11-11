@@ -1,0 +1,95 @@
+package com.example.shine.core.data.repository
+
+import android.net.Uri
+import com.example.shine.core.common.error.AppErrorEnum
+import com.example.shine.core.common.error.AppException
+import com.example.shine.core.common.util.suspendRunCatching
+import com.example.shine.core.data.source.local.ContentUriResolver
+import com.example.shine.core.data.source.local.UserLocalDataSource
+import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.model.User
+import com.example.shine.core.network.StorageUploader
+import com.example.shine.core.network.UserApi
+import com.example.shine.core.network.dto.DraftMediaRequest
+import com.example.shine.core.network.dto.extractFields
+import com.example.shine.core.network.dto.toDomain
+import com.example.shine.core.network.dto.toRequest
+import kotlinx.coroutines.flow.first
+import kotlinx.serialization.json.Json
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class UserRepositoryImpl @Inject constructor(
+    private val contentUriResolver: ContentUriResolver,
+    private val storageUploader: StorageUploader,
+    private val userApi: UserApi,
+    private val local: SessionLocalDataSource,
+    private val userLocalDataSource: UserLocalDataSource,
+    private val json: Json,
+) : UserRepository {
+
+    override suspend fun getProfile(): Result<Unit> = suspendRunCatching {
+        val currentLocalUser = local.session.first()?.user
+        val profile = userApi.getProfile()
+        val user = profile.toDomain(fallbackAvatarUrl = currentLocalUser?.avatarUrl)
+        local.updateUser(user)
+    }
+
+    override suspend fun getChatUsers(workspaceId: String?): Result<Unit> = suspendRunCatching {
+        val chatUsers = userApi.getChatUsers(workspaceId).map { it.toDomain() }
+        userLocalDataSource.replaceUsers(chatUsers)
+    }
+
+    override suspend fun updateAvatar(uri: Uri): Result<User> = suspendRunCatching {
+        val file = contentUriResolver.resolve(uri)
+        val fileName = file.fileName
+        val mimeType = file.mimeType
+        val bytes = file.bytes
+
+        // 1. Request draft avatar to obtain draft ID and storage presigned POST metadata
+        val draft = userApi.createAvatarDraft(
+            DraftMediaRequest(
+                name = fileName,
+                mimeType = mimeType,
+            )
+        )
+
+        // 2. Upload image binary directly to storage via presigned form data
+        val presignedPost = draft.presignedPost
+            ?: throw AppException(AppErrorEnum.SERVER)
+
+        storageUploader.upload(
+            url = presignedPost.url,
+            fields = presignedPost.extractFields(json),
+            fileName = fileName,
+            mimeType = mimeType,
+            bytes = bytes,
+        )
+
+        // 3. Save updated avatar ID to user profile
+        val currentProfile = userApi.getProfile()
+        val updateRequest = currentProfile.toRequest(avatarId = draft.id)
+        val updatedProfile = userApi.updateProfile(updateRequest)
+
+        // 4. Resolve new avatar URL and persist locally
+        val newAvatarUrl = updatedProfile.avatar?.signedUrl
+            ?: draft.presignedUrl
+            ?: ""
+
+        val updatedUser = User(
+            id = updatedProfile.id,
+            email = updatedProfile.email ?: currentProfile.email,
+            firstName = updatedProfile.firstName ?: currentProfile.firstName,
+            lastName = updatedProfile.lastName ?: currentProfile.lastName,
+            avatarUrl = newAvatarUrl.ifBlank { null },
+        )
+
+        local.updateUser(updatedUser)
+        updatedUser
+    }
+
+    override suspend fun clear() {
+        userLocalDataSource.clear()
+    }
+}

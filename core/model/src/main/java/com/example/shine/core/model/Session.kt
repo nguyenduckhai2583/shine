@@ -1,0 +1,33 @@
+package com.example.shine.core.model
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class Session(
+    val token: String,
+    val refreshToken: String? = null,
+    val expireAt: Long? = null,
+    val user: User? = null,
+    val workspaceId: String? = null,
+) {
+    val isSignedIn: Boolean
+        get() = token.isNotBlank() && !workspaceId.isNullOrBlank()
+}
+
+val Session?.isSignedIn: Boolean
+    get() = this?.isSignedIn == true
+
+@Serializable
+data class User(
+    val id: String,
+    val email: String? = null,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val avatarUrl: String? = null,
+) {
+    val displayName: String
+        get() = listOfNotNull(firstName, lastName).joinToString(" ").ifBlank { email.orEmpty() }
+
+    val avatarPath: String?
+        get() = avatarUrl
+}

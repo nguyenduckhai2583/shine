@@ -32,8 +32,8 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.example.shine.BuildConfig
 import com.example.shine.MainActivity
-import com.example.shine.domain.model.Channel
-import com.example.shine.domain.model.isSignedIn
+import com.example.shine.core.model.Channel
+import com.example.shine.core.model.isSignedIn
 import dagger.hilt.android.EntryPointAccessors
 import androidx.core.net.toUri
 import kotlinx.coroutines.flow.firstOrNull

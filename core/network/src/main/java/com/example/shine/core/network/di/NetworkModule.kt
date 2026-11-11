@@ -1,0 +1,115 @@
+package com.example.shine.core.network.di
+
+import android.util.Log
+import com.example.shine.core.network.BuildConfig
+import com.example.shine.core.network.AuthApi
+import com.example.shine.core.network.AuthInterceptor
+import com.example.shine.core.network.ChatApi
+import com.example.shine.core.network.ErrorMappingCallAdapterFactory
+import com.example.shine.core.network.PlanixApi
+import com.example.shine.core.network.TokenRefreshApi
+import com.example.shine.core.network.UserApi
+import com.example.shine.core.network.WorkspaceApi
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
+import javax.inject.Singleton
+
+/** Client/Retrofit without [AuthInterceptor]; used for the token refresh call itself. */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class Unauthenticated
+
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkModule {
+
+    @Provides
+    @Singleton
+    fun provideJson(): Json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+        encodeDefaults = true
+    }
+
+    @Provides
+    @Singleton
+    @Unauthenticated
+    fun provideUnauthenticatedOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
+        .apply {
+            if (BuildConfig.DEBUG) {
+                addInterceptor(
+                    HttpLoggingInterceptor { message -> Log.d("HTTP", message) }
+                        .apply { level = HttpLoggingInterceptor.Level.BODY },
+                )
+            }
+        }
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        @Unauthenticated baseClient: OkHttpClient,
+        authInterceptor: AuthInterceptor,
+    ): OkHttpClient = baseClient.newBuilder()
+        .apply { interceptors().add(0, authInterceptor) }
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(client: OkHttpClient, json: Json): Retrofit = buildRetrofit(client, json)
+        .newBuilder()
+        .addCallAdapterFactory(ErrorMappingCallAdapterFactory(json))
+        .build()
+
+    @Provides
+    @Singleton
+    @Unauthenticated
+    fun provideUnauthenticatedRetrofit(
+        @Unauthenticated client: OkHttpClient,
+        json: Json,
+    ): Retrofit = buildRetrofit(client, json)
+
+    @Provides
+    @Singleton
+    fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideChatApi(retrofit: Retrofit): ChatApi = retrofit.create(ChatApi::class.java)
+
+    @Provides
+    @Singleton
+    fun providePlanixApi(retrofit: Retrofit): PlanixApi = retrofit.create(PlanixApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideWorkspaceApi(retrofit: Retrofit): WorkspaceApi =
+        retrofit.create(WorkspaceApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideUserApi(retrofit: Retrofit): UserApi = retrofit.create(UserApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideTokenRefreshApi(@Unauthenticated retrofit: Retrofit): TokenRefreshApi =
+        retrofit.create(TokenRefreshApi::class.java)
+
+    private fun buildRetrofit(client: OkHttpClient, json: Json): Retrofit = Retrofit.Builder()
+        .baseUrl(BuildConfig.BASE_URL)
+        .client(client)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
+}

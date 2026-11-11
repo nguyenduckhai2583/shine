@@ -6,10 +6,10 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.example.shine.core.di.ApplicationScope
-import com.example.shine.data.local.SessionLocalDataSource
-import com.example.shine.data.local.dao.ChannelDao
-import com.example.shine.domain.model.isSignedIn
+import com.example.shine.core.common.di.ApplicationScope
+import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.database.dao.ChannelDao
+import com.example.shine.core.model.isSignedIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged

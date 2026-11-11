@@ -1,0 +1,5 @@
+<resources>
+    <string name="error_no_internet">No internet connection</string>
+    <string name="error_server">Something went wrong on the server</string>
+    <string name="error_unknown">Something went wrong</string>
+</resources>
