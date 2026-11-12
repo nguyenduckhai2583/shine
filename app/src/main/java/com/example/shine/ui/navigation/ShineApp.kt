@@ -128,7 +128,7 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
                         ProfileRoute(
                             onBack = { backStack.removeLastOrNull() },
                             onOpenCamera = {
-                                backStack.add(CameraCapture(resultKey = "profile_avatar", allowVideo = true))
+                                backStack.add(CameraCapture(resultKey = "profile_avatar"))
                             },
                         )
                     }

@@ -3,10 +3,12 @@ package com.example.shine.feature.camera
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
+import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
+import androidx.camera.core.SurfaceRequest
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.FileOutputOptions
@@ -16,7 +18,6 @@ import androidx.camera.video.Recorder
 import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,48 +28,42 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun CameraView(
+    uiState: CameraUiState,
+    onModeSelected: (CameraCaptureMode) -> Unit,
+    onFlipCamera: () -> Unit,
+    onAvailableLensesDetected: (List<CameraLens>) -> Unit,
+    onRecordingStarted: () -> Unit,
+    onRecordingStopped: () -> Unit,
     onMediaCaptured: (CapturedMedia) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
-    allowedModes: Set<CameraCaptureMode> = setOf(CameraCaptureMode.PHOTO, CameraCaptureMode.VIDEO),
-    hasAudioPermission: Boolean = true,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    var captureMode by rememberSaveable { mutableStateOf(allowedModes.first()) }
-    var availableCameras by remember { mutableStateOf<List<CameraSelector>>(emptyList()) }
-    var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
-
-    var isRecording by remember { mutableStateOf(false) }
-    var recordingDurationSeconds by remember { mutableIntStateOf(0) }
-    var activeRecording by remember { mutableStateOf<Recording?>(null) }
-
-    val previewView = remember {
-        PreviewView(context).apply {
-            scaleType = PreviewView.ScaleType.FILL_CENTER
-            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+    val cameraSelector = remember(uiState.currentLens) {
+        if (uiState.currentLens == CameraLens.FRONT) {
+            CameraSelector.DEFAULT_FRONT_CAMERA
+        } else {
+            CameraSelector.DEFAULT_BACK_CAMERA
         }
     }
+
+    var activeRecording by remember { mutableStateOf<Recording?>(null) }
+    var surfaceRequest by remember { mutableStateOf<SurfaceRequest?>(null) }
 
     val imageCapture = remember {
         ImageCapture.Builder()
@@ -91,6 +86,7 @@ fun CameraView(
         onDispose {
             activeRecording?.stop()
             activeRecording = null
+            onRecordingStopped()
         }
     }
 
@@ -99,20 +95,18 @@ fun CameraView(
             ProcessCameraProvider.getInstance(context).get()
         }.getOrNull() ?: return@LaunchedEffect
 
-        availableCameras = buildList {
+        val detectedLenses = buildList {
             if (runCatching { cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) }.getOrDefault(false)) {
-                add(CameraSelector.DEFAULT_BACK_CAMERA)
+                add(CameraLens.BACK)
             }
             if (runCatching { cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) }.getOrDefault(false)) {
-                add(CameraSelector.DEFAULT_FRONT_CAMERA)
+                add(CameraLens.FRONT)
             }
             if (isEmpty()) {
-                add(CameraSelector.DEFAULT_BACK_CAMERA)
+                add(CameraLens.BACK)
             }
         }
-        if (cameraSelector !in availableCameras) {
-            cameraSelector = availableCameras.first()
-        }
+        onAvailableLensesDetected(detectedLenses)
     }
 
     LaunchedEffect(cameraSelector) {
@@ -121,7 +115,9 @@ fun CameraView(
         }.getOrNull() ?: return@LaunchedEffect
 
         val preview = Preview.Builder().build().also {
-            it.surfaceProvider = previewView.surfaceProvider
+            it.setSurfaceProvider { request ->
+                surfaceRequest = request
+            }
         }
 
         cameraProvider.unbindAll()
@@ -134,19 +130,9 @@ fun CameraView(
                 videoCapture,
             )
         } catch (_: Exception) {
-            val fallbackUseCase = if (captureMode == CameraCaptureMode.PHOTO) imageCapture else videoCapture
+            val fallbackUseCase = if (uiState.captureMode == CameraCaptureMode.PHOTO) imageCapture else videoCapture
             runCatching {
                 cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, fallbackUseCase)
-            }
-        }
-    }
-
-    LaunchedEffect(isRecording) {
-        if (isRecording) {
-            recordingDurationSeconds = 0
-            while (isActive && isRecording) {
-                delay(1000L.milliseconds)
-                recordingDurationSeconds++
             }
         }
     }
@@ -161,14 +147,16 @@ fun CameraView(
                 .weight(1f)
                 .fillMaxWidth(),
         ) {
-            AndroidView(
-                factory = { previewView },
-                modifier = Modifier.fillMaxSize(),
-            )
+            surfaceRequest?.let { request ->
+                CameraXViewfinder(
+                    surfaceRequest = request,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
 
-            if (isRecording) {
+            if (uiState.isRecording) {
                 CameraRecordingIndicator(
-                    durationSeconds = recordingDurationSeconds,
+                    durationSeconds = uiState.recordingDurationSeconds,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .padding(top = 40.dp),
@@ -176,10 +164,10 @@ fun CameraView(
             }
 
             CameraShutterButton(
-                captureMode = captureMode,
-                isRecording = isRecording,
+                captureMode = uiState.captureMode,
+                isRecording = uiState.isRecording,
                 onClick = {
-                    if (captureMode == CameraCaptureMode.PHOTO) {
+                    if (uiState.captureMode == CameraCaptureMode.PHOTO) {
                         takePhoto(
                             context = context,
                             imageCapture = imageCapture,
@@ -188,21 +176,21 @@ fun CameraView(
                             },
                         )
                     } else {
-                        if (isRecording) {
+                        if (uiState.isRecording) {
                             activeRecording?.stop()
                             activeRecording = null
-                            isRecording = false
+                            onRecordingStopped()
                         } else {
                             val recording = startVideoRecording(
                                 context = context,
                                 videoCapture = videoCapture,
-                                hasAudioPermission = hasAudioPermission,
+                                hasAudioPermission = uiState.hasAudioPermission,
                                 onVideoSaved = { uri, durationMs ->
                                     onMediaCaptured(CapturedMedia.Video(uri, durationMs))
                                 },
                             )
                             activeRecording = recording
-                            isRecording = true
+                            onRecordingStarted()
                         }
                     }
                 },
@@ -213,21 +201,12 @@ fun CameraView(
         }
 
         CameraBottomBar(
-            captureMode = captureMode,
-            allowedModes = allowedModes,
-            isRecording = isRecording,
+            captureMode = uiState.captureMode,
+            allowedModes = uiState.allowedModes,
+            isRecording = uiState.isRecording,
             onClose = onClose,
-            onModeSelected = { newMode ->
-                if (!isRecording) {
-                    captureMode = newMode
-                }
-            },
-            onFlipCamera = {
-                if (availableCameras.isNotEmpty()) {
-                    val nextIndex = (availableCameras.indexOf(cameraSelector) + 1) % availableCameras.size
-                    cameraSelector = availableCameras[nextIndex]
-                }
-            },
+            onModeSelected = onModeSelected,
+            onFlipCamera = onFlipCamera,
         )
     }
 }
