@@ -4,11 +4,15 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import androidx.camera.compose.CameraXViewfinder
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
+import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.core.SurfaceRequest
+import androidx.camera.core.ZoomState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.FileOutputOptions
@@ -18,7 +22,10 @@ import androidx.camera.video.Recorder
 import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
+import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,16 +35,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Observer
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun CameraView(
@@ -64,6 +76,12 @@ fun CameraView(
 
     var activeRecording by remember { mutableStateOf<Recording?>(null) }
     var surfaceRequest by remember { mutableStateOf<SurfaceRequest?>(null) }
+    var boundCamera by remember { mutableStateOf<Camera?>(null) }
+    val coordinateTransformer = remember { MutableCoordinateTransformer() }
+
+    var currentZoomRatio by remember { mutableFloatStateOf(1f) }
+    var minZoomRatio by remember { mutableFloatStateOf(1f) }
+    var maxZoomRatio by remember { mutableFloatStateOf(1f) }
 
     val imageCapture = remember {
         ImageCapture.Builder()
@@ -87,6 +105,20 @@ fun CameraView(
             activeRecording?.stop()
             activeRecording = null
             onRecordingStopped()
+        }
+    }
+
+    DisposableEffect(boundCamera) {
+        val camera = boundCamera ?: return@DisposableEffect onDispose {}
+        val observer = Observer<ZoomState> { state ->
+            currentZoomRatio = state.zoomRatio
+            minZoomRatio = state.minZoomRatio
+            maxZoomRatio = state.maxZoomRatio
+        }
+        val zoomLiveData = camera.cameraInfo.zoomState
+        zoomLiveData.observeForever(observer)
+        onDispose {
+            zoomLiveData.removeObserver(observer)
         }
     }
 
@@ -122,17 +154,19 @@ fun CameraView(
 
         cameraProvider.unbindAll()
         try {
-            cameraProvider.bindToLifecycle(
+            val camera = cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
                 preview,
                 imageCapture,
                 videoCapture,
             )
+            boundCamera = camera
         } catch (_: Exception) {
             val fallbackUseCase = if (uiState.captureMode == CameraCaptureMode.PHOTO) imageCapture else videoCapture
             runCatching {
-                cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, fallbackUseCase)
+                val camera = cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, fallbackUseCase)
+                boundCamera = camera
             }
         }
     }
@@ -150,7 +184,34 @@ fun CameraView(
             surfaceRequest?.let { request ->
                 CameraXViewfinder(
                     surfaceRequest = request,
-                    modifier = Modifier.fillMaxSize(),
+                    coordinateTransformer = coordinateTransformer,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(boundCamera) {
+                            detectTransformGestures { _, _, zoom, _ ->
+                                boundCamera?.let { camera ->
+                                    val targetZoom = (currentZoomRatio * zoom).coerceIn(minZoomRatio, maxZoomRatio)
+                                    camera.cameraControl.setZoomRatio(targetZoom)
+                                }
+                            }
+                        }
+                        .pointerInput(boundCamera, surfaceRequest) {
+                            detectTapGestures { offset ->
+                                val req = surfaceRequest ?: return@detectTapGestures
+                                val camera = boundCamera ?: return@detectTapGestures
+                                val surfaceCoords = with(coordinateTransformer) { offset.transform() }
+                                val factory = SurfaceOrientedMeteringPointFactory(
+                                    req.resolution.width.toFloat(),
+                                    req.resolution.height.toFloat(),
+                                )
+                                val point = factory.createPoint(surfaceCoords.x, surfaceCoords.y)
+                                val action = FocusMeteringAction.Builder(
+                                    point,
+                                    FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE,
+                                ).setAutoCancelDuration(3, TimeUnit.SECONDS).build()
+                                camera.cameraControl.startFocusAndMetering(action)
+                            }
+                        },
                 )
             }
 
