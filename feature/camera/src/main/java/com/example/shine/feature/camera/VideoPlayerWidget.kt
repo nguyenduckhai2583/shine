@@ -4,7 +4,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.VideoView
+import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,12 +30,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 
+@OptIn(UnstableApi::class)
 @Composable
 fun VideoPlayerWidget(
     uri: Uri,
@@ -44,29 +52,47 @@ fun VideoPlayerWidget(
     isPlaying: Boolean = true,
     onTogglePlay: () -> Unit = {},
 ) {
+    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var isPrepared by remember { mutableStateOf(false) }
-    var videoViewRef by remember { mutableStateOf<VideoView?>(null) }
 
-    LaunchedEffect(isPlaying, isPrepared) {
-        if (!isPrepared) return@LaunchedEffect
-        val view = videoViewRef ?: return@LaunchedEffect
-        if (isPlaying) {
-            if (!view.isPlaying) view.start()
-        } else {
-            if (view.isPlaying) view.pause()
+    val exoPlayer = remember(context, uri) {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(uri))
+            repeatMode = Player.REPEAT_MODE_ONE
+            prepare()
+            playWhenReady = isPlaying
         }
     }
 
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) {
+                    isPrepared = true
+                }
+            }
+        }
+        exoPlayer.addListener(listener)
+        onDispose {
+            exoPlayer.removeListener(listener)
+            exoPlayer.release()
+        }
+    }
+
+    LaunchedEffect(isPlaying) {
+        exoPlayer.playWhenReady = isPlaying
+    }
+
+    DisposableEffect(lifecycleOwner, exoPlayer) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
-                    videoViewRef?.pause()
+                    exoPlayer.pause()
                 }
                 Lifecycle.Event.ON_RESUME -> {
-                    if (isPlaying && isPrepared) {
-                        videoViewRef?.start()
+                    if (isPlaying) {
+                        exoPlayer.play()
                     }
                 }
                 else -> Unit
@@ -75,8 +101,6 @@ fun VideoPlayerWidget(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            videoViewRef?.stopPlayback()
-            videoViewRef = null
         }
     }
 
@@ -93,27 +117,20 @@ fun VideoPlayerWidget(
         contentAlignment = Alignment.Center,
     ) {
         AndroidView(
-            factory = { context ->
-                VideoView(context).apply {
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    player = exoPlayer
+                    useController = false
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT,
-                        android.view.Gravity.CENTER,
                     )
-                    setVideoURI(uri)
-                    setOnPreparedListener { mp ->
-                        mp.isLooping = true
-                        isPrepared = true
-                        if (isPlaying) {
-                            start()
-                        }
-                    }
-                    setOnCompletionListener {
-                        if (isPlaying) {
-                            start()
-                        }
-                    }
-                    videoViewRef = this
+                }
+            },
+            update = { playerView ->
+                if (playerView.player != exoPlayer) {
+                    playerView.player = exoPlayer
                 }
             },
             modifier = Modifier.fillMaxSize(),
