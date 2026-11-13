@@ -9,7 +9,9 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.util.Calendar
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,13 +38,19 @@ class ChannelSyncScheduler @Inject constructor(
         )
     }
 
-    fun scheduleDailySync() {
-        val delayMillis = calculateDelayUntilNext7Am()
+    fun scheduleDailySync(
+        targetHour: Int = SyncConstants.DEFAULT_DAILY_SYNC_HOUR,
+        targetMinute: Int = SyncConstants.DEFAULT_DAILY_SYNC_MINUTE,
+    ) {
+        val delayMillis = calculateDelayUntilNextTargetTime(targetHour, targetMinute)
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val periodicRequest = PeriodicWorkRequestBuilder<SyncChannelsWorker>(24, TimeUnit.HOURS)
+        val periodicRequest = PeriodicWorkRequestBuilder<SyncChannelsWorker>(
+            SyncConstants.DAILY_SYNC_REPEAT_INTERVAL_HOURS,
+            TimeUnit.HOURS,
+        )
             .setConstraints(constraints)
             .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
             .build()
@@ -59,17 +67,23 @@ class ChannelSyncScheduler @Inject constructor(
         workManager.cancelUniqueWork(SyncChannelsWorker.DAILY_SYNC_WORK_NAME)
     }
 
-    private fun calculateDelayUntilNext7Am(): Long {
-        val now = Calendar.getInstance()
-        val target = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 7)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            if (before(now)) {
-                add(Calendar.DAY_OF_YEAR, 1)
-            }
+    internal fun calculateDelayUntilNextTargetTime(
+        targetHour: Int,
+        targetMinute: Int,
+        now: LocalDateTime = LocalDateTime.now(),
+    ): Long {
+        require(targetHour in 0..23) {
+            "targetHour must be between 0 and 23, but was $targetHour"
         }
-        return target.timeInMillis - now.timeInMillis
+        require(targetMinute in 0..59) {
+            "targetMinute must be between 0 and 59, but was $targetMinute"
+        }
+
+        val targetTime = LocalTime.of(targetHour, targetMinute, 0, 0)
+        var targetDateTime = now.with(targetTime)
+        if (!targetDateTime.isAfter(now)) {
+            targetDateTime = targetDateTime.plusDays(1)
+        }
+        return Duration.between(now, targetDateTime).toMillis()
     }
 }

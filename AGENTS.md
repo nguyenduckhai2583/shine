@@ -18,7 +18,7 @@ Tài liệu này cung cấp toàn bộ hướng dẫn, quy chuẩn kiến trúc,
 
 | Thành phần | Công nghệ / Thư viện | Phiên bản / Ghi chú |
 | :--- | :--- | :--- |
-| **Language & SDK** | Kotlin, Java 17 | Kotlin `2.4.20`, compileSdk/targetSdk `37`, minSdk `24` |
+| **Language & SDK** | Kotlin, Java 17 | Kotlin `2.4.20`, compileSdk/targetSdk `37`, minSdk `26` |
 | **Build System** | Gradle Version Catalogs (`libs.versions.toml`), AGP | AGP `9.4.1`, KSP `2.3.12` |
 | **UI Framework** | Jetpack Compose + Material 3 | Compose BOM `2026.09.00` |
 | **Navigation** | **AndroidX Navigation 3** (mới nhất) | `androidx.navigation3:navigation3-runtime:1.2.0`, `navigation3-ui` |

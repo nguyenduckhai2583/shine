@@ -14,7 +14,7 @@ internal fun Project.configureKotlinAndroid(
         }
 
         defaultConfig {
-            minSdk = 24
+            minSdk = 26
         }
 
         compileOptions {
