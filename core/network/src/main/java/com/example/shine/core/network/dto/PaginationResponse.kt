@@ -25,11 +25,6 @@ data class PaginationResponse<T>(
     @SerialName("currentPage")
     val currentPage: Int = 0,
 ) {
-    /**
-     * Non-null list of items.
-     */
-    val itemList: List<T>
-        get() = items.orEmpty()
 
     /**
      * Indicates whether a next page is available.

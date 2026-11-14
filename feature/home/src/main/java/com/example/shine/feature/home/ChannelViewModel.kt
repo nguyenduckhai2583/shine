@@ -88,13 +88,6 @@ class ChannelViewModel @Inject constructor(
         )
     }
 
-    fun retryChannel(channelId: String) {
-        execute(
-            task = { channelRepository.retrySync(channelId) },
-            onError = { userError.value = it },
-        )
-    }
-
     fun deleteChannel(channelId: String) {
         execute(
             task = { channelRepository.deleteChannel(channelId) },

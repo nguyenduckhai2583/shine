@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,17 +17,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -95,9 +91,7 @@ fun ChannelsRoute(
         ChannelsContent(
             uiState = uiState,
             onChannelClick = onChannelClick,
-            onAddChannelClick = { showCreateBottomSheet = true },
             onRefresh = viewModel::refresh,
-            onRetryChannel = viewModel::retryChannel,
             onDeleteChannel = viewModel::deleteFailedChannel,
             snackbarHostState = snackbarHostState,
             modifier = Modifier.padding(innerPadding),
@@ -115,15 +109,12 @@ fun ChannelsRoute(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChannelsContent(
     uiState: ChannelUiState,
     onChannelClick: (Channel) -> Unit,
-    onAddChannelClick: () -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
-    onRetryChannel: (String) -> Unit = {},
     onDeleteChannel: (String) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
@@ -321,13 +312,36 @@ private fun ChannelsContentPreview() {
         ChannelsContent(
             uiState = ChannelUiState(
                 channels = listOf(
-                    Channel("1", "general", false, false, true, null, null, null),
-                    Channel("2", "pending-channel", false, false, false, null, null, null, syncStatus = SyncStatus.PENDING),
-                    Channel("3", "error-channel", false, false, false, null, null, null, syncStatus = SyncStatus.ERROR, syncErrorMessage = "Tên kênh đã tồn tại"),
+                    Channel("1", "general",
+                        isPrivate = false,
+                        isEncrypted = false,
+                        isDefault = true,
+                        categoryName = null,
+                        createdAt = null,
+                        lastActivityAt = null
+                    ),
+                    Channel("2", "pending-channel",
+                        isPrivate = false,
+                        isEncrypted = false,
+                        isDefault = false,
+                        categoryName = null,
+                        createdAt = null,
+                        lastActivityAt = null,
+                        syncStatus = SyncStatus.PENDING
+                    ),
+                    Channel("3", "error-channel",
+                        isPrivate = false,
+                        isEncrypted = false,
+                        isDefault = false,
+                        categoryName = null,
+                        createdAt = null,
+                        lastActivityAt = null,
+                        syncStatus = SyncStatus.ERROR,
+                        syncErrorMessage = "Tên kênh đã tồn tại"
+                    ),
                 ),
             ),
             onChannelClick = {},
-            onAddChannelClick = {},
             onRefresh = {},
         )
     }

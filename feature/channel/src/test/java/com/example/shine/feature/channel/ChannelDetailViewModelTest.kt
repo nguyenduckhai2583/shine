@@ -138,6 +138,13 @@ class ChannelDetailViewModelTest {
     }
 
     private companion object {
-        val CHANNEL = Channel("1", "general", false, false, true, null, 1L, 2L)
+        val CHANNEL = Channel("1", "general",
+            isPrivate = false,
+            isEncrypted = false,
+            isDefault = true,
+            categoryName = null,
+            createdAt = 1L,
+            lastActivityAt = 2L
+        )
     }
 }

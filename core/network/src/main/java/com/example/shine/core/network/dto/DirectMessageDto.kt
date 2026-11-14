@@ -39,7 +39,7 @@ fun DirectMessageDto.toDomain(
         !name.isNullOrBlank() -> name
         !members.isNullOrEmpty() -> {
             val otherMembers = members.filter { it.id != currentUserId }
-            val membersToUse = if (otherMembers.isNotEmpty()) otherMembers else members
+            val membersToUse = otherMembers.ifEmpty { members }
             val names = membersToUse.mapNotNull { member ->
                 val full = listOfNotNull(member.firstName, member.lastName).joinToString(" ").trim()
                 full.ifEmpty { member.email }
@@ -48,7 +48,7 @@ fun DirectMessageDto.toDomain(
         }
         !recipientIds.isNullOrEmpty() -> {
             val otherIds = recipientIds.filter { it != currentUserId }
-            val idsToUse = if (otherIds.isNotEmpty()) otherIds else recipientIds
+            val idsToUse = otherIds.ifEmpty { recipientIds }
             val names = idsToUse.mapNotNull { chatUsersMap[it]?.takeIf { name -> name.isNotBlank() } }
             if (names.isNotEmpty()) names.joinToString(", ") else "Direct Message"
         }

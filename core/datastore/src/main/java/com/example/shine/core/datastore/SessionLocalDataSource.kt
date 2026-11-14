@@ -8,7 +8,6 @@ import com.example.shine.core.model.Session
 import com.example.shine.core.model.User
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton

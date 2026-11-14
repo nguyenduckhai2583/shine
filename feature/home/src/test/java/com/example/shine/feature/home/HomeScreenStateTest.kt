@@ -2,13 +2,11 @@ package com.example.shine.feature.home
 
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class HomeScreenStateTest {
 
     private val testDispatcher = StandardTestDispatcher()

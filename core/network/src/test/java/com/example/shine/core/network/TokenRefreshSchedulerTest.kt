@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TokenRefreshSchedulerTest {
@@ -34,20 +35,20 @@ class TokenRefreshSchedulerTest {
         sessions.value = session("a", expireAtSeconds = 400)
         start()
 
-        advanceTimeBy(99_999)
+        advanceTimeBy(99_999.milliseconds)
         runCurrent()
         assertEquals(emptyList<String>(), refreshedFrom)
 
-        advanceTimeBy(1)
+        advanceTimeBy(1.milliseconds)
         runCurrent()
         assertEquals(listOf("a"), refreshedFrom)
 
         // "a+" lives 360s, so it is refreshed 60s later (5 min before it expires).
-        advanceTimeBy(59_999)
+        advanceTimeBy(59_999.milliseconds)
         runCurrent()
         assertEquals(listOf("a"), refreshedFrom)
 
-        advanceTimeBy(1)
+        advanceTimeBy(1.milliseconds)
         runCurrent()
         assertEquals(listOf("a", "a+"), refreshedFrom)
     }
@@ -80,11 +81,11 @@ class TokenRefreshSchedulerTest {
         runCurrent()
 
         sessions.value = session("b", expireAtSeconds = 600)
-        advanceTimeBy(200_000)
+        advanceTimeBy(200_000.milliseconds)
         runCurrent()
         assertEquals(emptyList<String>(), refreshedFrom)
 
-        advanceTimeBy(100_000)
+        advanceTimeBy(100_000.milliseconds)
         runCurrent()
         assertEquals(listOf("b"), refreshedFrom)
     }
@@ -93,11 +94,11 @@ class TokenRefreshSchedulerTest {
     fun signedOutOrNoExpiry_doesNothing() = runTest {
         sessions.value = session("a", expireAtSeconds = null)
         start()
-        advanceTimeBy(1_000_000)
+        advanceTimeBy(1_000_000.milliseconds)
         runCurrent()
 
         sessions.value = null
-        advanceTimeBy(1_000_000)
+        advanceTimeBy(1_000_000.milliseconds)
         runCurrent()
 
         assertEquals(emptyList<String>(), refreshedFrom)

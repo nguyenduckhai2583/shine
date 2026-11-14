@@ -13,7 +13,6 @@ import com.example.shine.core.model.User
 import com.example.shine.core.network.socket.event.ConversationCreatedEvent
 import com.example.shine.core.network.socket.model.ConvSocketMessage
 import com.example.shine.core.network.socket.model.ConversationType
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -27,7 +26,6 @@ import org.junit.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class ConversationSocketMediatorTest {
 
     private class FakeChannelRepository : ChannelRepository {

@@ -10,7 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -29,9 +28,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.shine.core.model.DirectMessage
 import com.example.shine.core.designsystem.theme.ShineTheme
 import com.example.shine.core.designsystem.util.TimeFormatter
+import com.example.shine.core.model.DirectMessage
 import com.example.shine.feature.home.DmsUiState
 import com.example.shine.feature.home.DmsViewModel
 
@@ -152,8 +151,6 @@ private fun DirectMessageItem(
         },
     )
 }
-
-fun formatDmTime(seconds: Long?): String = TimeFormatter.formatTimeAgo(seconds)
 
 @Preview(showBackground = true)
 @Composable

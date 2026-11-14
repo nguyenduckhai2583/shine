@@ -2,13 +2,12 @@ package com.example.shine.feature.auth
 
 import com.example.shine.core.common.error.AppErrorEnum
 import com.example.shine.core.common.error.AppException
+import com.example.shine.core.common.ui.UiText
+import com.example.shine.core.data.repository.AuthRepository
 import com.example.shine.core.model.Session
 import com.example.shine.core.model.SignInStatus
-import com.example.shine.core.data.repository.AuthRepository
-import com.example.shine.core.common.ui.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain

@@ -2,7 +2,6 @@ package com.example.shine.core.data.source.local
 
 import com.example.shine.core.database.dao.UserDao
 import com.example.shine.core.database.entity.UserEntity
-import com.example.shine.core.database.entity.toDomain
 import com.example.shine.core.database.entity.toEntity
 import com.example.shine.core.model.User
 import kotlinx.coroutines.flow.first

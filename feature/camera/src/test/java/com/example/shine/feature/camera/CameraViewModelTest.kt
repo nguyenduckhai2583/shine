@@ -14,6 +14,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CameraViewModelTest {
@@ -108,11 +109,11 @@ class CameraViewModelTest {
         assertEquals(0, viewModel.uiState.value.recordingDurationSeconds)
         assertTrue(viewModel.uiState.value.isRecording)
 
-        advanceTimeBy(1000L)
+        advanceTimeBy(1000L.milliseconds)
         runCurrent()
         assertEquals(1, viewModel.uiState.value.recordingDurationSeconds)
 
-        advanceTimeBy(2000L)
+        advanceTimeBy(2000L.milliseconds)
         runCurrent()
         assertEquals(3, viewModel.uiState.value.recordingDurationSeconds)
 

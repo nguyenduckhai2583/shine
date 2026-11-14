@@ -82,7 +82,7 @@ class AppViewModelTest {
         var completeChatUsersCall: (() -> Unit)? = null
         val deferredUserRepository = object : UserRepository {
             override suspend fun getProfile(): Result<Unit> {
-                suspendCancellableCoroutine<Unit> { cont ->
+                suspendCancellableCoroutine { cont ->
                     completeProfileCall = {
                         cont.resume(Unit)
                     }
@@ -91,7 +91,7 @@ class AppViewModelTest {
             }
 
             override suspend fun getChatUsers(workspaceId: String?): Result<Unit> {
-                suspendCancellableCoroutine<Unit> { cont ->
+                suspendCancellableCoroutine { cont ->
                     completeChatUsersCall = {
                         cont.resume(Unit)
                     }

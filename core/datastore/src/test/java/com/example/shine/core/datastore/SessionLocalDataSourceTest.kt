@@ -1,8 +1,6 @@
 package com.example.shine.core.datastore
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.shine.core.model.Session
 import com.example.shine.core.model.User
 import kotlinx.coroutines.CoroutineScope

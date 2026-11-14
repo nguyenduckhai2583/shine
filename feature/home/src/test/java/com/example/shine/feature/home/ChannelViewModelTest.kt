@@ -196,7 +196,13 @@ class ChannelViewModelTest {
     }
 
     private class FakeChannelRepository : ChannelRepository {
-        val channelsFlow = MutableStateFlow(listOf(Channel("1", "general", false, false, true, null, null, null)))
+        val channelsFlow = MutableStateFlow(listOf(Channel("1", "general", false,
+            isEncrypted = false,
+            isDefault = true,
+            categoryName = null,
+            createdAt = null,
+            lastActivityAt = null
+        )))
         var shouldFail = false
         var clearCalled = false
         var getChannelsCallCount = 0
@@ -224,7 +230,7 @@ class ChannelViewModelTest {
                 createdAt = System.currentTimeMillis(),
                 lastActivityAt = null,
             )
-            channelsFlow.value = channelsFlow.value + newChannel
+            channelsFlow.value += newChannel
             return Result.success(Unit)
         }
 
