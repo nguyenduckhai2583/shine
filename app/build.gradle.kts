@@ -1,3 +1,24 @@
+import com.android.build.api.dsl.ProductFlavor
+import java.util.Properties
+
+fun loadEnv(envName: String): Properties = Properties().apply {
+    file("env/$envName.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
+fun ProductFlavor.buildTypedConfigField(key: String, rawValue: String) {
+    val (type, value) = when {
+        rawValue.equals("true", ignoreCase = true) || rawValue.equals("false", ignoreCase = true) ->
+            "boolean" to rawValue.lowercase()
+        rawValue.toIntOrNull() != null ->
+            "int" to rawValue
+        rawValue.toLongOrNull() != null ->
+            "long" to "${rawValue}L"
+        else ->
+            "String" to "\"$rawValue\""
+    }
+    buildConfigField(type, key, value)
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -20,12 +41,37 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 
-        buildConfigField("String", "BASE_URL", "\"https://employer-api.dev.hodfords.uk/\"")
-        buildConfigField("String", "PASSWORD_SALT", "\"709d0a32e4d0b1a2ce8800998d95d6f9\"")
+    flavorDimensions += listOf("environment")
 
-        val deepLinkHost = "employer.dev.hodfords.uk"
-        buildConfigField("String", "DEEP_LINK_HOST", "\"$deepLinkHost\"")
+    productFlavors {
+        val manifestKeys = setOf(
+            "APP_NAME",
+            "DEEP_LINK_HOST",
+        )
+
+        listOf("dev", "uat", "prod").forEach { envName ->
+            create(envName) {
+                dimension = "environment"
+                val env = loadEnv(envName)
+
+                env.getProperty("APP_SUFFIX")?.takeIf { it.isNotBlank() }?.let { suffix ->
+                    applicationIdSuffix = suffix
+                    versionNameSuffix = suffix
+                }
+
+                for (key in manifestKeys) {
+                    env.getProperty(key)?.let { value ->
+                        manifestPlaceholders[key] = value
+                    }
+                }
+
+                for ((key, value) in env) {
+                    buildTypedConfigField(key.toString(), value.toString())
+                }
+            }
+        }
     }
 
     buildTypes {
