@@ -49,6 +49,7 @@ class WorkspaceRepositoryImplTest {
                 tempFolder.newFile("test_session.preferences_pb")
             },
             json,
+            com.example.shine.core.data.FakeCryptoManager(),
         )
         fakeDao = FakeWorkspaceDao()
         fakeApi = FakeWorkspaceApi()

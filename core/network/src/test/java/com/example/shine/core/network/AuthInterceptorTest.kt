@@ -68,6 +68,7 @@ class AuthInterceptorTest {
                 tempFolder.newFile("session.preferences_pb")
             },
             json,
+            FakeCryptoManager(),
         )
         val refreshApi = Retrofit.Builder()
             .baseUrl(server.url("/"))

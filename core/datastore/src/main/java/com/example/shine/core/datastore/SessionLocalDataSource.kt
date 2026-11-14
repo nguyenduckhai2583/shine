@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.example.shine.core.datastore.security.CryptoManager
 import com.example.shine.core.model.Session
 import com.example.shine.core.model.User
 import kotlinx.coroutines.flow.Flow
@@ -16,15 +17,18 @@ import javax.inject.Singleton
 class SessionLocalDataSource @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     private val json: Json,
+    private val cryptoManager: CryptoManager,
 ) {
     val session: Flow<Session?> = dataStore.data.map { prefs ->
         getSession(prefs)
     }
 
     suspend fun save(session: Session) {
+        val rawJson = json.encodeToString(session)
+        val encrypted = cryptoManager.encrypt(rawJson)
         dataStore.edit { prefs ->
             prefs.clear()
-            prefs[KEY_SESSION] = json.encodeToString(session)
+            prefs[KEY_SESSION] = encrypted
         }
     }
 
@@ -32,7 +36,8 @@ class SessionLocalDataSource @Inject constructor(
         dataStore.edit { prefs ->
             val current = getSession(prefs) ?: return@edit
             val updated = current.copy(user = user)
-            prefs[KEY_SESSION] = json.encodeToString(updated)
+            val rawJson = json.encodeToString(updated)
+            prefs[KEY_SESSION] = cryptoManager.encrypt(rawJson)
         }
     }
 
@@ -42,7 +47,8 @@ class SessionLocalDataSource @Inject constructor(
             val updated = current.copy(
                 user = current.user?.copy(avatarUrl = avatarUrl),
             )
-            prefs[KEY_SESSION] = json.encodeToString(updated)
+            val rawJson = json.encodeToString(updated)
+            prefs[KEY_SESSION] = cryptoManager.encrypt(rawJson)
         }
     }
 
@@ -50,7 +56,8 @@ class SessionLocalDataSource @Inject constructor(
         dataStore.edit { prefs ->
             val current = getSession(prefs) ?: return@edit
             val updated = current.copy(workspaceId = workspaceId)
-            prefs[KEY_SESSION] = json.encodeToString(updated)
+            val rawJson = json.encodeToString(updated)
+            prefs[KEY_SESSION] = cryptoManager.encrypt(rawJson)
         }
     }
 
@@ -61,7 +68,8 @@ class SessionLocalDataSource @Inject constructor(
     private fun getSession(prefs: Preferences): Session? {
         val rawSession = prefs[KEY_SESSION] ?: return null
         return try {
-            json.decodeFromString<Session>(rawSession)
+            val decryptedJson = cryptoManager.decrypt(rawSession)
+            json.decodeFromString<Session>(decryptedJson)
         } catch (_: Exception) {
             null
         }

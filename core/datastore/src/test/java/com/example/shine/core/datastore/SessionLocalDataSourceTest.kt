@@ -1,6 +1,11 @@
 package com.example.shine.core.datastore
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.example.shine.core.datastore.security.CryptoManager
 import com.example.shine.core.model.Session
 import com.example.shine.core.model.User
 import kotlinx.coroutines.CoroutineScope
@@ -11,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -29,13 +35,22 @@ class SessionLocalDataSourceTest {
         explicitNulls = false
     }
 
+    private lateinit var dataStore: DataStore<Preferences>
     private lateinit var local: SessionLocalDataSource
+
+    private val fakeCryptoManager = object : CryptoManager {
+        override fun encrypt(plainText: String): String = "ENC_$plainText"
+        override fun decrypt(cipherText: String): String {
+            if (!cipherText.startsWith("ENC_")) throw IllegalArgumentException("Bad cipher")
+            return cipherText.removePrefix("ENC_")
+        }
+    }
 
     @Before
     fun setUp() {
         val testFile = tempFolder.newFile("test_session.preferences_pb")
-        val dataStore = PreferenceDataStoreFactory.create(scope = scope) { testFile }
-        local = SessionLocalDataSource(dataStore, json)
+        dataStore = PreferenceDataStoreFactory.create(scope = scope) { testFile }
+        local = SessionLocalDataSource(dataStore, json, fakeCryptoManager)
     }
 
     @After
@@ -67,6 +82,28 @@ class SessionLocalDataSourceTest {
         assertEquals(1000L, loaded?.expireAt)
         assertEquals("w1", loaded?.workspaceId)
         assertEquals("u1", loaded?.user?.id)
+    }
+
+    @Test
+    fun save_encryptsDataOnDisk() = runTest {
+        val session = Session(token = "secret_token_123")
+        local.save(session)
+
+        val rawStoredValue = dataStore.data.first()[stringPreferencesKey("session")]
+        assertNotNull(rawStoredValue)
+        // Must not contain plain JSON or plain token at the start
+        assertFalse(rawStoredValue!!.startsWith("{"))
+        assertEquals(true, rawStoredValue.startsWith("ENC_"))
+    }
+
+    @Test
+    fun getSession_withCorruptEncryptedData_returnsNullSafely() = runTest {
+        dataStore.edit { prefs ->
+            prefs[stringPreferencesKey("session")] = "CORRUPTED_CIPHER_TEXT"
+        }
+
+        val loaded = local.session.first()
+        assertNull(loaded)
     }
 
     @Test

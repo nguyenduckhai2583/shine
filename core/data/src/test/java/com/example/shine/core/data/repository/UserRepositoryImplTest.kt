@@ -68,6 +68,7 @@ class UserRepositoryImplTest {
                 tempFolder.newFile("test_session.preferences_pb")
             },
             json,
+            com.example.shine.core.data.FakeCryptoManager(),
         )
         fakeApi = FakeUserApi()
         contentUriResolver = FakeContentUriResolver()

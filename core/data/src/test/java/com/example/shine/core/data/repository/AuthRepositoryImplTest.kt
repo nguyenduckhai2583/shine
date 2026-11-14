@@ -47,6 +47,7 @@ class AuthRepositoryImplTest {
                 tempFolder.newFile("auth_test_session.preferences_pb")
             },
             json,
+            com.example.shine.core.data.FakeCryptoManager(),
         )
         fakeAuthApi = FakeAuthApi()
         repository = AuthRepositoryImpl(

@@ -5,6 +5,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
+import com.example.shine.core.datastore.security.CryptoManager
+import com.example.shine.core.datastore.security.SessionCryptoManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,4 +25,10 @@ object DataStoreModule {
     ): DataStore<Preferences> = PreferenceDataStoreFactory.create {
         context.preferencesDataStoreFile("session")
     }
+
+    @Provides
+    @Singleton
+    fun provideCryptoManager(
+        impl: SessionCryptoManager,
+    ): CryptoManager = impl
 }

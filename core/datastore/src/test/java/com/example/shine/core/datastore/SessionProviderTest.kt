@@ -33,7 +33,7 @@ class SessionProviderTest {
             scope = scope,
             produceFile = { tmp.newFile("test_session.preferences_pb") },
         )
-        local = SessionLocalDataSource(dataStore, Json)
+        local = SessionLocalDataSource(dataStore, Json, FakeCryptoManager())
         provider = SessionProvider(local, scope)
     }
 
