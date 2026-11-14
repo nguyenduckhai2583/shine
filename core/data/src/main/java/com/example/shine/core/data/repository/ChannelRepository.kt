@@ -13,8 +13,6 @@ interface ChannelRepository {
 
     suspend fun createChannel(name: String): Result<Unit>
 
-    suspend fun retrySync(channelId: String): Result<Unit> = Result.success(Unit)
-
     suspend fun deleteChannel(channelId: String): Result<Unit> = Result.success(Unit)
 
     fun getChannelsFlow(): Flow<List<Channel>> = getChannelsFlow(limit = -1)

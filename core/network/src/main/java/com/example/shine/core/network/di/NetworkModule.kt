@@ -7,6 +7,7 @@ import com.example.shine.core.network.AuthInterceptor
 import com.example.shine.core.network.ChatApi
 import com.example.shine.core.network.ErrorMappingCallAdapterFactory
 import com.example.shine.core.network.PlanixApi
+import com.example.shine.core.network.RetryInterceptor
 import com.example.shine.core.network.TokenRefreshApi
 import com.example.shine.core.network.UserApi
 import com.example.shine.core.network.WorkspaceApi
@@ -44,9 +45,12 @@ object NetworkModule {
     @Provides
     @Singleton
     @Unauthenticated
-    fun provideUnauthenticatedOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+    fun provideUnauthenticatedOkHttpClient(
+        retryInterceptor: RetryInterceptor,
+    ): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
+        .addInterceptor(retryInterceptor)
         .apply {
             if (BuildConfig.DEBUG) {
                 addInterceptor(

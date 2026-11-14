@@ -48,17 +48,6 @@ class ChannelRepositoryImpl @Inject constructor(
         channelSyncScheduler.scheduleImmediateSync()
     }
 
-    override suspend fun retrySync(channelId: String): Result<Unit> = suspendRunCatching {
-        val channel = channelDao.getChannel(channelId) ?: return@suspendRunCatching
-        channelDao.upsertChannel(
-            channel.copy(
-                syncStatus = SyncStatus.PENDING,
-                syncErrorMessage = null,
-            )
-        )
-        channelSyncScheduler.scheduleImmediateSync()
-    }
-
     override suspend fun deleteChannel(channelId: String): Result<Unit> = suspendRunCatching {
         channelDao.deleteChannel(channelId)
     }

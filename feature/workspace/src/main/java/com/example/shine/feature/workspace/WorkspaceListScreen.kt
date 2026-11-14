@@ -30,7 +30,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -57,7 +56,6 @@ fun WorkspaceListRoute(
         uiState = uiState,
         onSelectWorkspace = viewModel::onSelectWorkspace,
         onConfirm = viewModel::confirmSelection,
-        onRetry = viewModel::loadWorkspaces,
         onSignOut = viewModel::signOut,
     )
 }
@@ -67,7 +65,6 @@ fun WorkspaceListScreen(
     uiState: WorkspaceListUiState,
     onSelectWorkspace: (String) -> Unit,
     onConfirm: () -> Unit,
-    onRetry: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -98,7 +95,6 @@ fun WorkspaceListScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(uiState.errorMessage.asString(), color = MaterialTheme.colorScheme.error)
-                    OutlinedButton(onClick = onRetry) { Text("Retry") }
                 }
                 uiState.workspaces.isEmpty() -> Column(
                     modifier = Modifier.padding(24.dp),
@@ -106,7 +102,6 @@ fun WorkspaceListScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text("No workspaces available")
-                    OutlinedButton(onClick = onRetry) { Text("Reload") }
                 }
                 else -> Column(
                     modifier = Modifier
@@ -285,7 +280,6 @@ private fun WorkspaceListScreenPreview() {
             ),
             onSelectWorkspace = {},
             onConfirm = {},
-            onRetry = {},
             onSignOut = {},
         )
     }
