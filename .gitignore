@@ -13,3 +13,19 @@ build/
 .externalNativeBuild
 .cxx
 local.properties
+
+# Keystore files
+*.jks
+*.keystore
+
+# Built application files
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Output folders from Android Studio "Generate Signed Bundle / APK"
+app/prod/
+app/dev/
+app/*/release/
+
