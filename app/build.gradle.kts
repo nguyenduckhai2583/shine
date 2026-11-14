@@ -51,7 +51,7 @@ android {
             "DEEP_LINK_HOST",
         )
 
-        listOf("dev", "uat", "prod").forEach { envName ->
+        listOf("dev", "prod").forEach { envName ->
             create(envName) {
                 dimension = "environment"
                 val env = loadEnv(envName)
