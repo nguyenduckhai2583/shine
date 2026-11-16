@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.example.shine.core.datastore.security.CryptoManager
 import com.example.shine.core.datastore.security.SessionCryptoManager
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,19 +17,21 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DataStoreModule {
+abstract class DataStoreModule {
 
-    @Provides
+    @Binds
     @Singleton
-    fun providePreferencesDataStore(
-        @ApplicationContext context: Context,
-    ): DataStore<Preferences> = PreferenceDataStoreFactory.create {
-        context.preferencesDataStoreFile("session")
-    }
-
-    @Provides
-    @Singleton
-    fun provideCryptoManager(
+    abstract fun bindCryptoManager(
         impl: SessionCryptoManager,
-    ): CryptoManager = impl
+    ): CryptoManager
+
+    companion object {
+        @Provides
+        @Singleton
+        fun providePreferencesDataStore(
+            @ApplicationContext context: Context,
+        ): DataStore<Preferences> = PreferenceDataStoreFactory.create {
+            context.preferencesDataStoreFile("session")
+        }
+    }
 }
