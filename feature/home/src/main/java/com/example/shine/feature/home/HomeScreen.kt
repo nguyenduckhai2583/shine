@@ -15,11 +15,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,12 +26,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.shine.core.designsystem.theme.MultiDevicePreviews
 import com.example.shine.core.model.Channel
 import com.example.shine.core.model.Workspace
+import com.example.shine.feature.home.components.ChannelsContent
 import com.example.shine.feature.home.components.ChannelsRoute
+import com.example.shine.feature.home.components.DmsContent
 import com.example.shine.feature.home.components.DmsRoute
 import com.example.shine.feature.home.components.HomeDrawerContent
 import com.example.shine.feature.home.components.SettingsContent
@@ -52,11 +53,12 @@ fun HomeRoute(
         uiState = uiState,
         selectedTab = selectedTab,
         onSelectTab = { selectedTab = it },
-        onChannelClick = onChannelClick,
         onPlanixClick = onPlanixClick,
         onProfileClick = onProfileClick,
         onSignOut = viewModel::signOut,
         onSelectWorkspace = viewModel::selectWorkspace,
+        channelsContent = { ChannelsRoute(onChannelClick = onChannelClick) },
+        dmsContent = { DmsRoute() },
     )
 }
 
@@ -65,10 +67,11 @@ fun HomeScreen(
     uiState: HomeUiState,
     selectedTab: HomeTab,
     onSelectTab: (HomeTab) -> Unit,
-    onChannelClick: (Channel) -> Unit,
     onPlanixClick: () -> Unit,
     onSignOut: () -> Unit,
     onSelectWorkspace: (String) -> Unit,
+    channelsContent: @Composable () -> Unit,
+    dmsContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     onProfileClick: () -> Unit = {},
     state: HomeScreenState = rememberHomeScreenState(),
@@ -90,43 +93,60 @@ fun HomeScreen(
             )
         },
     ) {
-        Scaffold(
-            topBar = {
-                HomeTopAppBar(
-                    selectedTab = selectedTab,
-                    uiState = uiState,
-                    onOpenDrawer = state::openDrawer,
+        NavigationSuiteScaffold(
+            navigationSuiteItems = {
+                item(
+                    selected = selectedTab == HomeTab.Channels,
+                    onClick = { onSelectTab(HomeTab.Channels) },
+                    icon = { Icon(Icons.Filled.Tag, contentDescription = "Channels") },
+                    label = { Text("Channels") },
+                )
+                item(
+                    selected = selectedTab == HomeTab.Dms,
+                    onClick = { onSelectTab(HomeTab.Dms) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "DMs") },
+                    label = { Text("DMs") },
+                )
+                item(
+                    selected = selectedTab == HomeTab.Settings,
+                    onClick = { onSelectTab(HomeTab.Settings) },
+                    icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
+                    label = { Text("Settings") },
                 )
             },
-            bottomBar = {
-                HomeBottomBar(
-                    selectedTab = selectedTab,
-                    onSelectTab = onSelectTab,
-                )
-            },
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-            ) {
-                if (uiState.isSwitchingWorkspace) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    when (selectedTab) {
-                        HomeTab.Channels -> ChannelsRoute(onChannelClick = onChannelClick)
-                        HomeTab.Dms -> DmsRoute()
-                        HomeTab.Settings -> SettingsContent(
-                            uiState = uiState,
-                            onPlanixClick = onPlanixClick,
-                            onSignOut = onSignOut,
-                            onProfileClick = onProfileClick,
-                        )
+        ) {
+            Scaffold(
+                topBar = {
+                    HomeTopAppBar(
+                        selectedTab = selectedTab,
+                        uiState = uiState,
+                        onOpenDrawer = state::openDrawer,
+                    )
+                },
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                ) {
+                    if (uiState.isSwitchingWorkspace) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else {
+                        when (selectedTab) {
+                            HomeTab.Channels -> channelsContent()
+                            HomeTab.Dms -> dmsContent()
+                            HomeTab.Settings -> SettingsContent(
+                                uiState = uiState,
+                                onPlanixClick = onPlanixClick,
+                                onSignOut = onSignOut,
+                                onProfileClick = onProfileClick,
+                            )
+                        }
                     }
                 }
             }
@@ -166,34 +186,7 @@ private fun HomeTopAppBar(
     )
 }
 
-@Composable
-private fun HomeBottomBar(
-    selectedTab: HomeTab,
-    onSelectTab: (HomeTab) -> Unit,
-) {
-    NavigationBar {
-        NavigationBarItem(
-            selected = selectedTab == HomeTab.Channels,
-            onClick = { onSelectTab(HomeTab.Channels) },
-            icon = { Icon(Icons.Filled.Tag, contentDescription = "Channels") },
-            label = { Text("Channels") },
-        )
-        NavigationBarItem(
-            selected = selectedTab == HomeTab.Dms,
-            onClick = { onSelectTab(HomeTab.Dms) },
-            icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "DMs") },
-            label = { Text("DMs") },
-        )
-        NavigationBarItem(
-            selected = selectedTab == HomeTab.Settings,
-            onClick = { onSelectTab(HomeTab.Settings) },
-            icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
-            label = { Text("Settings") },
-        )
-    }
-}
-
-@Preview(showBackground = true)
+@MultiDevicePreviews
 @Composable
 private fun HomeScreenPreview() {
     ShineTheme(dynamicColor = false) {
@@ -207,10 +200,46 @@ private fun HomeScreenPreview() {
             ),
             selectedTab = HomeTab.Channels,
             onSelectTab = {},
-            onChannelClick = {},
             onPlanixClick = {},
             onSignOut = {},
             onSelectWorkspace = {},
+            channelsContent = {
+                ChannelsContent(
+                    uiState = ChannelUiState(
+                        channels = listOf(
+                            Channel(
+                                id = "1",
+                                name = "general",
+                                isPrivate = false,
+                                isEncrypted = false,
+                                isDefault = true,
+                                categoryName = null,
+                                createdAt = null,
+                                lastActivityAt = null,
+                            ),
+                            Channel(
+                                id = "2",
+                                name = "random",
+                                isPrivate = false,
+                                isEncrypted = false,
+                                isDefault = false,
+                                categoryName = null,
+                                createdAt = null,
+                                lastActivityAt = null,
+                            ),
+                        ),
+                    ),
+                    onChannelClick = {},
+                    onRefresh = {},
+                )
+            },
+            dmsContent = {
+                DmsContent(
+                    uiState = DmsUiState(),
+                    onDmClick = {},
+                    onRefresh = {},
+                )
+            },
         )
     }
 }

@@ -21,6 +21,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
+import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +55,7 @@ import com.example.shine.feature.profile.ProfileRoute
 import com.example.shine.feature.workspace.WorkspaceListRoute
 import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
 
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
     val authState by viewModel.authState.collectAsStateWithLifecycle()
@@ -91,9 +95,12 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (authState != AuthState.Initializing) {
+            val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>()
+
             NavDisplay(
                 backStack = backStack,
                 onBack = backStack::popBack,
+                sceneStrategies = listOf(listDetailStrategy),
                 entryDecorators = listOf(
                     rememberSaveableStateHolderNavEntryDecorator(),
                     rememberViewModelStoreNavEntryDecorator(),
@@ -106,14 +113,27 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
                     entry<WorkspaceList> {
                         WorkspaceListRoute()
                     }
-                    entry<Home> {
+                    entry<Home>(
+                        metadata = ListDetailSceneStrategy.listPane(
+                            detailPlaceholder = {
+                                EmptyChannelDetailPlaceholder()
+                            },
+                        ),
+                    ) {
                         HomeRoute(
-                            onChannelClick = { channel -> backStack.add(ChannelDetail(channel.id)) },
+                            onChannelClick = { channel ->
+                                if (backStack.lastOrNull() is ChannelDetail) {
+                                    backStack.removeLastOrNull()
+                                }
+                                backStack.add(ChannelDetail(channel.id))
+                            },
                             onPlanixClick = { backStack.add(PlanixList) },
                             onProfileClick = { backStack.add(Profile) },
                         )
                     }
-                    entry<ChannelDetail> { key ->
+                    entry<ChannelDetail>(
+                        metadata = ListDetailSceneStrategy.detailPane(),
+                    ) { key ->
                         ChannelDetailRoute(
                             channelId = key.channelId,
                             onBack = { backStack.removeLastOrNull() },
