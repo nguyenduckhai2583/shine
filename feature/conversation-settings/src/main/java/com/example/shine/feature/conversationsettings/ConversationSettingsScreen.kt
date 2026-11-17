@@ -42,8 +42,8 @@ import com.example.shine.core.designsystem.theme.ShineTheme
 fun ConversationSettingsRoute(
     conversationId: String,
     conversationType: ConversationType,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
     viewModel: ConversationSettingsViewModel = hiltViewModel<ConversationSettingsViewModel, ConversationSettingsViewModel.Factory>(
         creationCallback = { factory -> factory.create(conversationId, conversationType) },
     ),
@@ -60,9 +60,9 @@ fun ConversationSettingsRoute(
 @Composable
 fun ConversationSettingsScreen(
     uiState: ConversationSettingsUiState,
-    onBack: () -> Unit,
     onToggleNotification: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
 ) {
     Scaffold(
         modifier = modifier,

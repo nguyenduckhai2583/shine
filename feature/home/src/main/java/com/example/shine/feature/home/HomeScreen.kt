@@ -40,6 +40,7 @@ fun HomeRoute(
     dmsContent: @Composable () -> Unit,
     onPlanixClick: () -> Unit,
     onProfileClick: () -> Unit = {},
+    onTabSelected: (HomeTab) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -48,7 +49,12 @@ fun HomeRoute(
     HomeScreen(
         uiState = uiState,
         selectedTab = selectedTab,
-        onSelectTab = { selectedTab = it },
+        onSelectTab = { tab ->
+            if (selectedTab != tab) {
+                selectedTab = tab
+                onTabSelected(tab)
+            }
+        },
         onPlanixClick = onPlanixClick,
         onProfileClick = onProfileClick,
         onSignOut = viewModel::signOut,

@@ -22,6 +22,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
@@ -161,6 +163,8 @@ private fun ShineNavDisplay(
     }
 
     val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>()
+    val isTwoPane = calculatePaneScaffoldDirective(currentWindowAdaptiveInfoV2()).maxHorizontalPartitions > 1
+    val detailOnBack: (() -> Unit)? = if (isTwoPane) null else backStack::popBack
 
     NavDisplay(
         backStack = backStack,
@@ -203,7 +207,13 @@ private fun ShineNavDisplay(
                         )
                     },
                     onPlanixClick = { backStack.add(PlanixList) },
-                    onProfileClick = { backStack.add(Profile) },
+                    onProfileClick = {
+                        backStack.popUntil(Home)
+                        backStack.add(Profile)
+                    },
+                    onTabSelected = {
+                        backStack.popUntil(Home)
+                    },
                 )
             }
             entry<ChannelDetail>(
@@ -211,7 +221,7 @@ private fun ShineNavDisplay(
             ) { key ->
                 ChannelDetailRoute(
                     channelId = key.channelId,
-                    onBack = { backStack.popBack() },
+                    onBack = detailOnBack,
                     onNavigateToSettings = {
                         backStack.add(ConversationSettings(key.channelId, ConversationType.CHANNEL))
                     },
@@ -222,7 +232,7 @@ private fun ShineNavDisplay(
             ) { key ->
                 DirectMessageDetailRoute(
                     dmId = key.dmId,
-                    onBack = { backStack.popBack() },
+                    onBack = detailOnBack,
                     onNavigateToSettings = {
                         backStack.add(ConversationSettings(key.dmId, ConversationType.DM))
                     },
@@ -234,7 +244,7 @@ private fun ShineNavDisplay(
                 ConversationSettingsRoute(
                     conversationId = key.conversationId,
                     conversationType = key.type,
-                    onBack = { backStack.popBack() },
+                    onBack = detailOnBack,
                 )
             }
             entry<PlanixList> {
@@ -242,9 +252,11 @@ private fun ShineNavDisplay(
                     onBack = { backStack.popBack() },
                 )
             }
-            entry<Profile> {
+            entry<Profile>(
+                metadata = ListDetailSceneStrategy.detailPane(),
+            ) {
                 ProfileRoute(
-                    onBack = { backStack.popBack() },
+                    onBack = detailOnBack,
                     onOpenCamera = {
                         backStack.add(CameraCapture(resultKey = "profile_avatar"))
                     },

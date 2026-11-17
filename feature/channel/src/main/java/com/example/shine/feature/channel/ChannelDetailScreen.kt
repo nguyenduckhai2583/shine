@@ -34,8 +34,8 @@ import java.util.Date
 @Composable
 fun ChannelDetailRoute(
     channelId: String,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
     onNavigateToSettings: () -> Unit = {},
     viewModel: ChannelDetailViewModel = hiltViewModel<ChannelDetailViewModel, ChannelDetailViewModel.Factory>(
         creationCallback = { factory -> factory.create(channelId) },
@@ -53,8 +53,8 @@ fun ChannelDetailRoute(
 @Composable
 fun ChannelDetailScreen(
     uiState: ChannelDetailUiState,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
     onNavigateToSettings: () -> Unit = {},
 ) {
     Scaffold(

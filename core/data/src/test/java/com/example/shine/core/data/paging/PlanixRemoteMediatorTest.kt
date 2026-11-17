@@ -247,6 +247,7 @@ class PlanixRemoteMediatorTest {
         override fun userDao(): UserDao = error("Not implemented")
         override fun channelDao(): ChannelDao = error("Not implemented")
         override fun directMessageDao(): com.example.shine.core.database.dao.DirectMessageDao = error("Not implemented")
+        override fun conversationSettingDao(): com.example.shine.core.database.dao.ConversationSettingDao = error("Not implemented")
         override fun projectDao(): ProjectDao = projectDao
         override fun projectRemoteKeyDao(): ProjectRemoteKeyDao = remoteKeyDao
         override suspend fun <R> runTransaction(block: suspend () -> R): R = block()

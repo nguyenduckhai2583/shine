@@ -33,8 +33,8 @@ import com.example.shine.core.model.DirectMessage
 @Composable
 fun DirectMessageDetailRoute(
     dmId: String,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
     onNavigateToSettings: () -> Unit = {},
     viewModel: DirectMessageDetailViewModel = hiltViewModel<DirectMessageDetailViewModel, DirectMessageDetailViewModel.Factory>(
         creationCallback = { factory -> factory.create(dmId) },
@@ -52,8 +52,8 @@ fun DirectMessageDetailRoute(
 @Composable
 fun DirectMessageDetailScreen(
     uiState: DirectMessageDetailUiState,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
     onNavigateToSettings: () -> Unit = {},
 ) {
     Scaffold(

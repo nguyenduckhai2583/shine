@@ -2,6 +2,8 @@ package com.example.shine.ui.navigation
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
@@ -30,6 +32,9 @@ import com.example.shine.feature.dm.DmsUiState
 import com.example.shine.feature.home.HomeScreen
 import com.example.shine.feature.home.HomeTab
 import com.example.shine.feature.home.HomeUiState
+import com.example.shine.feature.profile.ProfileScreen
+import com.example.shine.feature.profile.ProfileUiState
+import com.example.shine.feature.profile.UploadState
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -87,6 +92,9 @@ fun MockListDetailNavDisplay(
         mutableStateOf(initialTab)
     }
 
+    val isTwoPane = calculatePaneScaffoldDirective(currentWindowAdaptiveInfoV2()).maxHorizontalPartitions > 1
+    val detailOnBack: (() -> Unit)? = if (isTwoPane) null else backStack::popBack
+
     NavDisplay(
         backStack = backStack,
         onBack = { backStack.popBack() },
@@ -107,8 +115,17 @@ fun MockListDetailNavDisplay(
                         selectedWorkspaceId = "1",
                     ),
                     selectedTab = selectedTab,
-                    onSelectTab = { selectedTab = it },
+                    onSelectTab = { tab ->
+                        if (selectedTab != tab) {
+                            selectedTab = tab
+                            backStack.popUntil(Home)
+                        }
+                    },
                     onPlanixClick = {},
+                    onProfileClick = {
+                        backStack.popUntil(Home)
+                        backStack.add(Profile)
+                    },
                     onSignOut = {},
                     onSelectWorkspace = {},
                     channelsContent = {
@@ -149,7 +166,7 @@ fun MockListDetailNavDisplay(
                     )
                 ChannelDetailScreen(
                     uiState = ChannelDetailUiState.Success(channel = selectedChannel),
-                    onBack = { backStack.popBack() },
+                    onBack = detailOnBack,
                 )
             }
             entry<DirectMessageDetail>(
@@ -166,7 +183,20 @@ fun MockListDetailNavDisplay(
                     )
                 DirectMessageDetailScreen(
                     uiState = DirectMessageDetailUiState.Success(directMessage = selectedDm),
-                    onBack = { backStack.popBack() },
+                    onBack = detailOnBack,
+                )
+            }
+            entry<Profile>(
+                metadata = ListDetailSceneStrategy.detailPane(),
+            ) {
+                ProfileScreen(
+                    uiState = ProfileUiState(
+                        name = "Jane Doe",
+                        avatarUrl = null,
+                        uploadState = UploadState.Idle,
+                    ),
+                    onBack = detailOnBack,
+                    onAvatarSelected = {},
                 )
             }
         },
@@ -224,6 +254,22 @@ private fun ListDetailDmSelectedPreview() {
         MockListDetailNavDisplay(
             initialKeys = listOf(Home, DirectMessageDetail("1")),
             initialTab = HomeTab.Dms,
+        )
+    }
+}
+
+/**
+ * Preview khi mở Settings và chọn Profile:
+ * - Phone: Thấy Profile full màn hình (có nút Back)
+ * - Tablet: Thấy 2 cột: Bên trái là Settings, bên phải là Profile (không có nút Back)
+ */
+@MultiDevicePreviews
+@Composable
+private fun ListDetailProfileSelectedPreview() {
+    ShineTheme(dynamicColor = false) {
+        MockListDetailNavDisplay(
+            initialKeys = listOf(Home, Profile),
+            initialTab = HomeTab.Settings,
         )
     }
 }
