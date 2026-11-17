@@ -5,4 +5,6 @@ data class DirectMessage(
     val name: String,
     val time: Long?,
     val type: String? = null,
+    val createdAt: Long? = null,
+    val lastActivityAt: Long? = null,
 )

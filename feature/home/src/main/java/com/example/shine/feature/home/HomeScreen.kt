@@ -30,6 +30,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.core.designsystem.theme.MultiDevicePreviews
 import com.example.shine.core.model.Channel
+import com.example.shine.core.model.DirectMessage
 import com.example.shine.core.model.Workspace
 import com.example.shine.feature.home.components.ChannelsContent
 import com.example.shine.feature.home.components.ChannelsRoute
@@ -44,6 +45,7 @@ fun HomeRoute(
     onChannelClick: (Channel) -> Unit,
     onPlanixClick: () -> Unit,
     onProfileClick: () -> Unit = {},
+    onDmClick: (DirectMessage) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -58,7 +60,7 @@ fun HomeRoute(
         onSignOut = viewModel::signOut,
         onSelectWorkspace = viewModel::selectWorkspace,
         channelsContent = { ChannelsRoute(onChannelClick = onChannelClick) },
-        dmsContent = { DmsRoute() },
+        dmsContent = { DmsRoute(onDmClick = onDmClick) },
     )
 }
 

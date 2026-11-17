@@ -13,6 +13,9 @@ data object Home : NavKey
 data class ChannelDetail(val channelId: String) : NavKey
 
 @Serializable
+data class DirectMessageDetail(val dmId: String) : NavKey
+
+@Serializable
 data object PlanixList : NavKey
 
 @Serializable

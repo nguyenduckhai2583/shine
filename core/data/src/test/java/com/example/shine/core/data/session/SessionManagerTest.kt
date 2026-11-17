@@ -2,7 +2,6 @@ package com.example.shine.core.data.session
 
 import com.example.shine.core.data.sync.ChannelSyncScheduler
 import com.example.shine.core.database.ShineDatabase
-import com.example.shine.core.datastore.DirectMessageDataStore
 import com.example.shine.core.datastore.SessionLocalDataSource
 import com.example.shine.core.model.Session
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +23,6 @@ class SessionManagerTest {
     private lateinit var sessionLocal: SessionLocalDataSource
     private lateinit var database: ShineDatabase
     private lateinit var inMemoryDatabase: ShineDatabase
-    private lateinit var directMessageDataStore: DirectMessageDataStore
     private lateinit var channelSyncScheduler: ChannelSyncScheduler
     private lateinit var sessionManager: SessionManager
 
@@ -38,14 +36,12 @@ class SessionManagerTest {
 
         database = mock(ShineDatabase::class.java)
         inMemoryDatabase = mock(ShineDatabase::class.java)
-        directMessageDataStore = mock(DirectMessageDataStore::class.java)
         channelSyncScheduler = mock(ChannelSyncScheduler::class.java)
 
         sessionManager = SessionManager(
             sessionLocalDataSource = sessionLocal,
             database = database,
             inMemoryDatabase = inMemoryDatabase,
-            directMessageDataStore = directMessageDataStore,
             channelSyncScheduler = channelSyncScheduler,
             scope = testScope,
             ioDispatcher = testDispatcher,
@@ -71,7 +67,6 @@ class SessionManagerTest {
         verify(channelSyncScheduler).cancelSync()
         verify(database).clearAll()
         verify(inMemoryDatabase).clearAll()
-        verify(directMessageDataStore).clear()
     }
 
     @Test
@@ -84,6 +79,5 @@ class SessionManagerTest {
         verify(channelSyncScheduler).cancelSync()
         verify(database).clearAll()
         verify(inMemoryDatabase).clearAll()
-        verify(directMessageDataStore).clear()
     }
 }

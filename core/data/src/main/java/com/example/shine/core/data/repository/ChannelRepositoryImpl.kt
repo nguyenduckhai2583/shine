@@ -52,7 +52,7 @@ class ChannelRepositoryImpl @Inject constructor(
         channelDao.deleteChannel(channelId)
     }
 
-    override fun getChannelsFlow(): Flow<List<Channel>> = getChannelsFlow(limit = -1)
+    fun getChannelsFlow(): Flow<List<Channel>> = getChannelsFlow(limit = -1)
 
     override fun getChannelsFlow(limit: Int): Flow<List<Channel>> =
         channelDao.observeChannels(limit).map { entities ->
@@ -61,6 +61,10 @@ class ChannelRepositoryImpl @Inject constructor(
 
     override fun getChannelFlow(id: String): Flow<Channel?> =
         channelDao.observeChannel(id).map { it?.toDomain() }
+
+    override suspend fun onChannelCreated(channel: Channel) {
+        channelDao.upsertChannel(channel.toEntity())
+    }
 
     override suspend fun clear() {
         channelDao.clearAll()

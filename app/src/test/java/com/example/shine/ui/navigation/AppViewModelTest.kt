@@ -100,6 +100,8 @@ class AppViewModelTest {
             }
 
             override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()
+
+            override suspend fun clear() {}
         }
 
         val viewModel = AppViewModel(authRepository, deferredUserRepository, deepLinkParser, networkMonitor)
@@ -257,6 +259,8 @@ class AppViewModelTest {
         }
 
         override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()
+
+        override suspend fun clear() {}
     }
 
     private class FakeNetworkMonitor : NetworkMonitor {

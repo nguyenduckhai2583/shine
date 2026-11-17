@@ -118,6 +118,7 @@ class HomeViewModelTest {
             onGetChatUsers?.invoke()
             return Result.success(Unit)
         }
+        override suspend fun clear() {}
     }
 
     private class FakeAuthRepository : AuthRepository {

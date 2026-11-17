@@ -50,6 +50,7 @@ import com.example.shine.feature.camera.CapturedMedia
 import com.example.shine.feature.camera.MediaPreviewRoute
 import com.example.shine.feature.channel.ChannelDetailRoute
 import com.example.shine.feature.home.HomeRoute
+import com.example.shine.feature.home.dm.DirectMessageDetailRoute
 import com.example.shine.feature.planix.PlanixListRoute
 import com.example.shine.feature.profile.ProfileRoute
 import com.example.shine.feature.workspace.WorkspaceListRoute
@@ -127,6 +128,9 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
                                 }
                                 backStack.add(ChannelDetail(channel.id))
                             },
+                            onDmClick = { dm ->
+                                backStack.add(DirectMessageDetail(dm.id))
+                            },
                             onPlanixClick = { backStack.add(PlanixList) },
                             onProfileClick = { backStack.add(Profile) },
                         )
@@ -136,6 +140,12 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
                     ) { key ->
                         ChannelDetailRoute(
                             channelId = key.channelId,
+                            onBack = { backStack.removeLastOrNull() },
+                        )
+                    }
+                    entry<DirectMessageDetail> { key ->
+                        DirectMessageDetailRoute(
+                            dmId = key.dmId,
                             onBack = { backStack.removeLastOrNull() },
                         )
                     }

@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -134,7 +135,17 @@ class ChannelDetailViewModelTest {
 
         override fun getChannelFlow(id: String): Flow<Channel?> = channelFlow
 
+        override suspend fun getRecentChannels(limit: Int): List<Channel> = emptyList()
+
         override suspend fun createChannel(name: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun deleteChannel(channelId: String): Result<Unit> = Result.success(Unit)
+
+        override fun getChannelsFlow(limit: Int): Flow<List<Channel>> = emptyFlow()
+
+        override suspend fun onChannelCreated(channel: Channel) {}
+
+        override suspend fun clear() {}
     }
 
     private companion object {

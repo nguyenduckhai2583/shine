@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.shine.core.database.ShineDatabase
 import com.example.shine.core.database.dao.ChannelDao
+import com.example.shine.core.database.dao.DirectMessageDao
 import com.example.shine.core.database.dao.ProjectDao
 import com.example.shine.core.database.dao.ProjectRemoteKeyDao
 import com.example.shine.core.database.dao.UserDao
@@ -79,4 +80,9 @@ object DatabaseModule {
     fun provideChannelDao(
         @LocalDatabase database: ShineDatabase,
     ): ChannelDao = database.channelDao()
+
+    @Provides
+    fun provideDirectMessageDao(
+        @LocalDatabase database: ShineDatabase,
+    ): DirectMessageDao = database.directMessageDao()
 }

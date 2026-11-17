@@ -35,6 +35,7 @@ class PlanixRepositoryImplTest {
         override fun workspaceDao(): WorkspaceDao = error("Not implemented")
         override fun userDao(): UserDao = error("Not implemented")
         override fun channelDao(): ChannelDao = error("Not implemented")
+        override fun directMessageDao(): com.example.shine.core.database.dao.DirectMessageDao = error("Not implemented")
         override fun projectDao(): ProjectDao = error("Not implemented")
         override fun projectRemoteKeyDao(): ProjectRemoteKeyDao = error("Not implemented")
         override fun createOpenHelper(config: DatabaseConfiguration): SupportSQLiteOpenHelper = error("Not implemented")

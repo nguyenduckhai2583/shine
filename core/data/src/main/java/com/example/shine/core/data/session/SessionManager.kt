@@ -5,7 +5,6 @@ import com.example.shine.core.common.di.IoDispatcher
 import com.example.shine.core.data.sync.ChannelSyncScheduler
 import com.example.shine.core.database.ShineDatabase
 import com.example.shine.core.database.di.InMemoryDatabase
-import com.example.shine.core.datastore.DirectMessageDataStore
 import com.example.shine.core.datastore.SessionLocalDataSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +24,6 @@ class SessionManager @Inject constructor(
     private val sessionLocalDataSource: SessionLocalDataSource,
     private val database: ShineDatabase,
     @InMemoryDatabase private val inMemoryDatabase: ShineDatabase,
-    private val directMessageDataStore: DirectMessageDataStore,
     private val channelSyncScheduler: ChannelSyncScheduler,
     @ApplicationScope private val scope: CoroutineScope,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -50,6 +48,5 @@ class SessionManager @Inject constructor(
         channelSyncScheduler.cancelSync()
         database.clearAll()
         inMemoryDatabase.clearAll()
-        directMessageDataStore.clear()
     }
 }

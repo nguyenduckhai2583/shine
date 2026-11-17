@@ -32,22 +32,29 @@ class ConversationSocketMediatorTest {
         val createdChannels = mutableListOf<Channel>()
 
         override suspend fun getChannels(): Result<Unit> = Result.success(Unit)
+        override suspend fun getRecentChannels(limit: Int): List<Channel> = emptyList()
         override suspend fun getChannel(id: String): Result<Unit> = Result.failure(Exception())
         override suspend fun createChannel(name: String): Result<Unit> = Result.success(Unit)
-
-        override fun onChannelCreated(channel: Channel) {
+        override suspend fun deleteChannel(channelId: String): Result<Unit> = Result.success(Unit)
+        override fun getChannelsFlow(limit: Int): Flow<List<Channel>> = emptyFlow()
+        override fun getChannelFlow(id: String): Flow<Channel?> = emptyFlow()
+        override suspend fun onChannelCreated(channel: Channel) {
             createdChannels.add(channel)
         }
+        override suspend fun clear() {}
     }
 
     private class FakeDirectMessageRepository : DirectMessageRepository {
         val createdDms = mutableListOf<DirectMessage>()
 
         override suspend fun getDirectMessages(): Result<Unit> = Result.success(Unit)
-
-        override fun onDirectMessageCreated(message: DirectMessage) {
+        override suspend fun getDirectMessage(id: String): Result<Unit> = Result.success(Unit)
+        override fun getDirectMessagesFlow(): Flow<List<DirectMessage>> = emptyFlow()
+        override fun getDirectMessageFlow(id: String): Flow<DirectMessage?> = emptyFlow()
+        override suspend fun onDirectMessageCreated(message: DirectMessage) {
             createdDms.add(message)
         }
+        override suspend fun clear() {}
     }
 
     private class FakeUserDao : UserDao {

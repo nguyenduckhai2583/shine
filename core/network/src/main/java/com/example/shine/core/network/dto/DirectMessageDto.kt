@@ -66,5 +66,7 @@ fun DirectMessageDto.toDomain(
         name = resolvedName,
         time = resolvedTime,
         type = type,
+        createdAt = createdAt,
+        lastActivityAt = lastActivityAt ?: latestMessageAt,
     )
 }

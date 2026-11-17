@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -208,7 +209,13 @@ class ChannelViewModelTest {
         var getChannelsCallCount = 0
         var deletedChannelId: String? = null
 
-        override fun getChannelsFlow(): Flow<List<Channel>> = channelsFlow
+        override fun getChannelsFlow(limit: Int): Flow<List<Channel>> = channelsFlow
+
+        override fun getChannelFlow(id: String): Flow<Channel?> = emptyFlow()
+
+        override suspend fun getRecentChannels(limit: Int): List<Channel> = emptyList()
+
+        override suspend fun onChannelCreated(channel: Channel) {}
 
         override suspend fun getChannels(): Result<Unit> {
             getChannelsCallCount++

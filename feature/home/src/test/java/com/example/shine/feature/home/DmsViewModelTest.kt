@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -129,6 +130,12 @@ class DmsViewModelTest {
 
         override fun getDirectMessagesFlow(): Flow<List<DirectMessage>> = dmsFlow
 
+        override fun getDirectMessageFlow(id: String): Flow<DirectMessage?> = emptyFlow()
+
+        override suspend fun getDirectMessage(id: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun onDirectMessageCreated(message: DirectMessage) {}
+
         override suspend fun getDirectMessages(): Result<Unit> {
             getDmsCallCount++
             return if (shouldFail) {
@@ -138,7 +145,7 @@ class DmsViewModelTest {
             }
         }
 
-        override fun clear() {
+        override suspend fun clear() {
             clearCalled = true
             dmsFlow.value = emptyList()
         }

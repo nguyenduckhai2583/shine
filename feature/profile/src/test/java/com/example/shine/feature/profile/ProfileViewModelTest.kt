@@ -131,5 +131,7 @@ class ProfileViewModelTest {
                 )
             )
         }
+
+        override suspend fun clear() {}
     }
 }
