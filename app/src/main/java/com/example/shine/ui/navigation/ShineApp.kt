@@ -27,6 +27,7 @@ import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneSt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -58,14 +59,74 @@ import com.example.shine.feature.profile.ProfileRoute
 import com.example.shine.feature.workspace.WorkspaceListRoute
 import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val pendingDestination by viewModel.pendingDestination.collectAsStateWithLifecycle()
     val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
 
-    val backStack = rememberNavBackStack(SignIn)
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (authState != AuthState.Initializing) {
+            ShineNavDisplay(
+                authState = authState,
+                pendingDestination = pendingDestination,
+                onDeepLinkConsumed = viewModel::onDeepLinkConsumed,
+            )
+        }
+
+        AnimatedVisibility(
+            visible = isOffline,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter),
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding(),
+                shadowElevation = 4.dp,
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.error_no_internet),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@Composable
+private fun ShineNavDisplay(
+    authState: AuthState,
+    pendingDestination: DeepLinkDestination?,
+    onDeepLinkConsumed: () -> Unit,
+) {
+    val initialKey = remember {
+        when (authState) {
+            AuthState.Authenticated -> Home
+            AuthState.SelectWorkspace -> WorkspaceList
+            else -> SignIn
+        }
+    }
+    val backStack = rememberNavBackStack(initialKey)
 
     LaunchedEffect(authState) {
         when (authState) {
@@ -85,37 +146,35 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
                     if (backStack.lastOrNull() != targetKey) {
                         backStack.add(targetKey)
                     }
-                    viewModel.onDeepLinkConsumed()
+                    onDeepLinkConsumed()
                 }
                 is DeepLinkDestination.Profile -> {
                     backStack.removeAll { it !is Home }
                     backStack.add(Profile)
-                    viewModel.onDeepLinkConsumed()
+                    onDeepLinkConsumed()
                 }
             }
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (authState != AuthState.Initializing) {
-            val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>()
+    val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>()
 
-            NavDisplay(
-                backStack = backStack,
-                onBack = backStack::popBack,
-                sceneStrategies = listOf(listDetailStrategy),
-                entryDecorators = listOf(
-                    rememberSaveableStateHolderNavEntryDecorator(),
-                    rememberViewModelStoreNavEntryDecorator(),
-                    rememberResultEventBusNavEntryDecorator(),
-                ),
-                entryProvider = entryProvider {
-                    entry<SignIn> {
-                        SignInRoute()
-                    }
-                    entry<WorkspaceList> {
-                        WorkspaceListRoute()
-                    }
+    NavDisplay(
+        backStack = backStack,
+        onBack = backStack::popBack,
+        sceneStrategies = listOf(listDetailStrategy),
+        entryDecorators = listOf(
+            rememberSaveableStateHolderNavEntryDecorator(),
+            rememberViewModelStoreNavEntryDecorator(),
+            rememberResultEventBusNavEntryDecorator(),
+        ),
+        entryProvider = entryProvider {
+            entry<SignIn> {
+                SignInRoute()
+            }
+            entry<WorkspaceList> {
+                WorkspaceListRoute()
+            }
                     entry<Home>(
                         metadata = ListDetailSceneStrategy.listPane(
                             detailPlaceholder = {
@@ -218,44 +277,6 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
                     }
                 },
             )
-        }
-
-        AnimatedVisibility(
-            visible = isOffline,
-            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter),
-        ) {
-            Surface(
-                color = MaterialTheme.colorScheme.errorContainer,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding(),
-                shadowElevation = 4.dp,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Warning,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.error_no_internet),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                }
-            }
-        }
-    }
 }
 
 private fun MutableList<NavKey>.resetTo(key: NavKey) {
