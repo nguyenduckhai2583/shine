@@ -138,18 +138,19 @@ private fun ShineNavDisplay(
     }
 
     LaunchedEffect(pendingDestination, authState) {
-        val dest = pendingDestination
-        if (authState == AuthState.Authenticated && dest != null) {
-            when (dest) {
+        if (authState == AuthState.Authenticated && pendingDestination != null) {
+            when (pendingDestination) {
                 is DeepLinkDestination.Channel -> {
-                    val targetKey = ChannelDetail(dest.channelId)
+                    val targetKey = ChannelDetail(pendingDestination.channelId)
                     if (backStack.lastOrNull() != targetKey) {
+                        backStack.popUntil(Home)
                         backStack.add(targetKey)
                     }
                     onDeepLinkConsumed()
                 }
+
                 is DeepLinkDestination.Profile -> {
-                    backStack.removeAll { it !is Home }
+                    backStack.popUntil(Home)
                     backStack.add(Profile)
                     onDeepLinkConsumed()
                 }
@@ -175,118 +176,124 @@ private fun ShineNavDisplay(
             entry<WorkspaceList> {
                 WorkspaceListRoute()
             }
-                    entry<Home>(
-                        metadata = ListDetailSceneStrategy.listPane(
-                            detailPlaceholder = {
-                                EmptyChannelDetailPlaceholder()
-                            },
-                        ),
-                    ) {
-                        HomeRoute(
-                            channelsContent = {
-                                ChannelsRoute(
-                                    onChannelClick = { channel ->
-                                        if (backStack.lastOrNull() is ChannelDetail) {
-                                            backStack.removeLastOrNull()
-                                        }
-                                        backStack.add(ChannelDetail(channel.id))
-                                    },
-                                )
-                            },
-                            dmsContent = {
-                                DmsRoute(
-                                    onDmClick = { dm ->
-                                        backStack.add(DirectMessageDetail(dm.id))
-                                    },
-                                )
-                            },
-                            onPlanixClick = { backStack.add(PlanixList) },
-                            onProfileClick = { backStack.add(Profile) },
-                        )
-                    }
-                    entry<ChannelDetail>(
-                        metadata = ListDetailSceneStrategy.detailPane(),
-                    ) { key ->
-                        ChannelDetailRoute(
-                            channelId = key.channelId,
-                            onBack = { backStack.removeLastOrNull() },
-                        )
-                    }
-                    entry<DirectMessageDetail> { key ->
-                        DirectMessageDetailRoute(
-                            dmId = key.dmId,
-                            onBack = { backStack.removeLastOrNull() },
-                        )
-                    }
-                    entry<PlanixList> {
-                        PlanixListRoute(
-                            onBack = { backStack.removeLastOrNull() },
-                        )
-                    }
-                    entry<Profile> {
-                        ProfileRoute(
-                            onBack = { backStack.removeLastOrNull() },
-                            onOpenCamera = {
-                                backStack.add(CameraCapture(resultKey = "profile_avatar"))
+            entry<Home>(
+                metadata = ListDetailSceneStrategy.listPane(
+                    detailPlaceholder = {
+                        EmptyDetailPlaceholder()
+                    },
+                ),
+            ) {
+                HomeRoute(
+                    channelsContent = {
+                        ChannelsRoute(
+                            onChannelClick = { channel ->
+                                backStack.popUntil(Home)
+                                backStack.add(ChannelDetail(channel.id))
                             },
                         )
-                    }
-                    entry<CameraCapture> { key ->
-                        val allowedModes = if (key.allowVideo) {
-                            setOf(CameraCaptureMode.PHOTO, CameraCaptureMode.VIDEO)
-                        } else {
-                            setOf(CameraCaptureMode.PHOTO)
+                    },
+                    dmsContent = {
+                        DmsRoute(
+                            onDmClick = { dm ->
+                                backStack.popUntil(Home)
+                                backStack.add(DirectMessageDetail(dm.id))
+                            },
+                        )
+                    },
+                    onPlanixClick = { backStack.add(PlanixList) },
+                    onProfileClick = { backStack.add(Profile) },
+                )
+            }
+            entry<ChannelDetail>(
+                metadata = ListDetailSceneStrategy.detailPane(),
+            ) { key ->
+                ChannelDetailRoute(
+                    channelId = key.channelId,
+                    onBack = { backStack.popBack() },
+                )
+            }
+            entry<DirectMessageDetail>(
+                metadata = ListDetailSceneStrategy.detailPane(),
+            ) { key ->
+                DirectMessageDetailRoute(
+                    dmId = key.dmId,
+                    onBack = { backStack.popBack() },
+                )
+            }
+            entry<PlanixList> {
+                PlanixListRoute(
+                    onBack = { backStack.popBack() },
+                )
+            }
+            entry<Profile> {
+                ProfileRoute(
+                    onBack = { backStack.popBack() },
+                    onOpenCamera = {
+                        backStack.add(CameraCapture(resultKey = "profile_avatar"))
+                    },
+                )
+            }
+            entry<CameraCapture> { key ->
+                val allowedModes = if (key.allowVideo) {
+                    setOf(CameraCaptureMode.PHOTO, CameraCaptureMode.VIDEO)
+                } else {
+                    setOf(CameraCaptureMode.PHOTO)
+                }
+                CameraRoute(
+                    allowedModes = allowedModes,
+                    onMediaCaptured = { media ->
+                        val isVideo = media is CapturedMedia.Video
+                        val durationMs = (media as? CapturedMedia.Video)?.durationMs ?: 0L
+                        backStack.add(
+                            MediaPreview(
+                                uri = media.uri.toString(),
+                                isVideo = isVideo,
+                                durationMs = durationMs,
+                                resultKey = key.resultKey,
+                            )
+                        )
+                    },
+                    onClose = { backStack.popBack() },
+                )
+            }
+            entry<MediaPreview> { key ->
+                val resultBus = LocalResultEventBus.current
+                val media = if (key.isVideo) {
+                    CapturedMedia.Video(key.uri.toUri(), key.durationMs)
+                } else {
+                    CapturedMedia.Photo(key.uri.toUri())
+                }
+                MediaPreviewRoute(
+                    media = media,
+                    onRetake = { backStack.removeLastOrNull() },
+                    onConfirm = { confirmedMedia ->
+                        if (key.resultKey.isNotBlank()) {
+                            resultBus.sendResult(key.resultKey, confirmedMedia.uri.toString())
                         }
-                        CameraRoute(
-                            allowedModes = allowedModes,
-                            onMediaCaptured = { media ->
-                                val isVideo = media is CapturedMedia.Video
-                                val durationMs = (media as? CapturedMedia.Video)?.durationMs ?: 0L
-                                backStack.add(
-                                    MediaPreview(
-                                        uri = media.uri.toString(),
-                                        isVideo = isVideo,
-                                        durationMs = durationMs,
-                                        resultKey = key.resultKey,
-                                    )
-                                )
-                            },
-                            onClose = { backStack.removeLastOrNull() },
-                        )
-                    }
-                    entry<MediaPreview> { key ->
-                        val resultBus = LocalResultEventBus.current
-                        val media = if (key.isVideo) {
-                            CapturedMedia.Video(key.uri.toUri(), key.durationMs)
-                        } else {
-                            CapturedMedia.Photo(key.uri.toUri())
-                        }
-                        MediaPreviewRoute(
-                            media = media,
-                            onRetake = { backStack.removeLastOrNull() },
-                            onConfirm = { confirmedMedia ->
-                                if (key.resultKey.isNotBlank()) {
-                                    resultBus.sendResult(key.resultKey, confirmedMedia.uri.toString())
-                                }
-                                backStack.removeAll { it is MediaPreview || it is CameraCapture }
-                            },
-                            onClose = {
-                                backStack.removeAll { it is MediaPreview || it is CameraCapture }
-                            },
-                        )
-                    }
-                },
-            )
+                        backStack.removeAll { it is MediaPreview || it is CameraCapture }
+                    },
+                    onClose = {
+                        backStack.removeAll { it is MediaPreview || it is CameraCapture }
+                    },
+                )
+            }
+        },
+    )
 }
 
-private fun MutableList<NavKey>.resetTo(key: NavKey) {
-    if (key !in this) {
-        clear()
-        add(key)
+internal fun MutableList<NavKey>.popUntil(key: NavKey) {
+    if (key !in this) return
+    while (isNotEmpty() && last() != key) {
+        removeAt(lastIndex)
     }
 }
 
-private fun MutableList<NavKey>.popBack() {
+internal fun MutableList<NavKey>.resetTo(key: NavKey) {
+    clear()
+    add(key)
+}
+
+internal fun MutableList<NavKey>.popBack() {
     if (size > 1) removeLastOrNull()
 }
 

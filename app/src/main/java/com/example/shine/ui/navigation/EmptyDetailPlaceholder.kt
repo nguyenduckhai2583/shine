@@ -11,8 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun EmptyChannelDetailPlaceholder(
+fun EmptyDetailPlaceholder(
     modifier: Modifier = Modifier,
+    message: String = "Select a conversation to view details",
 ) {
     Box(
         modifier = modifier
@@ -21,7 +22,7 @@ fun EmptyChannelDetailPlaceholder(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "Select a channel to view conversation",
+            text = message,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

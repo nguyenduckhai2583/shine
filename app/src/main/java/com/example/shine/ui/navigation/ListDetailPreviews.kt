@@ -5,6 +5,10 @@ import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -13,11 +17,14 @@ import androidx.navigation3.ui.NavDisplay
 import com.example.shine.core.designsystem.theme.MultiDevicePreviews
 import com.example.shine.core.designsystem.theme.ShineTheme
 import com.example.shine.core.model.Channel
+import com.example.shine.core.model.DirectMessage
 import com.example.shine.core.model.Workspace
 import com.example.shine.feature.channel.ChannelDetailScreen
 import com.example.shine.feature.channel.ChannelDetailUiState
 import com.example.shine.feature.channel.ChannelsContent
 import com.example.shine.feature.channel.ChannelUiState
+import com.example.shine.feature.dm.DirectMessageDetailScreen
+import com.example.shine.feature.dm.DirectMessageDetailUiState
 import com.example.shine.feature.dm.DmsContent
 import com.example.shine.feature.dm.DmsUiState
 import com.example.shine.feature.home.HomeScreen
@@ -29,6 +36,7 @@ import com.example.shine.feature.home.HomeUiState
 fun MockListDetailNavDisplay(
     initialKeys: List<NavKey>,
     modifier: Modifier = Modifier,
+    initialTab: HomeTab = HomeTab.Channels,
 ) {
     val backStack = rememberNavBackStack(*initialKeys.toTypedArray())
     val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>()
@@ -56,15 +64,38 @@ fun MockListDetailNavDisplay(
         ),
     )
 
+    val mockDms = listOf(
+        DirectMessage(
+            id = "1",
+            name = "Alice Smith",
+            time = 1_779_780_643L,
+            type = "direct",
+            createdAt = 1_779_700_000L,
+            lastActivityAt = 1_779_780_643L,
+        ),
+        DirectMessage(
+            id = "2",
+            name = "Bob Jones",
+            time = 1_779_780_000L,
+            type = "direct",
+            createdAt = 1_779_600_000L,
+            lastActivityAt = 1_779_780_000L,
+        ),
+    )
+
+    var selectedTab by remember(initialTab) {
+        mutableStateOf(initialTab)
+    }
+
     NavDisplay(
         backStack = backStack,
-        onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+        onBack = { backStack.popBack() },
         sceneStrategies = listOf(listDetailStrategy),
         modifier = modifier.fillMaxSize(),
         entryProvider = entryProvider {
             entry<Home>(
                 metadata = ListDetailSceneStrategy.listPane(
-                    detailPlaceholder = { EmptyChannelDetailPlaceholder() },
+                    detailPlaceholder = { EmptyDetailPlaceholder() },
                 ),
             ) {
                 HomeScreen(
@@ -75,8 +106,8 @@ fun MockListDetailNavDisplay(
                         ),
                         selectedWorkspaceId = "1",
                     ),
-                    selectedTab = HomeTab.Channels,
-                    onSelectTab = {},
+                    selectedTab = selectedTab,
+                    onSelectTab = { selectedTab = it },
                     onPlanixClick = {},
                     onSignOut = {},
                     onSelectWorkspace = {},
@@ -84,9 +115,7 @@ fun MockListDetailNavDisplay(
                         ChannelsContent(
                             uiState = ChannelUiState(channels = mockChannels),
                             onChannelClick = { channel ->
-                                if (backStack.lastOrNull() is ChannelDetail) {
-                                    backStack.removeLastOrNull()
-                                }
+                                backStack.popUntil(Home)
                                 backStack.add(ChannelDetail(channel.id))
                             },
                             onRefresh = {},
@@ -94,8 +123,11 @@ fun MockListDetailNavDisplay(
                     },
                     dmsContent = {
                         DmsContent(
-                            uiState = DmsUiState(),
-                            onDmClick = {},
+                            uiState = DmsUiState(dms = mockDms),
+                            onDmClick = { dm ->
+                                backStack.popUntil(Home)
+                                backStack.add(DirectMessageDetail(dm.id))
+                            },
                             onRefresh = {},
                         )
                     },
@@ -117,7 +149,24 @@ fun MockListDetailNavDisplay(
                     )
                 ChannelDetailScreen(
                     uiState = ChannelDetailUiState.Success(channel = selectedChannel),
-                    onBack = { backStack.removeLastOrNull() },
+                    onBack = { backStack.popBack() },
+                )
+            }
+            entry<DirectMessageDetail>(
+                metadata = ListDetailSceneStrategy.detailPane(),
+            ) { key ->
+                val selectedDm = mockDms.find { it.id == key.dmId }
+                    ?: DirectMessage(
+                        id = key.dmId,
+                        name = "User ${key.dmId}",
+                        time = null,
+                        type = "direct",
+                        createdAt = null,
+                        lastActivityAt = null,
+                    )
+                DirectMessageDetailScreen(
+                    uiState = DirectMessageDetailUiState.Success(directMessage = selectedDm),
+                    onBack = { backStack.popBack() },
                 )
             }
         },
@@ -147,5 +196,34 @@ private fun ListDetailInitialPreview() {
 private fun ListDetailSelectedPreview() {
     ShineTheme(dynamicColor = false) {
         MockListDetailNavDisplay(initialKeys = listOf(Home, ChannelDetail("1")))
+    }
+}
+
+/**
+ * Preview khi vừa mở Home ở tab DMs (chưa chọn DM nào):
+ * - Phone: Chỉ thấy Home (danh sách DM)
+ * - Tablet: Thấy 2 cột: Bên trái là Home, bên phải là Empty DM placeholder
+ */
+@MultiDevicePreviews
+@Composable
+private fun ListDetailDmInitialPreview() {
+    ShineTheme(dynamicColor = false) {
+        MockListDetailNavDisplay(initialKeys = listOf(Home), initialTab = HomeTab.Dms)
+    }
+}
+
+/**
+ * Preview khi đã chọn Direct Message "1" (Alice Smith):
+ * - Phone: Thấy Detail của Alice Smith full màn hình
+ * - Tablet: Thấy 2 cột: Bên trái là Home, bên phải là Detail của Alice Smith
+ */
+@MultiDevicePreviews
+@Composable
+private fun ListDetailDmSelectedPreview() {
+    ShineTheme(dynamicColor = false) {
+        MockListDetailNavDisplay(
+            initialKeys = listOf(Home, DirectMessageDetail("1")),
+            initialTab = HomeTab.Dms,
+        )
     }
 }
