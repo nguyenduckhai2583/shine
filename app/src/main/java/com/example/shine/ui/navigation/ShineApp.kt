@@ -168,6 +168,10 @@ private fun ShineNavDisplay(
     val isTwoPane = calculatePaneScaffoldDirective(currentWindowAdaptiveInfoV2()).maxHorizontalPartitions > 1
     val detailOnBack: (() -> Unit)? = if (isTwoPane) null else backStack::popBack
 
+    val selectedChannelId = (backStack.lastOrNull { it is ChannelDetail } as? ChannelDetail)?.channelId
+    val selectedDmId = (backStack.lastOrNull { it is DirectMessageDetail } as? DirectMessageDetail)?.dmId
+    val selectedProjectId = (backStack.lastOrNull { it is PlanixDetail } as? PlanixDetail)?.projectId
+
     NavDisplay(
         backStack = backStack,
         onBack = backStack::popBack,
@@ -194,6 +198,7 @@ private fun ShineNavDisplay(
                 HomeRoute(
                     channelsContent = {
                         ChannelsRoute(
+                            selectedChannelId = selectedChannelId,
                             onChannelClick = { channel ->
                                 backStack.popUntil(Home)
                                 backStack.add(ChannelDetail(channel.id))
@@ -202,6 +207,7 @@ private fun ShineNavDisplay(
                     },
                     dmsContent = {
                         DmsRoute(
+                            selectedDmId = selectedDmId,
                             onDmClick = { dm ->
                                 backStack.popUntil(Home)
                                 backStack.add(DirectMessageDetail(dm.id))
@@ -255,6 +261,7 @@ private fun ShineNavDisplay(
                 ),
             ) {
                 PlanixListRoute(
+                    selectedProjectId = selectedProjectId,
                     onBack = { backStack.popUntil(Home) },
                     onProjectClick = { project ->
                         backStack.popUntil(PlanixList)

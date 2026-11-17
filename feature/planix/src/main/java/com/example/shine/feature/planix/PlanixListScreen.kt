@@ -1,5 +1,6 @@
 package com.example.shine.feature.planix
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import kotlinx.coroutines.flow.flowOf
 fun PlanixListRoute(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    selectedProjectId: String? = null,
     onProjectClick: (Project) -> Unit = {},
     viewModel: PlanixListViewModel = hiltViewModel(),
 ) {
@@ -60,6 +62,7 @@ fun PlanixListRoute(
         uiState = uiState,
         projects = projects,
         onBack = onBack,
+        selectedProjectId = selectedProjectId,
         onProjectClick = onProjectClick,
         onSearchQueryChange = viewModel::onSearchQueryChanged,
         modifier = modifier,
@@ -73,6 +76,7 @@ fun PlanixListScreen(
     onBack: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    selectedProjectId: String? = null,
     onProjectClick: (Project) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
@@ -154,6 +158,7 @@ fun PlanixListScreen(
                                 if (project != null) {
                                     ProjectItem(
                                         project = project,
+                                        isSelected = project.id == selectedProjectId,
                                         onClick = { onProjectClick(project) },
                                     )
                                 }
@@ -197,11 +202,24 @@ fun PlanixListScreen(
 @Composable
 private fun ProjectItem(
     project: Project,
+    isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
         onClick = onClick,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+        ),
+        border = if (isSelected) {
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            null
+        },
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),

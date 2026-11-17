@@ -95,6 +95,9 @@ fun MockListDetailNavDisplay(
     val isTwoPane = calculatePaneScaffoldDirective(currentWindowAdaptiveInfoV2()).maxHorizontalPartitions > 1
     val detailOnBack: (() -> Unit)? = if (isTwoPane) null else backStack::popBack
 
+    val selectedChannelId = (backStack.lastOrNull { it is ChannelDetail } as? ChannelDetail)?.channelId
+    val selectedDmId = (backStack.lastOrNull { it is DirectMessageDetail } as? DirectMessageDetail)?.dmId
+
     NavDisplay(
         backStack = backStack,
         onBack = { backStack.popBack() },
@@ -131,6 +134,7 @@ fun MockListDetailNavDisplay(
                     channelsContent = {
                         ChannelsContent(
                             uiState = ChannelUiState(channels = mockChannels),
+                            selectedChannelId = selectedChannelId,
                             onChannelClick = { channel ->
                                 backStack.popUntil(Home)
                                 backStack.add(ChannelDetail(channel.id))
@@ -141,6 +145,7 @@ fun MockListDetailNavDisplay(
                     dmsContent = {
                         DmsContent(
                             uiState = DmsUiState(dms = mockDms),
+                            selectedDmId = selectedDmId,
                             onDmClick = { dm ->
                                 backStack.popUntil(Home)
                                 backStack.add(DirectMessageDetail(dm.id))

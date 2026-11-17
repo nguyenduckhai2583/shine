@@ -3,17 +3,18 @@ package com.example.shine.feature.channel
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Lock
@@ -26,10 +27,12 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -41,8 +44,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -55,6 +60,7 @@ import com.example.shine.core.model.SyncStatus
 fun ChannelsRoute(
     onChannelClick: (Channel) -> Unit,
     modifier: Modifier = Modifier,
+    selectedChannelId: String? = null,
     viewModel: ChannelViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -87,6 +93,7 @@ fun ChannelsRoute(
     ) { innerPadding ->
         ChannelsContent(
             uiState = uiState,
+            selectedChannelId = selectedChannelId,
             onChannelClick = onChannelClick,
             onRefresh = viewModel::refresh,
             onDeleteChannel = viewModel::deleteFailedChannel,
@@ -112,6 +119,7 @@ fun ChannelsContent(
     onChannelClick: (Channel) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
+    selectedChannelId: String? = null,
     onDeleteChannel: (String) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
@@ -171,8 +179,10 @@ fun ChannelsContent(
                         contentPadding = PaddingValues(bottom = 88.dp),
                     ) {
                         items(uiState.channels, key = { it.id }) { channel ->
+                            val isSelected = channel.id == selectedChannelId
                             ChannelItem(
                                 channel = channel,
+                                isSelected = isSelected,
                                 onClick = {
                                     when (channel.syncStatus) {
                                         SyncStatus.SYNCED -> onChannelClick(channel)
@@ -236,6 +246,7 @@ fun ChannelsContent(
 @Composable
 private fun ChannelItem(
     channel: Channel,
+    isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -243,63 +254,97 @@ private fun ChannelItem(
     val isError = channel.syncStatus == SyncStatus.ERROR
     val isEnabled = channel.syncStatus == SyncStatus.SYNCED || isError
 
-    ListItem(
-        modifier = modifier.clickable(enabled = isEnabled, onClick = onClick),
-        leadingContent = {
-            Icon(
-                imageVector = if (channel.isPrivate) Icons.Filled.Lock else Icons.Filled.Tag,
-                contentDescription = if (channel.isPrivate) "Private channel" else "Public channel",
-                tint = if (isPending) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onSurface,
-            )
+    Surface(
+        selected = isSelected,
+        onClick = onClick,
+        enabled = isEnabled,
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            Color.Transparent
         },
-        headlineContent = {
-            Text(
-                text = channel.name,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (isPending) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onSurface,
-            )
-        },
-        supportingContent = channel.categoryName?.let {
-            {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+    ) {
+        ListItem(
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent,
+                headlineColor = if (isSelected) {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                } else if (isPending) {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                leadingIconColor = if (isSelected) {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                } else if (isPending) {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            ),
+            leadingContent = {
+                Icon(
+                    imageVector = if (channel.isPrivate) Icons.Filled.Lock else Icons.Filled.Tag,
+                    contentDescription = if (channel.isPrivate) "Private channel" else "Public channel",
                 )
-            }
-        },
-        trailingContent = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                AnimatedVisibility(
-                    visible = isPending,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Sync,
-                        contentDescription = "Syncing",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary,
+            },
+            headlineContent = {
+                Text(
+                    text = channel.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                )
+            },
+            supportingContent = channel.categoryName?.let {
+                {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                     )
                 }
-                AnimatedVisibility(
-                    visible = isError,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
+            },
+            trailingContent = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.ErrorOutline,
-                        contentDescription = "Sync failed",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
+                    AnimatedVisibility(
+                        visible = isPending,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Sync,
+                            contentDescription = "Syncing",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    AnimatedVisibility(
+                        visible = isError,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ErrorOutline,
+                            contentDescription = "Sync failed",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
-            }
-        },
-    )
+            },
+        )
+    }
 }
 
 @Preview(showBackground = true)
