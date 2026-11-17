@@ -1,4 +1,4 @@
-package com.example.shine.feature.home.dm
+package com.example.shine.feature.dm
 
 import com.example.shine.core.common.R
 import com.example.shine.core.common.error.AppErrorEnum

@@ -1,9 +1,9 @@
-package com.example.shine.feature.home
+package com.example.shine.feature.channel
 
 import androidx.lifecycle.viewModelScope
 import com.example.shine.core.common.base.BaseViewModel
-import com.example.shine.core.model.DirectMessage
-import com.example.shine.core.data.repository.DirectMessageRepository
+import com.example.shine.core.model.Channel
+import com.example.shine.core.data.repository.ChannelRepository
 import com.example.shine.core.data.repository.WorkspaceRepository
 import com.example.shine.core.common.ui.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,16 +18,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class DmsUiState(
-    val dms: List<DirectMessage> = emptyList(),
+data class ChannelUiState(
+    val channels: List<Channel> = emptyList(),
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val userError: UiText? = null,
 )
 
 @HiltViewModel
-class DmsViewModel @Inject constructor(
-    private val directMessageRepository: DirectMessageRepository,
+class ChannelViewModel @Inject constructor(
+    private val channelRepository: ChannelRepository,
     private val workspaceRepository: WorkspaceRepository,
 ) : BaseViewModel() {
 
@@ -35,22 +35,22 @@ class DmsViewModel @Inject constructor(
     private val isRefreshing = MutableStateFlow(false)
     private val userError = MutableStateFlow<UiText?>(null)
 
-    val uiState: StateFlow<DmsUiState> = combine(
-        directMessageRepository.getDirectMessagesFlow(),
+    val uiState: StateFlow<ChannelUiState> = combine(
+        channelRepository.getChannelsFlow(),
         isLoading,
         isRefreshing,
         userError,
-    ) { dms, loading, refreshing, error ->
-        DmsUiState(
-            dms = dms,
-            isLoading = loading && dms.isEmpty(),
+    ) { channels, loading, refreshing, error ->
+        ChannelUiState(
+            channels = channels,
+            isLoading = loading && channels.isEmpty(),
             isRefreshing = refreshing,
             userError = error,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = DmsUiState(isLoading = true),
+        initialValue = ChannelUiState(isLoading = true),
     )
 
     private var currentWorkspaceId: String? = null
@@ -62,32 +62,59 @@ class DmsViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collectLatest { workspaceId ->
                     currentWorkspaceId = workspaceId
-                    loadInitial()
+                    loadChannels(isRefresh = false)
                 }
         }
     }
 
-    private fun loadInitial() {
-        isLoading.value = true
-        userError.value = null
-        execute(
-            task = { directMessageRepository.getDirectMessages() },
-            onError = { userError.value = it },
-            onComplete = { isLoading.value = false },
-        )
-    }
-
     fun refresh() {
-        isRefreshing.value = true
-        userError.value = null
-        execute(
-            task = { directMessageRepository.getDirectMessages() },
-            onError = { userError.value = it },
-            onComplete = { isRefreshing.value = false },
-        )
+        loadChannels(isRefresh = true)
     }
 
     fun clearUserError() {
         userError.value = null
+    }
+
+    fun clearError() {
+        clearUserError()
+    }
+
+    fun createChannel(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return
+        execute(
+            task = { channelRepository.createChannel(trimmed) },
+            onError = { userError.value = it },
+        )
+    }
+
+    fun deleteChannel(channelId: String) {
+        execute(
+            task = { channelRepository.deleteChannel(channelId) },
+            onError = { userError.value = it },
+        )
+    }
+
+    fun deleteFailedChannel(channelId: String) {
+        deleteChannel(channelId)
+    }
+
+    private fun loadChannels(isRefresh: Boolean) {
+        if (currentWorkspaceId == null) return
+
+        if (isRefresh) {
+            isRefreshing.value = true
+        } else {
+            isLoading.value = true
+        }
+
+        execute(
+            task = { channelRepository.getChannels() },
+            onError = { userError.value = it },
+            onComplete = {
+                isLoading.value = false
+                isRefreshing.value = false
+            },
+        )
     }
 }

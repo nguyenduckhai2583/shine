@@ -16,13 +16,13 @@ import com.example.shine.core.model.Channel
 import com.example.shine.core.model.Workspace
 import com.example.shine.feature.channel.ChannelDetailScreen
 import com.example.shine.feature.channel.ChannelDetailUiState
+import com.example.shine.feature.channel.ChannelsContent
+import com.example.shine.feature.channel.ChannelUiState
+import com.example.shine.feature.dm.DmsContent
+import com.example.shine.feature.dm.DmsUiState
 import com.example.shine.feature.home.HomeScreen
 import com.example.shine.feature.home.HomeTab
 import com.example.shine.feature.home.HomeUiState
-import com.example.shine.feature.home.components.ChannelsContent
-import com.example.shine.feature.home.components.DmsContent
-import com.example.shine.feature.home.ChannelUiState
-import com.example.shine.feature.home.DmsUiState
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable

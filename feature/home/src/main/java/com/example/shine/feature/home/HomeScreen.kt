@@ -29,23 +29,17 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.core.designsystem.theme.MultiDevicePreviews
-import com.example.shine.core.model.Channel
-import com.example.shine.core.model.DirectMessage
+import com.example.shine.core.designsystem.theme.ShineTheme
 import com.example.shine.core.model.Workspace
-import com.example.shine.feature.home.components.ChannelsContent
-import com.example.shine.feature.home.components.ChannelsRoute
-import com.example.shine.feature.home.components.DmsContent
-import com.example.shine.feature.home.components.DmsRoute
 import com.example.shine.feature.home.components.HomeDrawerContent
 import com.example.shine.feature.home.components.SettingsContent
-import com.example.shine.core.designsystem.theme.ShineTheme
 
 @Composable
 fun HomeRoute(
-    onChannelClick: (Channel) -> Unit,
+    channelsContent: @Composable () -> Unit,
+    dmsContent: @Composable () -> Unit,
     onPlanixClick: () -> Unit,
     onProfileClick: () -> Unit = {},
-    onDmClick: (DirectMessage) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -59,8 +53,8 @@ fun HomeRoute(
         onProfileClick = onProfileClick,
         onSignOut = viewModel::signOut,
         onSelectWorkspace = viewModel::selectWorkspace,
-        channelsContent = { ChannelsRoute(onChannelClick = onChannelClick) },
-        dmsContent = { DmsRoute(onDmClick = onDmClick) },
+        channelsContent = channelsContent,
+        dmsContent = dmsContent,
     )
 }
 
@@ -206,41 +200,20 @@ private fun HomeScreenPreview() {
             onSignOut = {},
             onSelectWorkspace = {},
             channelsContent = {
-                ChannelsContent(
-                    uiState = ChannelUiState(
-                        channels = listOf(
-                            Channel(
-                                id = "1",
-                                name = "general",
-                                isPrivate = false,
-                                isEncrypted = false,
-                                isDefault = true,
-                                categoryName = null,
-                                createdAt = null,
-                                lastActivityAt = null,
-                            ),
-                            Channel(
-                                id = "2",
-                                name = "random",
-                                isPrivate = false,
-                                isEncrypted = false,
-                                isDefault = false,
-                                categoryName = null,
-                                createdAt = null,
-                                lastActivityAt = null,
-                            ),
-                        ),
-                    ),
-                    onChannelClick = {},
-                    onRefresh = {},
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("Channels Content")
+                }
             },
             dmsContent = {
-                DmsContent(
-                    uiState = DmsUiState(),
-                    onDmClick = {},
-                    onRefresh = {},
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("DMs Content")
+                }
             },
         )
     }

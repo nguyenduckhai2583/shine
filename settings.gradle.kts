@@ -42,4 +42,4 @@ include(":feature:profile")
 include(":feature:channel")
 include(":feature:camera")
 include(":feature:home")
- 
+include(":feature:dm")

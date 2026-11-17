@@ -1,4 +1,4 @@
-package com.example.shine.feature.home.dm
+package com.example.shine.feature.dm
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

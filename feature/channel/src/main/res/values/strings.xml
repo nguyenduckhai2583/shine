@@ -1,0 +1,8 @@
+<resources>
+    <string name="channel_created_success">Channel \"%1$s\" created successfully</string>
+    <string name="channel_create_failed">Failed to create channel</string>
+    <string name="channel_error_dialog_title">Failed to create channel</string>
+    <string name="channel_error_dialog_default_message">An error occurred while creating channel \"#%1$s\". Would you like to retry or delete it?</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_delete">Delete</string>
+</resources>

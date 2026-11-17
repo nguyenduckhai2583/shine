@@ -38,19 +38,29 @@ Dự án đang áp dụng **Multi-module Architecture (theo chuẩn Google Now i
 ```
 Shine/
 ├── core/
-│   ├── model/                     # Pure data models (Channel, User, Workspace, Project, Session, SyncStatus, SignInStatus)
+│   ├── model/                     # Pure data models (Channel, DirectMessage, User, Workspace, Project, Session, SyncStatus, SignInStatus)
 │   ├── common/                    # Core utilities, Dispatchers, NetworkMonitor, AppLifecycleMonitor, AppException, UiText
 │   ├── database/                  # Room Database (ShineDatabase), Entities, DAOs, DatabaseModule
-│   ├── datastore/                 # DataStore Preferences (Session, Tokens, Workspace, DMs), DataStoreModule
+│   ├── datastore/                 # DataStore Preferences (Session, Tokens, Workspace), DataStoreModule
 │   ├── network/                   # Retrofit APIs, DTOs & Mappers, OkHttp Interceptors, Socket.IO engine, NetworkModule
 │   ├── data/                      # Repository (interfaces & impls), Paging (PlanixRemoteMediator), Sync (Worker & Scheduler), DataModule
-│   └── domain/                    # Use Cases (SignOutUseCase), Domain Interactors & Coordinators, DomainModule
+│   ├── domain/                    # Use Cases (SignOutUseCase), Domain Interactors & Coordinators, DomainModule
+│   └── designsystem/              # Design system, Theme, Components, Icons
+├── feature/
+│   ├── auth/                      # Authentication (SignIn)
+│   ├── camera/                    # Camera capture & Media preview
+│   ├── channel/                   # Channels list, creation & details
+│   ├── dm/                        # Direct messages list & details
+│   ├── home/                      # Dashboard container, drawer, settings
+│   ├── planix/                    # Planix / Project management
+│   ├── profile/                   # User profile & avatar update
+│   └── workspace/                 # Workspace selection & management
 └── app/
     ├── src/main/java/com/example/shine/
     │   ├── ShineApplication.kt    # Application class, @HiltAndroidApp
     │   ├── MainActivity.kt        # Single Activity, Compose & Deep Links
     │   ├── core/                  # App-level di (ShortcutModule, WidgetSyncListenerModule) & shortcuts
-    │   ├── ui/                    # Feature screens (home, channel, dms, planix, profile, signin, workspace, navigation)
+    │   ├── ui/                    # Root navigation & app scaffold
     │   └── widget/                # Glance AppWidget & sync managers
 ```
 

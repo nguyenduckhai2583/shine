@@ -127,6 +127,7 @@ dependencies {
     implementation(projects.feature.channel)
     implementation(projects.feature.camera)
     implementation(projects.feature.home)
+    implementation(projects.feature.dm)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

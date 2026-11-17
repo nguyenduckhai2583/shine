@@ -49,8 +49,10 @@ import com.example.shine.feature.camera.CameraRoute
 import com.example.shine.feature.camera.CapturedMedia
 import com.example.shine.feature.camera.MediaPreviewRoute
 import com.example.shine.feature.channel.ChannelDetailRoute
+import com.example.shine.feature.channel.ChannelsRoute
+import com.example.shine.feature.dm.DirectMessageDetailRoute
+import com.example.shine.feature.dm.DmsRoute
 import com.example.shine.feature.home.HomeRoute
-import com.example.shine.feature.home.dm.DirectMessageDetailRoute
 import com.example.shine.feature.planix.PlanixListRoute
 import com.example.shine.feature.profile.ProfileRoute
 import com.example.shine.feature.workspace.WorkspaceListRoute
@@ -122,14 +124,22 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
                         ),
                     ) {
                         HomeRoute(
-                            onChannelClick = { channel ->
-                                if (backStack.lastOrNull() is ChannelDetail) {
-                                    backStack.removeLastOrNull()
-                                }
-                                backStack.add(ChannelDetail(channel.id))
+                            channelsContent = {
+                                ChannelsRoute(
+                                    onChannelClick = { channel ->
+                                        if (backStack.lastOrNull() is ChannelDetail) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                        backStack.add(ChannelDetail(channel.id))
+                                    },
+                                )
                             },
-                            onDmClick = { dm ->
-                                backStack.add(DirectMessageDetail(dm.id))
+                            dmsContent = {
+                                DmsRoute(
+                                    onDmClick = { dm ->
+                                        backStack.add(DirectMessageDetail(dm.id))
+                                    },
+                                )
                             },
                             onPlanixClick = { backStack.add(PlanixList) },
                             onProfileClick = { backStack.add(Profile) },

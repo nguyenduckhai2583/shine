@@ -1,4 +1,4 @@
-package com.example.shine.feature.home.components
+package com.example.shine.feature.channel
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -47,12 +47,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.shine.feature.home.R
+import com.example.shine.core.designsystem.theme.ShineTheme
 import com.example.shine.core.model.Channel
 import com.example.shine.core.model.SyncStatus
-import com.example.shine.feature.home.ChannelUiState
-import com.example.shine.feature.home.ChannelViewModel
-import com.example.shine.core.designsystem.theme.ShineTheme
 
 @Composable
 fun ChannelsRoute(

@@ -1,5 +1,6 @@
 package com.example.shine.core.common.base
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.shine.core.common.R
@@ -10,6 +11,17 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 abstract class BaseViewModel : ViewModel() {
+
+    private val tag: String = this::class.java.simpleName
+    private val instanceId: String = Integer.toHexString(System.identityHashCode(this))
+
+    init {
+        Log.d(TAG, "🟢 [$tag@$instanceId] INITIALIZED")
+    }
+
+    override fun onCleared() {
+        Log.d(TAG, "🔴 [$tag@$instanceId] CLEARED")
+    }
 
     protected fun <T> execute(
         task: suspend () -> Result<T>,
@@ -30,5 +42,9 @@ abstract class BaseViewModel : ViewModel() {
         } finally {
             onComplete()
         }
+    }
+
+    companion object {
+        private const val TAG = "ViewModelLifecycle"
     }
 }

@@ -1,4 +1,4 @@
-package com.example.shine.feature.home.dm
+package com.example.shine.feature.dm
 
 import androidx.lifecycle.viewModelScope
 import com.example.shine.core.common.base.BaseViewModel

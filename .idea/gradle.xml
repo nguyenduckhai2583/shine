@@ -38,6 +38,7 @@
             <option value="$PROJECT_DIR$/feature/auth" />
             <option value="$PROJECT_DIR$/feature/camera" />
             <option value="$PROJECT_DIR$/feature/channel" />
+            <option value="$PROJECT_DIR$/feature/dm" />
             <option value="$PROJECT_DIR$/feature/home" />
             <option value="$PROJECT_DIR$/feature/planix" />
             <option value="$PROJECT_DIR$/feature/profile" />

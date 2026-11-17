@@ -1,4 +1,4 @@
-package com.example.shine.feature.home.components
+package com.example.shine.feature.dm
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -31,8 +31,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.core.designsystem.theme.ShineTheme
 import com.example.shine.core.designsystem.util.TimeFormatter
 import com.example.shine.core.model.DirectMessage
-import com.example.shine.feature.home.DmsUiState
-import com.example.shine.feature.home.DmsViewModel
 
 @Composable
 fun DmsRoute(

@@ -1,4 +1,4 @@
-package com.example.shine.feature.home
+package com.example.shine.feature.channel
 
 import com.example.shine.core.model.Channel
 import com.example.shine.core.model.Workspace
