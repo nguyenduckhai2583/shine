@@ -1,9 +1,5 @@
 package com.example.shine.feature.dm
 
-import com.example.shine.core.common.R
-import com.example.shine.core.common.error.AppErrorEnum
-import com.example.shine.core.common.error.AppException
-import com.example.shine.core.common.ui.UiText
 import com.example.shine.core.data.repository.DirectMessageRepository
 import com.example.shine.core.model.DirectMessage
 import kotlinx.coroutines.Dispatchers
@@ -34,8 +30,6 @@ class DirectMessageDetailViewModelTest {
 
     @Test
     fun load_success_showsDirectMessage() = runTest {
-        repository.error = null
-
         val viewModel = DirectMessageDetailViewModel("1", repository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
@@ -46,7 +40,7 @@ class DirectMessageDetailViewModelTest {
     }
 
     @Test
-    fun initialLocalDataNull_showsLoadingUntilFetched() = runTest {
+    fun dmNull_showsErrorUntilFetched() = runTest {
         repository.dmFlow.value = null
         repository.autoUpdateFlowOnGetDirectMessage = false
 
@@ -55,35 +49,15 @@ class DirectMessageDetailViewModelTest {
             viewModel.uiState.collect {}
         }
 
-        assertEquals(DirectMessageDetailUiState.Loading, viewModel.uiState.value)
+        assertEquals(DirectMessageDetailUiState.Error(), viewModel.uiState.value)
 
         repository.dmFlow.value = DM
         assertEquals(DirectMessageDetailUiState.Success(DM), viewModel.uiState.value)
     }
 
     @Test
-    fun load_failure_showsErrorThenRetrySucceeds() = runTest {
-        repository.error = AppException(AppErrorEnum.NO_INTERNET)
-        val viewModel = DirectMessageDetailViewModel("1", repository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
-        }
-
-        assertEquals(
-            DirectMessageDetailUiState.Error(UiText.Resource(R.string.error_no_internet)),
-            viewModel.uiState.value,
-        )
-
-        repository.error = null
-        viewModel.load()
-
-        assertEquals(DirectMessageDetailUiState.Success(DM), viewModel.uiState.value)
-    }
-
-    @Test
-    fun offlineFirst_withCachedData_syncFailure_stillShowsDirectMessage() = runTest {
+    fun offlineFirst_withCachedData_stillShowsDirectMessage() = runTest {
         repository.dmFlow.value = DM
-        repository.error = AppException(AppErrorEnum.NO_INTERNET)
 
         val viewModel = DirectMessageDetailViewModel("1", repository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -94,7 +68,6 @@ class DirectMessageDetailViewModelTest {
     }
 
     private class FakeDirectMessageRepository : DirectMessageRepository {
-        var error: AppException? = null
         var lastId: String? = null
         var autoUpdateFlowOnGetDirectMessage = true
         val dmFlow = MutableStateFlow<DirectMessage?>(null)
@@ -103,15 +76,10 @@ class DirectMessageDetailViewModelTest {
 
         override suspend fun getDirectMessage(id: String): Result<Unit> {
             lastId = id
-            val currentError = error
-            return if (currentError != null) {
-                Result.failure(currentError)
-            } else {
-                if (autoUpdateFlowOnGetDirectMessage) {
-                    dmFlow.value = DM
-                }
-                Result.success(Unit)
+            if (autoUpdateFlowOnGetDirectMessage) {
+                dmFlow.value = DM
             }
+            return Result.success(Unit)
         }
 
         override fun getDirectMessageFlow(id: String): Flow<DirectMessage?> = dmFlow
