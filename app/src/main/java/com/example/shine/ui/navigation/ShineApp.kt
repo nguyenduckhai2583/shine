@@ -228,7 +228,9 @@ private fun ShineNavDisplay(
                     },
                 )
             }
-            entry<ConversationSettings> { key ->
+            entry<ConversationSettings>(
+                metadata = ListDetailSceneStrategy.detailPane(),
+            ) { key ->
                 ConversationSettingsRoute(
                     conversationId = key.conversationId,
                     conversationType = key.type,
