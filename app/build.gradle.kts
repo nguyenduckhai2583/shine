@@ -128,6 +128,7 @@ dependencies {
     implementation(projects.feature.camera)
     implementation(projects.feature.home)
     implementation(projects.feature.dm)
+    implementation(projects.feature.conversationSettings)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

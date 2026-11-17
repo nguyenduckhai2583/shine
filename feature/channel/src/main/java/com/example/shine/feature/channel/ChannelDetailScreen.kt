@@ -7,8 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -31,6 +35,8 @@ import java.util.Date
 fun ChannelDetailRoute(
     channelId: String,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    onNavigateToSettings: () -> Unit = {},
     viewModel: ChannelDetailViewModel = hiltViewModel<ChannelDetailViewModel, ChannelDetailViewModel.Factory>(
         creationCallback = { factory -> factory.create(channelId) },
     ),
@@ -39,6 +45,8 @@ fun ChannelDetailRoute(
     ChannelDetailScreen(
         uiState = uiState,
         onBack = onBack,
+        modifier = modifier,
+        onNavigateToSettings = onNavigateToSettings,
     )
 }
 
@@ -47,6 +55,7 @@ fun ChannelDetailScreen(
     uiState: ChannelDetailUiState,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToSettings: () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier,
@@ -57,6 +66,14 @@ fun ChannelDetailScreen(
                     else -> "Channel info"
                 },
                 onBack = onBack,
+                actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Channel Settings",
+                        )
+                    }
+                },
             )
         },
     ) { innerPadding ->

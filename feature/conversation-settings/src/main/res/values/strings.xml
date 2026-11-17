@@ -1,0 +1,9 @@
+<resources>
+    <string name="conversation_settings_title_channel">Channel settings</string>
+    <string name="conversation_settings_title_dm">Conversation settings</string>
+    <string name="conversation_settings_private_channel">Private channel</string>
+    <string name="conversation_settings_public_channel">Public channel</string>
+    <string name="conversation_settings_section_notifications">Notifications</string>
+    <string name="conversation_settings_enable_notifications">Enable notifications</string>
+    <string name="conversation_settings_enable_notifications_description">Get notified about new messages and activities in this conversation</string>
+</resources>

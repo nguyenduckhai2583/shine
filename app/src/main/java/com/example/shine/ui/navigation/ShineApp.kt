@@ -51,6 +51,8 @@ import com.example.shine.feature.camera.CapturedMedia
 import com.example.shine.feature.camera.MediaPreviewRoute
 import com.example.shine.feature.channel.ChannelDetailRoute
 import com.example.shine.feature.channel.ChannelsRoute
+import com.example.shine.feature.conversationsettings.ConversationSettingsRoute
+import com.example.shine.feature.conversationsettings.ConversationType
 import com.example.shine.feature.dm.DirectMessageDetailRoute
 import com.example.shine.feature.dm.DmsRoute
 import com.example.shine.feature.home.HomeRoute
@@ -210,6 +212,9 @@ private fun ShineNavDisplay(
                 ChannelDetailRoute(
                     channelId = key.channelId,
                     onBack = { backStack.popBack() },
+                    onNavigateToSettings = {
+                        backStack.add(ConversationSettings(key.channelId, ConversationType.CHANNEL))
+                    },
                 )
             }
             entry<DirectMessageDetail>(
@@ -217,6 +222,16 @@ private fun ShineNavDisplay(
             ) { key ->
                 DirectMessageDetailRoute(
                     dmId = key.dmId,
+                    onBack = { backStack.popBack() },
+                    onNavigateToSettings = {
+                        backStack.add(ConversationSettings(key.dmId, ConversationType.DM))
+                    },
+                )
+            }
+            entry<ConversationSettings> { key ->
+                ConversationSettingsRoute(
+                    conversationId = key.conversationId,
+                    conversationType = key.type,
                     onBack = { backStack.popBack() },
                 )
             }

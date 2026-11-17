@@ -7,8 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -30,6 +34,8 @@ import com.example.shine.core.model.DirectMessage
 fun DirectMessageDetailRoute(
     dmId: String,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    onNavigateToSettings: () -> Unit = {},
     viewModel: DirectMessageDetailViewModel = hiltViewModel<DirectMessageDetailViewModel, DirectMessageDetailViewModel.Factory>(
         creationCallback = { factory -> factory.create(dmId) },
     ),
@@ -38,6 +44,8 @@ fun DirectMessageDetailRoute(
     DirectMessageDetailScreen(
         uiState = uiState,
         onBack = onBack,
+        modifier = modifier,
+        onNavigateToSettings = onNavigateToSettings,
     )
 }
 
@@ -46,6 +54,7 @@ fun DirectMessageDetailScreen(
     uiState: DirectMessageDetailUiState,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToSettings: () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier,
@@ -56,6 +65,14 @@ fun DirectMessageDetailScreen(
                     else -> "Direct message info"
                 },
                 onBack = onBack,
+                actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Conversation Settings",
+                        )
+                    }
+                },
             )
         },
     ) { innerPadding ->

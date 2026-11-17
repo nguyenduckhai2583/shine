@@ -1,6 +1,7 @@
 package com.example.shine.ui.navigation
 
 import androidx.navigation3.runtime.NavKey
+import com.example.shine.feature.conversationsettings.ConversationType
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -11,6 +12,12 @@ data object Home : NavKey
 
 @Serializable
 data class ChannelDetail(val channelId: String) : NavKey
+
+@Serializable
+data class ConversationSettings(
+    val conversationId: String,
+    val type: ConversationType,
+) : NavKey
 
 @Serializable
 data class DirectMessageDetail(val dmId: String) : NavKey

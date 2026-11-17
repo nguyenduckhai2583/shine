@@ -1,10 +1,10 @@
 package com.example.shine.core.model
 
 data class DirectMessage(
-    val id: String,
-    val name: String,
+    override val id: String,
+    override val name: String,
     val time: Long?,
     val type: String? = null,
-    val createdAt: Long? = null,
-    val lastActivityAt: Long? = null,
-)
+    override val createdAt: Long? = null,
+    override val lastActivityAt: Long? = null,
+) : Conversation

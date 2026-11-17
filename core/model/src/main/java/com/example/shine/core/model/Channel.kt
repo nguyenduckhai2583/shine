@@ -1,14 +1,14 @@
 package com.example.shine.core.model
 
 data class Channel(
-    val id: String,
-    val name: String,
+    override val id: String,
+    override val name: String,
     val isPrivate: Boolean,
     val isEncrypted: Boolean,
     val isDefault: Boolean,
     val categoryName: String?,
-    val createdAt: Long?,
-    val lastActivityAt: Long?,
+    override val createdAt: Long?,
+    override val lastActivityAt: Long?,
     val syncStatus: SyncStatus = SyncStatus.SYNCED,
     val syncErrorMessage: String? = null,
-)
+) : Conversation

@@ -4,6 +4,8 @@ import com.example.shine.core.data.repository.AuthRepository
 import com.example.shine.core.data.repository.AuthRepositoryImpl
 import com.example.shine.core.data.repository.ChannelRepository
 import com.example.shine.core.data.repository.ChannelRepositoryImpl
+import com.example.shine.core.data.repository.ConversationSettingRepository
+import com.example.shine.core.data.repository.ConversationSettingRepositoryImpl
 import com.example.shine.core.data.repository.DirectMessageRepository
 import com.example.shine.core.data.repository.DirectMessageRepositoryImpl
 import com.example.shine.core.data.repository.PlanixRepository
@@ -35,6 +37,9 @@ abstract class DataModule {
 
     @Binds
     abstract fun bindDirectMessageRepository(impl: DirectMessageRepositoryImpl): DirectMessageRepository
+
+    @Binds
+    abstract fun bindConversationSettingRepository(impl: ConversationSettingRepositoryImpl): ConversationSettingRepository
 
     @Binds
     abstract fun bindPlanixRepository(impl: PlanixRepositoryImpl): PlanixRepository
