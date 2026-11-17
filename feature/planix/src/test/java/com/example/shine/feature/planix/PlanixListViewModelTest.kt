@@ -81,5 +81,9 @@ class PlanixListViewModelTest {
             lastSearchKey = searchKey
             return emptyFlow()
         }
+
+        override fun getProjectById(id: String): Flow<Project?> {
+            return emptyFlow()
+        }
     }
 }

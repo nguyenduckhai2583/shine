@@ -1,0 +1,12 @@
+<resources>
+    <string name="planix_projects">Planix Projects</string>
+    <string name="search_projects">Search projects…</string>
+    <string name="clear_search">Clear search</string>
+    <string name="no_projects_found">No projects found</string>
+    <string name="project_details">Project Details</string>
+    <string name="error_project_not_found">Project not found</string>
+    <string name="select_project_to_view_details">Select a project to view details</string>
+    <string name="project_leader">Project Leader</string>
+    <string name="project_key_id">Project Key / ID</string>
+    <string name="unassigned">Unassigned</string>
+</resources>

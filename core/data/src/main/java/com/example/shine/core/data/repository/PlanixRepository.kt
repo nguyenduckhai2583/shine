@@ -6,4 +6,5 @@ import kotlinx.coroutines.flow.Flow
 
 interface PlanixRepository {
     fun getProjectsPagingFlow(searchKey: String? = null): Flow<PagingData<Project>>
+    fun getProjectById(id: String): Flow<Project?>
 }

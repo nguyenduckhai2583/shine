@@ -58,6 +58,8 @@ import com.example.shine.feature.conversationsettings.ConversationType
 import com.example.shine.feature.dm.DirectMessageDetailRoute
 import com.example.shine.feature.dm.DmsRoute
 import com.example.shine.feature.home.HomeRoute
+import com.example.shine.feature.planix.PlanixDetailPlaceholder
+import com.example.shine.feature.planix.PlanixDetailRoute
 import com.example.shine.feature.planix.PlanixListRoute
 import com.example.shine.feature.profile.ProfileRoute
 import com.example.shine.feature.workspace.WorkspaceListRoute
@@ -247,9 +249,25 @@ private fun ShineNavDisplay(
                     onBack = detailOnBack,
                 )
             }
-            entry<PlanixList> {
+            entry<PlanixList>(
+                metadata = ListDetailSceneStrategy.listPane(
+                    detailPlaceholder = { PlanixDetailPlaceholder() },
+                ),
+            ) {
                 PlanixListRoute(
-                    onBack = { backStack.popBack() },
+                    onBack = { backStack.popUntil(Home) },
+                    onProjectClick = { project ->
+                        backStack.popUntil(PlanixList)
+                        backStack.add(PlanixDetail(project.id))
+                    },
+                )
+            }
+            entry<PlanixDetail>(
+                metadata = ListDetailSceneStrategy.detailPane(),
+            ) { key ->
+                PlanixDetailRoute(
+                    projectId = key.projectId,
+                    onBack = detailOnBack,
                 )
             }
             entry<Profile>(

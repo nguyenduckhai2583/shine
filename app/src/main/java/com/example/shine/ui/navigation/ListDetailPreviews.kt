@@ -16,10 +16,13 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import androidx.paging.PagingData
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.shine.core.designsystem.theme.MultiDevicePreviews
 import com.example.shine.core.designsystem.theme.ShineTheme
 import com.example.shine.core.model.Channel
 import com.example.shine.core.model.DirectMessage
+import com.example.shine.core.model.Project
 import com.example.shine.core.model.Workspace
 import com.example.shine.feature.channel.ChannelDetailScreen
 import com.example.shine.feature.channel.ChannelDetailUiState
@@ -32,9 +35,15 @@ import com.example.shine.feature.dm.DmsUiState
 import com.example.shine.feature.home.HomeScreen
 import com.example.shine.feature.home.HomeTab
 import com.example.shine.feature.home.HomeUiState
+import com.example.shine.feature.planix.PlanixDetailPlaceholder
+import com.example.shine.feature.planix.PlanixDetailScreen
+import com.example.shine.feature.planix.PlanixDetailUiState
+import com.example.shine.feature.planix.PlanixListScreen
+import com.example.shine.feature.planix.PlanixListUiState
 import com.example.shine.feature.profile.ProfileScreen
 import com.example.shine.feature.profile.ProfileUiState
 import com.example.shine.feature.profile.UploadState
+import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -88,6 +97,25 @@ fun MockListDetailNavDisplay(
         ),
     )
 
+    val mockProjects = listOf(
+        Project(
+            id = "1",
+            name = "Mobile App Redesign",
+            prefix = "MAR",
+            status = "ACTIVE",
+            logoUrl = null,
+            leaderName = "John Doe",
+        ),
+        Project(
+            id = "2",
+            name = "Backend Migration",
+            prefix = "BM",
+            status = "IN_PROGRESS",
+            logoUrl = null,
+            leaderName = "Alice Smith",
+        ),
+    )
+
     var selectedTab by remember(initialTab) {
         mutableStateOf(initialTab)
     }
@@ -121,7 +149,10 @@ fun MockListDetailNavDisplay(
                             backStack.popUntil(Home)
                         }
                     },
-                    onPlanixClick = {},
+                    onPlanixClick = {
+                        backStack.popUntil(Home)
+                        backStack.add(PlanixList)
+                    },
                     onProfileClick = {
                         backStack.popUntil(Home)
                         backStack.add(Profile)
@@ -199,6 +230,35 @@ fun MockListDetailNavDisplay(
                     onAvatarSelected = {},
                 )
             }
+            entry<PlanixList>(
+                metadata = ListDetailSceneStrategy.listPane(
+                    detailPlaceholder = { PlanixDetailPlaceholder() },
+                ),
+            ) {
+                val pagingData = remember {
+                    flowOf(PagingData.from(mockProjects))
+                }.collectAsLazyPagingItems()
+
+                PlanixListScreen(
+                    uiState = PlanixListUiState(),
+                    projects = pagingData,
+                    onBack = { backStack.popUntil(Home) },
+                    onProjectClick = { project ->
+                        backStack.popUntil(PlanixList)
+                        backStack.add(PlanixDetail(project.id))
+                    },
+                    onSearchQueryChange = {},
+                )
+            }
+            entry<PlanixDetail>(
+                metadata = ListDetailSceneStrategy.detailPane(),
+            ) { key ->
+                val selectedProject = mockProjects.find { it.id == key.projectId } ?: mockProjects.first()
+                PlanixDetailScreen(
+                    uiState = PlanixDetailUiState.Success(selectedProject),
+                    onBack = detailOnBack,
+                )
+            }
         },
     )
 }
@@ -269,6 +329,38 @@ private fun ListDetailProfileSelectedPreview() {
     ShineTheme(dynamicColor = false) {
         MockListDetailNavDisplay(
             initialKeys = listOf(Home, Profile),
+            initialTab = HomeTab.Settings,
+        )
+    }
+}
+
+/**
+ * Preview khi mở Planix từ Settings (chưa chọn project nào):
+ * - Phone: Thấy PlanixList full màn hình (có nút Back)
+ * - Tablet: Thấy 2 cột: Bên trái là PlanixList, bên phải là PlanixDetailPlaceholder
+ */
+@MultiDevicePreviews
+@Composable
+private fun ListDetailPlanixInitialPreview() {
+    ShineTheme(dynamicColor = false) {
+        MockListDetailNavDisplay(
+            initialKeys = listOf(Home, PlanixList),
+            initialTab = HomeTab.Settings,
+        )
+    }
+}
+
+/**
+ * Preview khi đã chọn Project "1" (Mobile App Redesign):
+ * - Phone: Thấy PlanixDetail full màn hình (có nút Back)
+ * - Tablet: Thấy 2 cột: Bên trái là PlanixList có card được highlight, bên phải là PlanixDetail (không có nút Back)
+ */
+@MultiDevicePreviews
+@Composable
+private fun ListDetailPlanixSelectedPreview() {
+    ShineTheme(dynamicColor = false) {
+        MockListDetailNavDisplay(
+            initialKeys = listOf(Home, PlanixList, PlanixDetail("1")),
             initialTab = HomeTab.Settings,
         )
     }

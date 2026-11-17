@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,7 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,11 +37,12 @@ import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
-import com.example.shine.core.common.R
+import com.example.shine.core.common.R as CommonR
 import com.example.shine.core.common.error.AppException
 import com.example.shine.core.common.ui.UiText
 import com.example.shine.core.common.ui.toUiText
 import com.example.shine.core.designsystem.component.ShineTopAppBar
+import com.example.shine.core.designsystem.theme.MultiDevicePreviews
 import com.example.shine.core.designsystem.theme.ShineTheme
 import com.example.shine.core.model.Project
 import kotlinx.coroutines.flow.flowOf
@@ -47,6 +50,8 @@ import kotlinx.coroutines.flow.flowOf
 @Composable
 fun PlanixListRoute(
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    onProjectClick: (Project) -> Unit = {},
     viewModel: PlanixListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -55,7 +60,9 @@ fun PlanixListRoute(
         uiState = uiState,
         projects = projects,
         onBack = onBack,
+        onProjectClick = onProjectClick,
         onSearchQueryChange = viewModel::onSearchQueryChanged,
+        modifier = modifier,
     )
 }
 
@@ -66,12 +73,15 @@ fun PlanixListScreen(
     onBack: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onProjectClick: (Project) -> Unit = {},
 ) {
+    val listState = rememberLazyListState()
+
     Scaffold(
         modifier = modifier,
         topBar = {
             ShineTopAppBar(
-                title = "Planix Projects",
+                title = stringResource(R.string.planix_projects),
                 onBack = onBack,
             )
         },
@@ -87,12 +97,15 @@ fun PlanixListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Search projects...") },
+                placeholder = { Text(stringResource(R.string.search_projects)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (uiState.searchQuery.isNotEmpty()) {
                         IconButton(onClick = { onSearchQueryChange("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear search")
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(R.string.clear_search),
+                            )
                         }
                     }
                 },
@@ -115,7 +128,7 @@ fun PlanixListScreen(
 
                     is LoadState.Error if projects.itemCount == 0 -> {
                         val error = (refreshLoadState.error as? AppException)?.toUiText()
-                            ?: UiText.Resource(R.string.error_unknown)
+                            ?: UiText.Resource(CommonR.string.error_unknown)
                         Text(
                             text = error.asString(),
                             color = MaterialTheme.colorScheme.error,
@@ -124,11 +137,12 @@ fun PlanixListScreen(
                     }
 
                     is LoadState.NotLoading if projects.itemCount == 0 -> {
-                        Text("No projects found")
+                        Text(stringResource(R.string.no_projects_found))
                     }
 
                     else -> {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
@@ -138,7 +152,10 @@ fun PlanixListScreen(
                             ) { index ->
                                 val project = projects[index]
                                 if (project != null) {
-                                    ProjectItem(project = project)
+                                    ProjectItem(
+                                        project = project,
+                                        onClick = { onProjectClick(project) },
+                                    )
                                 }
                             }
 
@@ -158,7 +175,7 @@ fun PlanixListScreen(
                             if (appendLoadState is LoadState.Error) {
                                 item {
                                     val error = (appendLoadState.error as? AppException)?.toUiText()
-                                        ?: UiText.Resource(R.string.error_unknown)
+                                        ?: UiText.Resource(CommonR.string.error_unknown)
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -178,9 +195,14 @@ fun PlanixListScreen(
 }
 
 @Composable
-private fun ProjectItem(project: Project) {
+private fun ProjectItem(
+    project: Project,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Card(
-        modifier = Modifier
+        onClick = onClick,
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
@@ -196,7 +218,10 @@ private fun ProjectItem(project: Project) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(project.name, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = project.name,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                     project.prefix?.let { prefix ->
                         Text(
                             text = "[$prefix]",
@@ -226,7 +251,7 @@ private fun ProjectItem(project: Project) {
     }
 }
 
-@Preview(showBackground = true)
+@MultiDevicePreviews
 @Composable
 private fun PlanixListScreenPreview() {
     ShineTheme(dynamicColor = false) {

@@ -41,4 +41,8 @@ class PlanixRepositoryImpl @Inject constructor(
             pagingData.map { it.toDomain() }
         }
     }
+
+    override fun getProjectById(id: String): Flow<Project?> {
+        return database.projectDao().getProjectById(id).map { it?.toDomain() }
+    }
 }

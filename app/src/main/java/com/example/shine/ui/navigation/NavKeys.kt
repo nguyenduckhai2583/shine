@@ -26,6 +26,9 @@ data class DirectMessageDetail(val dmId: String) : NavKey
 data object PlanixList : NavKey
 
 @Serializable
+data class PlanixDetail(val projectId: String) : NavKey
+
+@Serializable
 data object WorkspaceList : NavKey
 
 @Serializable

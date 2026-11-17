@@ -22,6 +22,8 @@ import com.example.shine.core.database.entity.ProjectRemoteKeyEntity
 import com.example.shine.core.network.PlanixApi
 import com.example.shine.core.network.dto.PaginationResponse
 import com.example.shine.core.network.dto.ProjectDto
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -265,6 +267,9 @@ class PlanixRemoteMediatorTest {
         }
 
         override fun getProjectsPagingSource(): PagingSource<Int, ProjectEntity> = error("Not needed")
+
+        override fun getProjectById(id: String): Flow<ProjectEntity?> =
+            flowOf(projects.find { it.id == id })
 
         override suspend fun clearProjects() {
             projects.clear()

@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.shine.core.database.entity.ProjectEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProjectDao {
@@ -15,6 +16,9 @@ interface ProjectDao {
 
     @Query("SELECT * FROM projects")
     fun getProjectsPagingSource(): PagingSource<Int, ProjectEntity>
+
+    @Query("SELECT * FROM projects WHERE id = :id")
+    fun getProjectById(id: String): Flow<ProjectEntity?>
 
     @Query("DELETE FROM projects")
     suspend fun clearProjects()
