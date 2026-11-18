@@ -102,3 +102,4 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 shine-android-library = { id = "shine.android.library" }
 shine-android-library-compose = { id = "shine.android.library.compose" }
 shine-hilt = { id = "shine.hilt" }
+shine-jvm-library = { id = "shine.jvm.library" }

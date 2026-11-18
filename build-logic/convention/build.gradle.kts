@@ -32,5 +32,9 @@ gradlePlugin {
             id = "shine.hilt"
             implementationClass = "AndroidHiltConventionPlugin"
         }
+        register("jvmLibrary") {
+            id = "shine.jvm.library"
+            implementationClass = "JvmLibraryConventionPlugin"
+        }
     }
 }
