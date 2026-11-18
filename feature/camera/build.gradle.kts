@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.shine.android.library)
     alias(libs.plugins.shine.android.library.compose)
     alias(libs.plugins.shine.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -11,6 +12,8 @@ android {
 dependencies {
     implementation(projects.core.common)
     implementation(projects.core.designsystem)
+
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

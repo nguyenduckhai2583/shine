@@ -33,17 +33,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun MediaPreviewRoute(
+fun CaptureMediaPreviewRoute(
     media: CapturedMedia,
     onRetake: () -> Unit,
     onConfirm: (CapturedMedia) -> Unit,
     modifier: Modifier = Modifier,
-    onClose: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     var videoThumbnail by remember(media) { mutableStateOf<Bitmap?>(null) }
@@ -51,34 +51,32 @@ fun MediaPreviewRoute(
     LaunchedEffect(media) {
         if (media is CapturedMedia.Video) {
             withContext(Dispatchers.IO) {
-                videoThumbnail = CameraMediaUtils.getVideoThumbnail(context, media.uri)
+                videoThumbnail = CameraMediaUtils.getVideoThumbnail(context, media.uri.toUri())
             }
         }
     }
 
-    MediaPreviewScreen(
+    CaptureMediaPreviewScreen(
         media = media,
         videoThumbnail = videoThumbnail,
         onRetake = {
             runCatching {
-                context.contentResolver.delete(media.uri, null, null)
+                context.contentResolver.delete(media.uri.toUri(), null, null)
             }
             onRetake()
         },
         onConfirm = { onConfirm(media) },
-        onClose = onClose ?: onRetake,
         modifier = modifier,
     )
 }
 
 @Composable
-fun MediaPreviewScreen(
+fun CaptureMediaPreviewScreen(
     media: CapturedMedia,
     videoThumbnail: Bitmap?,
     onRetake: () -> Unit,
     onConfirm: () -> Unit,
     modifier: Modifier = Modifier,
-    onClose: (() -> Unit)? = null,
 ) {
     var isVideoPlaying by rememberSaveable { mutableStateOf(true) }
 
@@ -99,7 +97,7 @@ fun MediaPreviewScreen(
 
             is CapturedMedia.Video -> {
                 VideoPlayerWidget(
-                    uri = media.uri,
+                    uri = media.uri.toUri(),
                     thumbnail = videoThumbnail,
                     isPlaying = isVideoPlaying,
                     onTogglePlay = { isVideoPlaying = !isVideoPlaying },

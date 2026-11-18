@@ -1,10 +1,8 @@
 package com.example.shine.feature.camera
 
-import android.net.Uri
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.mockito.Mockito.mock
 
 class CameraMediaUtilsTest {
 
@@ -20,18 +18,18 @@ class CameraMediaUtilsTest {
 
     @Test
     fun capturedMedia_photoPreservesUri() {
-        val uri = mock(Uri::class.java)
-        val photo: CapturedMedia = CapturedMedia.Photo(uri)
+        val uriString = "content://media/external/images/media/1"
+        val photo: CapturedMedia = CapturedMedia.Photo(uriString)
 
-        assertEquals(uri, photo.uri)
+        assertEquals(uriString, photo.uri)
     }
 
     @Test
     fun capturedMedia_videoPreservesUriAndDuration() {
-        val uri = mock(Uri::class.java)
-        val video = CapturedMedia.Video(uri = uri, durationMs = 15000L)
+        val uriString = "content://media/external/video/media/1"
+        val video = CapturedMedia.Video(uri = uriString, durationMs = 15000L)
 
-        assertEquals(uri, video.uri)
+        assertEquals(uriString, video.uri)
         assertEquals(15000L, video.durationMs)
     }
 

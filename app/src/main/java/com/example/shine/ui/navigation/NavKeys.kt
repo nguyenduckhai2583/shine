@@ -1,6 +1,8 @@
 package com.example.shine.ui.navigation
 
 import androidx.navigation3.runtime.NavKey
+import com.example.shine.feature.camera.CameraCaptureMode
+import com.example.shine.feature.camera.CapturedMedia
 import com.example.shine.feature.conversationsettings.ConversationType
 import kotlinx.serialization.Serializable
 
@@ -37,14 +39,11 @@ data object Profile : NavKey
 @Serializable
 data class CameraCapture(
     val resultKey: String,
-    val allowVideo: Boolean = false,
+    val modes: List<CameraCaptureMode> = listOf(CameraCaptureMode.PHOTO),
 ) : NavKey
 
 @Serializable
-data class MediaPreview(
-    val uri: String,
-    val isVideo: Boolean = false,
-    val durationMs: Long = 0L,
+data class CaptureMediaPreview(
+    val media: CapturedMedia,
     val resultKey: String = "",
 ) : NavKey
-

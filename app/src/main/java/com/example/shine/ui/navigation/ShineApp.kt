@@ -34,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -48,11 +47,9 @@ import androidx.navigation3.ui.NavDisplay
 import com.example.shine.R
 import com.example.shine.feature.auth.SignInRoute
 import com.example.shine.feature.auth.SignInViewModel
-import com.example.shine.feature.camera.CameraCaptureMode
 import com.example.shine.feature.camera.CameraRoute
 import com.example.shine.feature.camera.CameraViewModel
-import com.example.shine.feature.camera.CapturedMedia
-import com.example.shine.feature.camera.MediaPreviewRoute
+import com.example.shine.feature.camera.CaptureMediaPreviewRoute
 import com.example.shine.feature.channel.ChannelDetailRoute
 import com.example.shine.feature.channel.ChannelDetailViewModel
 import com.example.shine.feature.channel.ChannelsRoute
@@ -319,22 +316,13 @@ private fun ShineNavDisplay(
             }
             entry<CameraCapture> { key ->
                 val viewModel = hiltViewModel<CameraViewModel>()
-                val allowedModes = if (key.allowVideo) {
-                    setOf(CameraCaptureMode.PHOTO, CameraCaptureMode.VIDEO)
-                } else {
-                    setOf(CameraCaptureMode.PHOTO)
-                }
                 CameraRoute(
                     viewModel = viewModel,
-                    allowedModes = allowedModes,
+                    allowedModes = key.modes.toSet(),
                     onMediaCaptured = { media ->
-                        val isVideo = media is CapturedMedia.Video
-                        val durationMs = (media as? CapturedMedia.Video)?.durationMs ?: 0L
                         backStack.add(
-                            MediaPreview(
-                                uri = media.uri.toString(),
-                                isVideo = isVideo,
-                                durationMs = durationMs,
+                            CaptureMediaPreview(
+                                media = media,
                                 resultKey = key.resultKey,
                             )
                         )
@@ -342,24 +330,16 @@ private fun ShineNavDisplay(
                     onClose = { backStack.popBack() },
                 )
             }
-            entry<MediaPreview> { key ->
+            entry<CaptureMediaPreview> { key ->
                 val resultBus = LocalResultEventBus.current
-                val media = if (key.isVideo) {
-                    CapturedMedia.Video(key.uri.toUri(), key.durationMs)
-                } else {
-                    CapturedMedia.Photo(key.uri.toUri())
-                }
-                MediaPreviewRoute(
-                    media = media,
+                CaptureMediaPreviewRoute(
+                    media = key.media,
                     onRetake = { backStack.removeLastOrNull() },
                     onConfirm = { confirmedMedia ->
                         if (key.resultKey.isNotBlank()) {
-                            resultBus.sendResult(key.resultKey, confirmedMedia.uri.toString())
+                            resultBus.sendResult(key.resultKey, confirmedMedia.uri)
                         }
-                        backStack.removeAll { it is MediaPreview || it is CameraCapture }
-                    },
-                    onClose = {
-                        backStack.removeAll { it is MediaPreview || it is CameraCapture }
+                        backStack.removeAll { it is CaptureMediaPreview || it is CameraCapture }
                     },
                 )
             }
