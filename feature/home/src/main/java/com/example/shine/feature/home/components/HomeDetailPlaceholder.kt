@@ -1,4 +1,4 @@
-package com.example.shine.ui.navigation
+package com.example.shine.feature.home.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun EmptyDetailPlaceholder(
+fun HomeDetailPlaceholder(
     modifier: Modifier = Modifier,
     message: String = "Select a conversation to view details",
 ) {

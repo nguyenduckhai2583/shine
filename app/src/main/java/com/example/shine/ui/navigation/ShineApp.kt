@@ -47,22 +47,33 @@ import androidx.navigation3.runtime.result.rememberResultEventBusNavEntryDecorat
 import androidx.navigation3.ui.NavDisplay
 import com.example.shine.R
 import com.example.shine.feature.auth.SignInRoute
+import com.example.shine.feature.auth.SignInViewModel
 import com.example.shine.feature.camera.CameraCaptureMode
 import com.example.shine.feature.camera.CameraRoute
+import com.example.shine.feature.camera.CameraViewModel
 import com.example.shine.feature.camera.CapturedMedia
 import com.example.shine.feature.camera.MediaPreviewRoute
 import com.example.shine.feature.channel.ChannelDetailRoute
+import com.example.shine.feature.channel.ChannelDetailViewModel
 import com.example.shine.feature.channel.ChannelsRoute
 import com.example.shine.feature.conversationsettings.ConversationSettingsRoute
+import com.example.shine.feature.conversationsettings.ConversationSettingsViewModel
 import com.example.shine.feature.conversationsettings.ConversationType
 import com.example.shine.feature.dm.DirectMessageDetailRoute
+import com.example.shine.feature.dm.DirectMessageDetailViewModel
 import com.example.shine.feature.dm.DmsRoute
 import com.example.shine.feature.home.HomeRoute
+import com.example.shine.feature.home.HomeViewModel
+import com.example.shine.feature.home.components.HomeDetailPlaceholder
 import com.example.shine.feature.planix.PlanixDetailPlaceholder
 import com.example.shine.feature.planix.PlanixDetailRoute
+import com.example.shine.feature.planix.PlanixDetailViewModel
 import com.example.shine.feature.planix.PlanixListRoute
+import com.example.shine.feature.planix.PlanixListViewModel
 import com.example.shine.feature.profile.ProfileRoute
+import com.example.shine.feature.profile.ProfileViewModel
 import com.example.shine.feature.workspace.WorkspaceListRoute
+import com.example.shine.feature.workspace.WorkspaceListViewModel
 import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
 
 @Composable
@@ -183,19 +194,23 @@ private fun ShineNavDisplay(
         ),
         entryProvider = entryProvider {
             entry<SignIn> {
-                SignInRoute()
+                val viewModel = hiltViewModel<SignInViewModel>()
+                SignInRoute(viewModel = viewModel)
             }
             entry<WorkspaceList> {
-                WorkspaceListRoute()
+                val viewModel = hiltViewModel<WorkspaceListViewModel>()
+                WorkspaceListRoute(viewModel = viewModel)
             }
             entry<Home>(
                 metadata = ListDetailSceneStrategy.listPane(
                     detailPlaceholder = {
-                        EmptyDetailPlaceholder()
+                        HomeDetailPlaceholder()
                     },
                 ),
             ) {
+                val viewModel = hiltViewModel<HomeViewModel>()
                 HomeRoute(
+                    viewModel = viewModel,
                     channelsContent = {
                         ChannelsRoute(
                             selectedChannelId = selectedChannelId,
@@ -227,8 +242,11 @@ private fun ShineNavDisplay(
             entry<ChannelDetail>(
                 metadata = ListDetailSceneStrategy.detailPane(),
             ) { key ->
+                val viewModel = hiltViewModel<ChannelDetailViewModel, ChannelDetailViewModel.Factory>(
+                    creationCallback = { factory -> factory.create(key.channelId) },
+                )
                 ChannelDetailRoute(
-                    channelId = key.channelId,
+                    viewModel = viewModel,
                     onBack = detailOnBack,
                     onNavigateToSettings = {
                         backStack.add(ConversationSettings(key.channelId, ConversationType.CHANNEL))
@@ -238,8 +256,11 @@ private fun ShineNavDisplay(
             entry<DirectMessageDetail>(
                 metadata = ListDetailSceneStrategy.detailPane(),
             ) { key ->
+                val viewModel = hiltViewModel<DirectMessageDetailViewModel, DirectMessageDetailViewModel.Factory>(
+                    creationCallback = { factory -> factory.create(key.dmId) },
+                )
                 DirectMessageDetailRoute(
-                    dmId = key.dmId,
+                    viewModel = viewModel,
                     onBack = detailOnBack,
                     onNavigateToSettings = {
                         backStack.add(ConversationSettings(key.dmId, ConversationType.DM))
@@ -249,9 +270,11 @@ private fun ShineNavDisplay(
             entry<ConversationSettings>(
                 metadata = ListDetailSceneStrategy.detailPane(),
             ) { key ->
+                val viewModel = hiltViewModel<ConversationSettingsViewModel, ConversationSettingsViewModel.Factory>(
+                    creationCallback = { factory -> factory.create(key.conversationId, key.type) },
+                )
                 ConversationSettingsRoute(
-                    conversationId = key.conversationId,
-                    conversationType = key.type,
+                    viewModel = viewModel,
                     onBack = detailOnBack,
                 )
             }
@@ -260,7 +283,9 @@ private fun ShineNavDisplay(
                     detailPlaceholder = { PlanixDetailPlaceholder() },
                 ),
             ) {
+                val viewModel = hiltViewModel<PlanixListViewModel>()
                 PlanixListRoute(
+                    viewModel = viewModel,
                     selectedProjectId = selectedProjectId,
                     onBack = { backStack.popUntil(Home) },
                     onProjectClick = { project ->
@@ -272,15 +297,20 @@ private fun ShineNavDisplay(
             entry<PlanixDetail>(
                 metadata = ListDetailSceneStrategy.detailPane(),
             ) { key ->
+                val viewModel = hiltViewModel<PlanixDetailViewModel, PlanixDetailViewModel.Factory>(
+                    creationCallback = { factory -> factory.create(key.projectId) },
+                )
                 PlanixDetailRoute(
-                    projectId = key.projectId,
+                    viewModel = viewModel,
                     onBack = detailOnBack,
                 )
             }
             entry<Profile>(
                 metadata = ListDetailSceneStrategy.detailPane(),
             ) {
+                val viewModel = hiltViewModel<ProfileViewModel>()
                 ProfileRoute(
+                    viewModel = viewModel,
                     onBack = detailOnBack,
                     onOpenCamera = {
                         backStack.add(CameraCapture(resultKey = "profile_avatar"))
@@ -288,12 +318,14 @@ private fun ShineNavDisplay(
                 )
             }
             entry<CameraCapture> { key ->
+                val viewModel = hiltViewModel<CameraViewModel>()
                 val allowedModes = if (key.allowVideo) {
                     setOf(CameraCaptureMode.PHOTO, CameraCaptureMode.VIDEO)
                 } else {
                     setOf(CameraCaptureMode.PHOTO)
                 }
                 CameraRoute(
+                    viewModel = viewModel,
                     allowedModes = allowedModes,
                     onMediaCaptured = { media ->
                         val isVideo = media is CapturedMedia.Video
@@ -333,21 +365,5 @@ private fun ShineNavDisplay(
             }
         },
     )
-}
-
-internal fun MutableList<NavKey>.popUntil(key: NavKey) {
-    if (key !in this) return
-    while (isNotEmpty() && last() != key) {
-        removeAt(lastIndex)
-    }
-}
-
-internal fun MutableList<NavKey>.resetTo(key: NavKey) {
-    clear()
-    add(key)
-}
-
-internal fun MutableList<NavKey>.popBack() {
-    if (size > 1) removeLastOrNull()
 }
 

@@ -26,7 +26,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.core.designsystem.theme.MultiDevicePreviews
 import com.example.shine.core.designsystem.theme.ShineTheme
@@ -36,12 +35,12 @@ import com.example.shine.feature.home.components.SettingsContent
 
 @Composable
 fun HomeRoute(
+    viewModel: HomeViewModel,
     channelsContent: @Composable () -> Unit,
     dmsContent: @Composable () -> Unit,
     onPlanixClick: () -> Unit,
     onProfileClick: () -> Unit = {},
     onTabSelected: (HomeTab) -> Unit = {},
-    viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Channels) }

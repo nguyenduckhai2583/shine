@@ -31,14 +31,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
-import com.example.shine.core.common.R as CommonR
 import com.example.shine.core.common.error.AppException
 import com.example.shine.core.common.ui.UiText
 import com.example.shine.core.common.ui.toUiText
@@ -47,14 +45,15 @@ import com.example.shine.core.designsystem.theme.MultiDevicePreviews
 import com.example.shine.core.designsystem.theme.ShineTheme
 import com.example.shine.core.model.Project
 import kotlinx.coroutines.flow.flowOf
+import com.example.shine.core.common.R as CommonR
 
 @Composable
 fun PlanixListRoute(
+    viewModel: PlanixListViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     selectedProjectId: String? = null,
     onProjectClick: (Project) -> Unit = {},
-    viewModel: PlanixListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val projects = viewModel.projectsPagingFlow.collectAsLazyPagingItems()

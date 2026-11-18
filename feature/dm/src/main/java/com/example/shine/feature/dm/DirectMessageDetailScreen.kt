@@ -23,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.core.designsystem.component.ShineTopAppBar
 import com.example.shine.core.designsystem.theme.ShineTheme
@@ -32,13 +31,10 @@ import com.example.shine.core.model.DirectMessage
 
 @Composable
 fun DirectMessageDetailRoute(
-    dmId: String,
+    viewModel: DirectMessageDetailViewModel,
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
     onNavigateToSettings: () -> Unit = {},
-    viewModel: DirectMessageDetailViewModel = hiltViewModel<DirectMessageDetailViewModel, DirectMessageDetailViewModel.Factory>(
-        creationCallback = { factory -> factory.create(dmId) },
-    ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     DirectMessageDetailScreen(

@@ -23,23 +23,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.shine.core.model.Channel
 import com.example.shine.core.designsystem.component.ShineTopAppBar
 import com.example.shine.core.designsystem.theme.ShineTheme
+import com.example.shine.core.model.Channel
 import java.text.DateFormat
 import java.util.Date
 
 @Composable
 fun ChannelDetailRoute(
-    channelId: String,
+    viewModel: ChannelDetailViewModel,
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
     onNavigateToSettings: () -> Unit = {},
-    viewModel: ChannelDetailViewModel = hiltViewModel<ChannelDetailViewModel, ChannelDetailViewModel.Factory>(
-        creationCallback = { factory -> factory.create(channelId) },
-    ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ChannelDetailScreen(

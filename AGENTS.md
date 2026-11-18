@@ -79,7 +79,7 @@ Shine/
 > [!IMPORTANT]
 > Dự án sử dụng **Jetpack Navigation 3** (không dùng NavHostController / Navigation 2 XML / chuỗi String route cũ).
 
-- **Khai báo NavKey:** Đặt trong `ui/navigation/NavKeys.kt`, kế thừa `androidx.navigation3.runtime.NavKey` và có annotation `@Serializable`.
+- **Khai báo NavKey:** Đặt trong `ui/navigation/NavKeys.kt` của module `:app`, kế thừa `androidx.navigation3.runtime.NavKey` và có annotation `@Serializable`.
   ```kotlin
   @Serializable
   data object Home : NavKey
@@ -90,7 +90,11 @@ Shine/
 - **Quản lý BackStack:** Sử dụng `rememberNavBackStack(...)`, `NavDisplay(...)`, phối hợp với decorators:
   - `rememberSaveableStateHolderNavEntryDecorator()`
   - `rememberViewModelStoreNavEntryDecorator()`
-- **Quản lý luồng xác thực:** Trong `ShineApp.kt`, ứng dụng sử dụng một `NavDisplay` duy nhất kết hợp `LaunchedEffect(authState)` để tự động điều hướng và làm sạch `backStack` giữa các trạng thái `Unauthenticated` (SignIn), `SelectWorkspace`, và `Authenticated` (Home).
+  - `rememberResultEventBusNavEntryDecorator()`
+- **Quản lý luồng xác thực và Khởi tạo ViewModel:** Trong `ShineApp.kt`, ứng dụng sử dụng một `NavDisplay` duy nhất kết hợp `LaunchedEffect(authState)` để tự động điều hướng và làm sạch `backStack` giữa các trạng thái `Unauthenticated` (SignIn), `SelectWorkspace`, và `Authenticated` (Home). Tầng `:app` đóng vai trò **Orchestrator** duy nhất:
+  - Giữ toàn bộ `entryProvider { ... }`.
+  - Khởi tạo `hiltViewModel()` trực tiếp ngay tại từng `entry<Key> { ... }` rồi truyền vào `Route(viewModel = viewModel, ...)`. Điều này bảo đảm ViewModel được gắn chính xác vào vòng đời của từng `NavEntry` và giải phóng tự động khi entry được pop khỏi backstack.
+  - Các feature module hoàn toàn tinh gọn: chỉ cung cấp `Stateless Screen` và `Stateful Route(viewModel)`, không phải bọc thêm các entry provider hay phụ thuộc vào logic điều hướng của app.
 
 ### 4.3. Quản lý Phiên (Session) & Xác thực
 - **SessionLocalDataSource:** Quản lý `Session` (Token, RefreshToken, User, WorkspaceId) lưu trữ bảo mật trong DataStore.

@@ -38,13 +38,15 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.core.common.ui.UiText
 import com.example.shine.core.designsystem.theme.ShineTheme
 
 @Composable
-fun SignInRoute(viewModel: SignInViewModel = hiltViewModel()) {
+fun SignInRoute(
+    viewModel: SignInViewModel,
+    modifier: Modifier = Modifier,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     SignInScreen(
         uiState = uiState,
@@ -52,6 +54,7 @@ fun SignInRoute(viewModel: SignInViewModel = hiltViewModel()) {
         onPasswordChange = viewModel::onPasswordChange,
         onTogglePasswordVisibility = viewModel::onTogglePasswordVisibility,
         onSignIn = viewModel::signIn,
+        modifier = modifier,
     )
 }
 

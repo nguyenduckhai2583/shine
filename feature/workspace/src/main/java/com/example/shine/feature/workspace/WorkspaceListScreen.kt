@@ -41,7 +41,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.core.designsystem.component.ShineTopAppBar
 import com.example.shine.core.designsystem.theme.ShineTheme
@@ -49,7 +48,8 @@ import com.example.shine.core.model.Workspace
 
 @Composable
 fun WorkspaceListRoute(
-    viewModel: WorkspaceListViewModel = hiltViewModel(),
+    viewModel: WorkspaceListViewModel,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     WorkspaceListScreen(
@@ -57,6 +57,7 @@ fun WorkspaceListRoute(
         onSelectWorkspace = viewModel::onSelectWorkspace,
         onConfirm = viewModel::confirmSelection,
         onSignOut = viewModel::signOut,
+        modifier = modifier,
     )
 }
 

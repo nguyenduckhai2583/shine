@@ -36,7 +36,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.shine.core.designsystem.component.ShineTopAppBar
@@ -46,12 +45,9 @@ import com.example.shine.core.model.Project
 
 @Composable
 fun PlanixDetailRoute(
-    projectId: String,
+    viewModel: PlanixDetailViewModel,
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
-    viewModel: PlanixDetailViewModel = hiltViewModel<PlanixDetailViewModel, PlanixDetailViewModel.Factory>(
-        creationCallback = { factory -> factory.create(projectId) },
-    ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     PlanixDetailScreen(

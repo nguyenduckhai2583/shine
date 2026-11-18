@@ -32,7 +32,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shine.core.common.ui.UiText
 import com.example.shine.core.designsystem.component.ShineTopAppBar
@@ -40,13 +39,9 @@ import com.example.shine.core.designsystem.theme.ShineTheme
 
 @Composable
 fun ConversationSettingsRoute(
-    conversationId: String,
-    conversationType: ConversationType,
+    viewModel: ConversationSettingsViewModel,
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
-    viewModel: ConversationSettingsViewModel = hiltViewModel<ConversationSettingsViewModel, ConversationSettingsViewModel.Factory>(
-        creationCallback = { factory -> factory.create(conversationId, conversationType) },
-    ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ConversationSettingsScreen(

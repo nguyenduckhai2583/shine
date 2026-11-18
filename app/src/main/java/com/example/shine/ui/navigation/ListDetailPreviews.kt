@@ -32,6 +32,7 @@ import com.example.shine.feature.dm.DmsUiState
 import com.example.shine.feature.home.HomeScreen
 import com.example.shine.feature.home.HomeTab
 import com.example.shine.feature.home.HomeUiState
+import com.example.shine.feature.home.components.HomeDetailPlaceholder
 import com.example.shine.feature.profile.ProfileScreen
 import com.example.shine.feature.profile.ProfileUiState
 import com.example.shine.feature.profile.UploadState
@@ -106,7 +107,7 @@ fun MockListDetailNavDisplay(
         entryProvider = entryProvider {
             entry<Home>(
                 metadata = ListDetailSceneStrategy.listPane(
-                    detailPlaceholder = { EmptyDetailPlaceholder() },
+                    detailPlaceholder = { HomeDetailPlaceholder() },
                 ),
             ) {
                 HomeScreen(
