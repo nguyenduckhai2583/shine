@@ -16,8 +16,11 @@ class RefreshChannelsActionCallback : ActionCallback {
             context.applicationContext,
             ChannelsWidgetEntryPoint::class.java,
         )
-        runCatching {
-            entryPoint.channelRepository().getChannels()
+        val workspaceId = entryPoint.sessionManager().getSession()?.workspaceId
+        if (workspaceId != null) {
+            runCatching {
+                entryPoint.channelRepository().getChannels(workspaceId)
+            }
         }
         ChannelsGlanceWidget().update(context, glanceId)
     }

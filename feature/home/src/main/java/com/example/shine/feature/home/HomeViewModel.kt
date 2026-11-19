@@ -2,17 +2,19 @@ package com.example.shine.feature.home
 
 import androidx.lifecycle.viewModelScope
 import com.example.shine.core.common.base.BaseViewModel
-import com.example.shine.core.shortcut.AppShortcutManager
-import com.example.shine.core.model.Workspace
 import com.example.shine.core.data.repository.AuthRepository
 import com.example.shine.core.data.repository.UserRepository
 import com.example.shine.core.data.repository.WorkspaceRepository
 import com.example.shine.core.domain.SignOutUseCase
+import com.example.shine.core.model.Workspace
+import com.example.shine.core.shortcut.AppShortcutManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -31,7 +33,7 @@ data class HomeUiState(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    authRepository: AuthRepository,
+    private val authRepository: AuthRepository,
     private val workspaceRepository: WorkspaceRepository,
     private val userRepository: UserRepository,
     private val shortcutManager: AppShortcutManager,
@@ -77,6 +79,7 @@ class HomeViewModel @Inject constructor(
                 shortcutManager.removeRecentChannelShortcut()
                 userRepository.getChatUsers(workspaceId)
                 workspaceRepository.selectWorkspace(workspaceId)
+                authRepository.session.filter { it?.workspaceId == workspaceId }.first()
             } finally {
                 isSwitchingWorkspace.value = false
             }

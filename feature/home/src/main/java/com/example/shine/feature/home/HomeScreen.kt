@@ -21,6 +21,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -138,15 +139,17 @@ fun HomeScreen(
                             CircularProgressIndicator()
                         }
                     } else {
-                        when (selectedTab) {
-                            HomeTab.Channels -> channelsContent()
-                            HomeTab.Dms -> dmsContent()
-                            HomeTab.Settings -> SettingsContent(
-                                uiState = uiState,
-                                onPlanixClick = onPlanixClick,
-                                onSignOut = onSignOut,
-                                onProfileClick = onProfileClick,
-                            )
+                        key(uiState.selectedWorkspaceId) {
+                            when (selectedTab) {
+                                HomeTab.Channels -> channelsContent()
+                                HomeTab.Dms -> dmsContent()
+                                HomeTab.Settings -> SettingsContent(
+                                    uiState = uiState,
+                                    onPlanixClick = onPlanixClick,
+                                    onSignOut = onSignOut,
+                                    onProfileClick = onProfileClick,
+                                )
+                            }
                         }
                     }
                 }

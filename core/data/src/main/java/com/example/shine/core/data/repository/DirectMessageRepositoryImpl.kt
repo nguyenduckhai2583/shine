@@ -5,12 +5,11 @@ import com.example.shine.core.data.source.local.UserLocalDataSource
 import com.example.shine.core.database.dao.DirectMessageDao
 import com.example.shine.core.database.entity.toDomain
 import com.example.shine.core.database.entity.toEntity
-import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.model.DirectMessage
 import com.example.shine.core.network.ChatApi
 import com.example.shine.core.network.dto.toDomain
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,12 +18,12 @@ import javax.inject.Singleton
 class DirectMessageRepositoryImpl @Inject constructor(
     private val chatApi: ChatApi,
     private val userLocalDataSource: UserLocalDataSource,
-    private val sessionLocalDataSource: SessionLocalDataSource,
+    private val sessionManager: SessionManager,
     private val directMessageDao: DirectMessageDao,
 ) : DirectMessageRepository {
 
     override suspend fun getDirectMessages(): Result<Unit> = suspendRunCatching {
-        val currentUserId = sessionLocalDataSource.session.firstOrNull()?.user?.id
+        val currentUserId = sessionManager.currentUserId()
         val chatUsersMap = userLocalDataSource.getUsers().associate { user ->
             val name = listOfNotNull(user.firstName, user.lastName)
                 .joinToString(" ")

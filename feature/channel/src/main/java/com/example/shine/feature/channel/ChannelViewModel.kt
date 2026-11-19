@@ -2,23 +2,28 @@ package com.example.shine.feature.channel
 
 import androidx.lifecycle.viewModelScope
 import com.example.shine.core.common.base.BaseViewModel
-import com.example.shine.core.model.Channel
-import com.example.shine.core.data.repository.ChannelRepository
-import com.example.shine.core.data.repository.WorkspaceRepository
 import com.example.shine.core.common.ui.UiText
+import com.example.shine.core.data.repository.ChannelRepository
+import com.example.shine.core.datastore.SessionManager
+import com.example.shine.core.model.Channel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ChannelUiState(
+    val workspaceId: String? = null,
     val channels: List<Channel> = emptyList(),
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -28,36 +33,56 @@ data class ChannelUiState(
 @HiltViewModel
 class ChannelViewModel @Inject constructor(
     private val channelRepository: ChannelRepository,
-    private val workspaceRepository: WorkspaceRepository,
+    private val sessionManager: SessionManager,
 ) : BaseViewModel() {
 
+    private val syncedWorkspaceId = MutableStateFlow<String?>(null)
     private val isLoading = MutableStateFlow(true)
     private val isRefreshing = MutableStateFlow(false)
     private val userError = MutableStateFlow<UiText?>(null)
 
-    val uiState: StateFlow<ChannelUiState> = combine(
-        channelRepository.getChannelsFlow(),
-        isLoading,
-        isRefreshing,
-        userError,
-    ) { channels, loading, refreshing, error ->
-        ChannelUiState(
-            channels = channels,
-            isLoading = loading && channels.isEmpty(),
-            isRefreshing = refreshing,
-            userError = error,
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val uiState: StateFlow<ChannelUiState> = sessionManager.workspaceId
+        .filterNotNull()
+        .distinctUntilChanged()
+        .flatMapLatest { workspaceId ->
+            combine(
+                channelRepository.getChannelsFlow(workspaceId),
+                isLoading,
+                isRefreshing,
+                syncedWorkspaceId,
+                userError,
+            ) { channels, loading, refreshing, syncedWsId, error ->
+                val isWorkspaceLoading = syncedWsId != workspaceId
+                ChannelUiState(
+                    workspaceId = workspaceId,
+                    channels = if (isWorkspaceLoading) emptyList() else channels,
+                    isLoading = isWorkspaceLoading || (loading && channels.isEmpty()),
+                    isRefreshing = refreshing,
+                    userError = error,
+                )
+            }.onStart {
+                emit(
+                    ChannelUiState(
+                        workspaceId = workspaceId,
+                        isLoading = true,
+                        channels = emptyList(),
+                    )
+                )
+            }
+        }
+        .conflate()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = ChannelUiState(isLoading = true),
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = ChannelUiState(isLoading = true),
-    )
 
     private var currentWorkspaceId: String? = null
 
     init {
         viewModelScope.launch {
-            workspaceRepository.selectedWorkspaceId
+            sessionManager.workspaceId
                 .filterNotNull()
                 .distinctUntilChanged()
                 .collectLatest { workspaceId ->
@@ -82,8 +107,9 @@ class ChannelViewModel @Inject constructor(
     fun createChannel(name: String) {
         val trimmed = name.trim()
         if (trimmed.isBlank()) return
+        val workspaceId = currentWorkspaceId ?: return
         execute(
-            task = { channelRepository.createChannel(trimmed) },
+            task = { channelRepository.createChannel(trimmed, workspaceId) },
             onError = { userError.value = it },
         )
     }
@@ -100,7 +126,7 @@ class ChannelViewModel @Inject constructor(
     }
 
     private fun loadChannels(isRefresh: Boolean) {
-        if (currentWorkspaceId == null) return
+        val workspaceId = currentWorkspaceId ?: return
 
         if (isRefresh) {
             isRefreshing.value = true
@@ -109,9 +135,10 @@ class ChannelViewModel @Inject constructor(
         }
 
         execute(
-            task = { channelRepository.getChannels() },
+            task = { channelRepository.getChannels(workspaceId) },
             onError = { userError.value = it },
             onComplete = {
+                syncedWorkspaceId.value = workspaceId
                 isLoading.value = false
                 isRefreshing.value = false
             },

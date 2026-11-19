@@ -122,14 +122,14 @@ class ConversationSettingsViewModelTest {
             ),
         )
 
-        override suspend fun getChannels(): Result<Unit> = Result.success(Unit)
-        override suspend fun getRecentChannels(limit: Int): List<Channel> = emptyList()
-        override suspend fun getChannel(id: String): Result<Unit> = Result.success(Unit)
-        override suspend fun createChannel(name: String): Result<Unit> = Result.success(Unit)
+        override suspend fun getChannels(workspaceId: String): Result<Unit> = Result.success(Unit)
+        override suspend fun getRecentChannels(workspaceId: String, limit: Int): List<Channel> = emptyList()
+        override suspend fun getChannel(id: String, workspaceId: String): Result<Unit> = Result.success(Unit)
+        override suspend fun createChannel(name: String, workspaceId: String): Result<Unit> = Result.success(Unit)
         override suspend fun deleteChannel(channelId: String): Result<Unit> = Result.success(Unit)
-        override fun getChannelsFlow(limit: Int): Flow<List<Channel>> = emptyFlow()
+        override fun getChannelsFlow(workspaceId: String, limit: Int): Flow<List<Channel>> = emptyFlow()
         override fun getChannelFlow(id: String): Flow<Channel?> = channelFlow
-        override suspend fun onChannelCreated(channel: Channel) {}
+        override suspend fun onChannelCreated(channel: Channel, workspaceId: String) {}
         override suspend fun clear() {}
     }
 

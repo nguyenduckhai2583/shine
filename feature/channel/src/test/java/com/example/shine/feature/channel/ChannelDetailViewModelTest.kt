@@ -1,8 +1,12 @@
 package com.example.shine.feature.channel
 
 import com.example.shine.core.data.repository.ChannelRepository
+import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.model.Channel
+import com.example.shine.core.model.Session
 import com.example.shine.core.shortcut.FakeAppShortcutManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -18,22 +22,30 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.mock
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChannelDetailViewModelTest {
 
     private val repository = FakeChannelRepository()
     private val shortcutManager = FakeAppShortcutManager()
+    private lateinit var sessionManager: SessionManager
 
     @Before
-    fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        val sessionLocal = mock(SessionLocalDataSource::class.java)
+        `when`(sessionLocal.session).thenReturn(MutableStateFlow(Session("tok", workspaceId = "ws-1")))
+        sessionManager = SessionManager(sessionLocal, CoroutineScope(UnconfinedTestDispatcher()))
+    }
 
     @After
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
     fun load_success_showsChannelAndUpdatesShortcut() = runTest {
-        val viewModel = ChannelDetailViewModel("1", repository, shortcutManager)
+        val viewModel = ChannelDetailViewModel("1", repository, sessionManager, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -49,7 +61,7 @@ class ChannelDetailViewModelTest {
         repository.channelFlow.value = null
         repository.autoUpdateFlowOnGetChannel = false
 
-        val viewModel = ChannelDetailViewModel("1", repository, shortcutManager)
+        val viewModel = ChannelDetailViewModel("1", repository, sessionManager, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -68,7 +80,7 @@ class ChannelDetailViewModelTest {
     fun offlineFirst_withCachedData_stillShowsChannel() = runTest {
         repository.channelFlow.value = CHANNEL
 
-        val viewModel = ChannelDetailViewModel("1", repository, shortcutManager)
+        val viewModel = ChannelDetailViewModel("1", repository, sessionManager, shortcutManager)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect {}
         }
@@ -82,9 +94,9 @@ class ChannelDetailViewModelTest {
         var autoUpdateFlowOnGetChannel = true
         val channelFlow = MutableStateFlow<Channel?>(null)
 
-        override suspend fun getChannels(): Result<Unit> = Result.success(Unit)
+        override suspend fun getChannels(workspaceId: String): Result<Unit> = Result.success(Unit)
 
-        override suspend fun getChannel(id: String): Result<Unit> {
+        override suspend fun getChannel(id: String, workspaceId: String): Result<Unit> {
             lastId = id
             if (autoUpdateFlowOnGetChannel) {
                 channelFlow.value = CHANNEL
@@ -94,15 +106,15 @@ class ChannelDetailViewModelTest {
 
         override fun getChannelFlow(id: String): Flow<Channel?> = channelFlow
 
-        override suspend fun getRecentChannels(limit: Int): List<Channel> = emptyList()
+        override suspend fun getRecentChannels(workspaceId: String, limit: Int): List<Channel> = emptyList()
 
-        override suspend fun createChannel(name: String): Result<Unit> = Result.success(Unit)
+        override suspend fun createChannel(name: String, workspaceId: String): Result<Unit> = Result.success(Unit)
 
         override suspend fun deleteChannel(channelId: String): Result<Unit> = Result.success(Unit)
 
-        override fun getChannelsFlow(limit: Int): Flow<List<Channel>> = emptyFlow()
+        override fun getChannelsFlow(workspaceId: String, limit: Int): Flow<List<Channel>> = emptyFlow()
 
-        override suspend fun onChannelCreated(channel: Channel) {}
+        override suspend fun onChannelCreated(channel: Channel, workspaceId: String) {}
 
         override suspend fun clear() {}
     }
@@ -115,8 +127,8 @@ class ChannelDetailViewModelTest {
             isEncrypted = false,
             isDefault = true,
             categoryName = null,
-            createdAt = 1L,
-            lastActivityAt = 2L,
+            createdAt = null,
+            lastActivityAt = null,
         )
     }
 }

@@ -1,6 +1,6 @@
 package com.example.shine.core.network
 
-import com.example.shine.core.datastore.SessionProvider
+import com.example.shine.core.datastore.SessionManager
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
@@ -8,18 +8,18 @@ import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import javax.inject.Inject
 
 class AuthInterceptor @Inject constructor(
-    private val sessionProvider: SessionProvider,
+    private val sessionManager: SessionManager,
     private val tokenRefresher: TokenRefresher,
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val token = sessionProvider.currentToken()
+        val token = sessionManager.currentToken()
         if (token == null || request.header(AUTHORIZATION) != null) {
             return chain.proceed(request)
         }
 
-        val workspaceId = sessionProvider.currentWorkspaceId()
+        val workspaceId = sessionManager.currentWorkspaceId()
         val response = chain.proceed(request.withAuth(token, workspaceId))
         return when (response.code) {
             HTTP_UNAUTHORIZED, HTTP_TOKEN_EXPIRED -> {
@@ -33,9 +33,6 @@ class AuthInterceptor @Inject constructor(
 
     private fun Request.withAuth(token: String, workspaceId: String?): Request {
         val builder = newBuilder().header(AUTHORIZATION, "Bearer $token")
-        if (workspaceId != null && header(WORKSPACE_ID) == null) {
-            builder.header(WORKSPACE_ID, workspaceId)
-        }
         if (workspaceId != null && header(X_WORKSPACE_ID) == null) {
             builder.header(X_WORKSPACE_ID, workspaceId)
         }
@@ -44,7 +41,6 @@ class AuthInterceptor @Inject constructor(
 
     private companion object {
         const val AUTHORIZATION = "Authorization"
-        const val WORKSPACE_ID = "workspace-id"
         const val X_WORKSPACE_ID = "x-workspace-id"
         const val HTTP_TOKEN_EXPIRED = 440
     }

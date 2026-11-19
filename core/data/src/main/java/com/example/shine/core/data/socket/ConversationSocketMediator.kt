@@ -4,7 +4,6 @@ import android.util.Log
 import com.example.shine.core.data.repository.ChannelRepository
 import com.example.shine.core.data.repository.DirectMessageRepository
 import com.example.shine.core.data.source.local.UserLocalDataSource
-import com.example.shine.core.datastore.SessionLocalDataSource
 import com.example.shine.core.network.dto.ChannelDto
 import com.example.shine.core.network.dto.DirectMessageDto
 import com.example.shine.core.network.dto.toDomain
@@ -17,13 +16,14 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
 import javax.inject.Inject
+import com.example.shine.core.datastore.SessionManager
 import javax.inject.Singleton
 
 @Singleton
 class ConversationSocketMediator @Inject constructor(
     private val channelRepository: ChannelRepository,
     private val directMessageRepository: DirectMessageRepository,
-    private val sessionLocalDataSource: SessionLocalDataSource,
+    private val sessionManager: SessionManager,
     private val userLocalDataSource: UserLocalDataSource,
     private val json: Json,
 ) : SocketMediator {
@@ -39,7 +39,8 @@ class ConversationSocketMediator @Inject constructor(
             ConversationType.CHANNEL -> {
                 try {
                     val channelDto = json.decodeFromJsonElement<ChannelDto>(message.rawJson)
-                    channelRepository.onChannelCreated(channelDto.toDomain())
+                    val workspaceId = message.workspaceId.orEmpty()
+                    channelRepository.onChannelCreated(channelDto.toDomain(), workspaceId)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to process CHANNEL creation: ${e.message}", e)
                 }
@@ -49,7 +50,7 @@ class ConversationSocketMediator @Inject constructor(
             -> {
                 try {
                     val dmDto = json.decodeFromJsonElement<DirectMessageDto>(message.rawJson)
-                    val currentUserId = sessionLocalDataSource.session.firstOrNull()?.user?.id
+                    val currentUserId = sessionManager.currentUserId()
                     val chatUsersMap = userLocalDataSource.getUsers().associate { (id, email, firstName, lastName) ->
                         val name = listOfNotNull(firstName, lastName)
                             .joinToString(" ")

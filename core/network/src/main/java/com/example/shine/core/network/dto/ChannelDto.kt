@@ -12,7 +12,6 @@ data class ChannelDto(
     val isDefault: Boolean? = null,
     val createdAt: Long? = null,
     val lastActivityAt: Long? = null,
-    val position: Long? = null,
     val category: CategoryDto? = null,
 )
 
@@ -33,9 +32,10 @@ fun ChannelDto.toDomain() = Channel(
     lastActivityAt = lastActivityAt,
 )
 
-fun ChannelDto.toEntity() = com.example.shine.core.database.entity.ChannelEntity(
+fun ChannelDto.toEntity(workspaceId: String) = com.example.shine.core.database.entity.ChannelEntity(
     id = id,
     localId = id,
+    workspaceId = workspaceId,
     name = name.orEmpty(),
     isPrivate = isPrivate == true,
     isEncrypted = isEncrypted == true,
@@ -43,6 +43,5 @@ fun ChannelDto.toEntity() = com.example.shine.core.database.entity.ChannelEntity
     categoryName = category?.name,
     createdAt = createdAt ?: System.currentTimeMillis(),
     lastActivityAt = lastActivityAt ?: System.currentTimeMillis(),
-    position = position,
     syncStatus = com.example.shine.core.model.SyncStatus.SYNCED,
 )

@@ -56,7 +56,10 @@ class SyncChannelsWorker @AssistedInject constructor(
                 isPrivate = channel.isPrivate,
                 isEncrypted = channel.isEncrypted,
             )
-            val response = chatApi.createChannel(request)
+            val response = chatApi.createChannel(
+                request = request,
+                workspaceId = channel.workspaceId,
+            )
             channelDao.markSynced(localId = channel.localId, serverId = response.id)
             SyncResult.Success
         } catch (e: Exception) {

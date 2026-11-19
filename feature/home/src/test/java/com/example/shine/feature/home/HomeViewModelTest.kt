@@ -1,13 +1,14 @@
 package com.example.shine.feature.home
 
-import com.example.shine.core.shortcut.FakeAppShortcutManager
+import com.example.shine.core.data.repository.AuthRepository
+import com.example.shine.core.data.repository.UserRepository
+import com.example.shine.core.data.repository.WorkspaceRepository
+import com.example.shine.core.domain.FakeSignOutUseCase
 import com.example.shine.core.model.Session
 import com.example.shine.core.model.SignInStatus
 import com.example.shine.core.model.User
 import com.example.shine.core.model.Workspace
-import com.example.shine.core.data.repository.AuthRepository
-import com.example.shine.core.data.repository.UserRepository
-import com.example.shine.core.data.repository.WorkspaceRepository
+import com.example.shine.core.shortcut.FakeAppShortcutManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -17,7 +18,6 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import com.example.shine.core.domain.FakeSignOutUseCase
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -34,7 +34,14 @@ class HomeViewModelTest {
     private val signOutUseCase = FakeSignOutUseCase(onSignOut = { authRepository.signedOut = true })
 
     @Before
-    fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        workspaceRepository.onSelectWorkspace = {
+            authRepository.sessionFlow.value = authRepository.sessionFlow.value.copy(
+                workspaceId = workspaceRepository.currentSelectedId.value,
+            )
+        }
+    }
 
     @After
     fun tearDown() = Dispatchers.resetMain()
@@ -156,14 +163,13 @@ class HomeViewModelTest {
         val currentSelectedId = MutableStateFlow<String?>("ws-1")
 
         override val workspaces: Flow<List<Workspace>> = currentWorkspaces
-        override val selectedWorkspaceId: Flow<String?> = currentSelectedId
 
         override suspend fun fetchWorkspaces(): Result<List<Workspace>> =
             Result.success(currentWorkspaces.value)
 
         override suspend fun selectWorkspace(workspaceId: String) {
-            onSelectWorkspace?.invoke()
             currentSelectedId.value = workspaceId
+            onSelectWorkspace?.invoke()
         }
 
         override suspend fun clear() {

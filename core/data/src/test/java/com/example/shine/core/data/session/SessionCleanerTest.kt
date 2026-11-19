@@ -3,6 +3,7 @@ package com.example.shine.core.data.session
 import com.example.shine.core.data.sync.ChannelSyncScheduler
 import com.example.shine.core.database.ShineDatabase
 import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.model.Session
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi

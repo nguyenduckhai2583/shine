@@ -5,7 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import com.example.shine.core.common.base.BaseViewModel
 import com.example.shine.core.common.network.NetworkMonitor
-import com.example.shine.core.data.session.SessionManager
+import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.data.session.SessionPreloader
 import com.example.shine.core.model.AuthState
 import com.example.shine.core.shortcut.AppShortcutManager

@@ -22,26 +22,27 @@ class ChannelRepositoryImpl @Inject constructor(
     private val channelSyncScheduler: ChannelSyncScheduler,
 ) : ChannelRepository {
 
-    override suspend fun getChannels(): Result<Unit> = suspendRunCatching {
-        val serverChannels = api.getChannels().map { it.toDomain() }
-        val serverEntities = serverChannels.mapIndexed { index, channel ->
-            channel.toEntity(position = index.toLong())
+    override suspend fun getChannels(workspaceId: String): Result<Unit> = suspendRunCatching {
+        val serverChannels = api.getChannels(workspaceId).map { it.toDomain() }
+        val serverEntities = serverChannels.map { channel ->
+            channel.toEntity(workspaceId = workspaceId)
         }
-        channelDao.replaceSyncedChannels(serverEntities)
+        channelDao.replaceSyncedChannels(workspaceId, serverEntities)
     }
 
-    override suspend fun getRecentChannels(limit: Int): List<Channel> =
-        channelDao.getChannels(limit).map { it.toDomain() }
+    override suspend fun getRecentChannels(workspaceId: String, limit: Int): List<Channel> =
+        channelDao.getChannels(workspaceId, limit).map { it.toDomain() }
 
-    override suspend fun getChannel(id: String): Result<Unit> = suspendRunCatching {
+    override suspend fun getChannel(id: String, workspaceId: String): Result<Unit> = suspendRunCatching {
         val channel = api.getConversation(id).toDomain()
-        channelDao.upsertChannel(channel.toEntity())
+        channelDao.upsertChannel(channel.toEntity(workspaceId = workspaceId))
     }
 
-    override suspend fun createChannel(name: String): Result<Unit> = suspendRunCatching {
+    override suspend fun createChannel(name: String, workspaceId: String): Result<Unit> = suspendRunCatching {
         channelDao.upsertChannel(
             ChannelEntity(
                 name = name,
+                workspaceId = workspaceId,
                 syncStatus = SyncStatus.PENDING,
             )
         )
@@ -52,18 +53,16 @@ class ChannelRepositoryImpl @Inject constructor(
         channelDao.deleteChannel(channelId)
     }
 
-    fun getChannelsFlow(): Flow<List<Channel>> = getChannelsFlow(limit = -1)
-
-    override fun getChannelsFlow(limit: Int): Flow<List<Channel>> =
-        channelDao.observeChannels(limit).map { entities ->
+    override fun getChannelsFlow(workspaceId: String, limit: Int): Flow<List<Channel>> =
+        channelDao.observeChannels(workspaceId, limit).map { entities ->
             entities.map { it.toDomain() }
         }
 
     override fun getChannelFlow(id: String): Flow<Channel?> =
         channelDao.observeChannel(id).map { it?.toDomain() }
 
-    override suspend fun onChannelCreated(channel: Channel) {
-        channelDao.upsertChannel(channel.toEntity())
+    override suspend fun onChannelCreated(channel: Channel, workspaceId: String) {
+        channelDao.upsertChannel(channel.toEntity(workspaceId = workspaceId))
     }
 
     override suspend fun clear() {

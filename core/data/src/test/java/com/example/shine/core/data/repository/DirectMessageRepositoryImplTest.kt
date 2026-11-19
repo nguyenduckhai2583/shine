@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
+import com.example.shine.core.datastore.SessionManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -27,24 +30,29 @@ import org.junit.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DirectMessageRepositoryImplTest {
 
     private val chatApi = FakeChatApi()
     private val userDao = FakeUserDao()
     private val userLocal = UserLocalDataSource(userDao)
-    private val sessionLocal = mock(SessionLocalDataSource::class.java)
+    private val sessionFlow = MutableStateFlow<Session?>(Session("token", user = User("me")))
+    private val sessionLocal = mock(SessionLocalDataSource::class.java).apply {
+        `when`(session).thenReturn(sessionFlow)
+    }
+    private val sessionManager = SessionManager(sessionLocal, CoroutineScope(UnconfinedTestDispatcher()))
     private val directMessageDao = FakeDirectMessageDao()
 
     private val repository = DirectMessageRepositoryImpl(
         chatApi = chatApi,
         userLocalDataSource = userLocal,
-        sessionLocalDataSource = sessionLocal,
+        sessionManager = sessionManager,
         directMessageDao = directMessageDao,
     )
 
     @Test
     fun getDirectMessages_success_mapsAndSavesToDao() = runTest {
-        `when`(sessionLocal.session).thenReturn(flowOf(Session("token", user = User("me"))))
+        sessionFlow.value = Session("token", user = User("me"))
         userDao.users.add(UserEntity(id = "user-2", firstName = "Alice", lastName = "Smith"))
         chatApi.dmsToReturn = listOf(
             DirectMessageDto(id = "dm-1", name = "Team Alpha", lastActivityAt = 100L),
@@ -64,7 +72,7 @@ class DirectMessageRepositoryImplTest {
 
     @Test
     fun getDirectMessages_apiFails_returnsFailure() = runTest {
-        `when`(sessionLocal.session).thenReturn(flowOf(null))
+        sessionFlow.value = null
         chatApi.shouldFail = true
 
         val result = repository.getDirectMessages()
@@ -160,9 +168,12 @@ class DirectMessageRepositoryImplTest {
         var dmsToReturn: List<DirectMessageDto> = emptyList()
         var shouldFail: Boolean = false
 
-        override suspend fun getChannels(): List<ChannelDto> = emptyList()
+        override suspend fun getChannels(workspaceId: String?): List<ChannelDto> = emptyList()
 
-        override suspend fun createChannel(request: com.example.shine.core.network.dto.CreateChannelRequestDto): ChannelDto =
+        override suspend fun createChannel(
+            request: com.example.shine.core.network.dto.CreateChannelRequestDto,
+            workspaceId: String?,
+        ): ChannelDto =
             ChannelDto(id = "c1", name = request.name)
 
         override suspend fun getConversation(id: String): ChannelDto = ChannelDto(id = id)

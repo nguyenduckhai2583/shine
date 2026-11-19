@@ -6,6 +6,7 @@ import com.example.shine.core.data.source.local.UserLocalDataSource
 import com.example.shine.core.database.dao.UserDao
 import com.example.shine.core.database.entity.UserEntity
 import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.model.Channel
 import com.example.shine.core.model.DirectMessage
 import com.example.shine.core.model.Session
@@ -31,14 +32,14 @@ class ConversationSocketMediatorTest {
     private class FakeChannelRepository : ChannelRepository {
         val createdChannels = mutableListOf<Channel>()
 
-        override suspend fun getChannels(): Result<Unit> = Result.success(Unit)
-        override suspend fun getRecentChannels(limit: Int): List<Channel> = emptyList()
-        override suspend fun getChannel(id: String): Result<Unit> = Result.failure(Exception())
-        override suspend fun createChannel(name: String): Result<Unit> = Result.success(Unit)
+        override suspend fun getChannels(workspaceId: String): Result<Unit> = Result.success(Unit)
+        override suspend fun getRecentChannels(workspaceId: String, limit: Int): List<Channel> = emptyList()
+        override suspend fun getChannel(id: String, workspaceId: String): Result<Unit> = Result.failure(Exception())
+        override suspend fun createChannel(name: String, workspaceId: String): Result<Unit> = Result.success(Unit)
         override suspend fun deleteChannel(channelId: String): Result<Unit> = Result.success(Unit)
-        override fun getChannelsFlow(limit: Int): Flow<List<Channel>> = emptyFlow()
+        override fun getChannelsFlow(workspaceId: String, limit: Int): Flow<List<Channel>> = emptyFlow()
         override fun getChannelFlow(id: String): Flow<Channel?> = emptyFlow()
-        override suspend fun onChannelCreated(channel: Channel) {
+        override suspend fun onChannelCreated(channel: Channel, workspaceId: String) {
             createdChannels.add(channel)
         }
         override suspend fun clear() {}
@@ -73,6 +74,8 @@ class ConversationSocketMediatorTest {
     private lateinit var channelRepository: FakeChannelRepository
     private lateinit var directMessageRepository: FakeDirectMessageRepository
     private lateinit var sessionLocal: SessionLocalDataSource
+    private lateinit var sessionManager: SessionManager
+    private val sessionFlow = kotlinx.coroutines.flow.MutableStateFlow<Session?>(Session(token = "token", workspaceId = "ws-1"))
     private lateinit var userDao: FakeUserDao
     private lateinit var userLocal: UserLocalDataSource
     private lateinit var mediator: ConversationSocketMediator
@@ -83,12 +86,14 @@ class ConversationSocketMediatorTest {
         directMessageRepository = FakeDirectMessageRepository()
         userDao = FakeUserDao()
         userLocal = UserLocalDataSource(userDao)
-        sessionLocal = mock(SessionLocalDataSource::class.java)
+        sessionLocal = org.mockito.Mockito.mock(SessionLocalDataSource::class.java)
+        org.mockito.Mockito.`when`(sessionLocal.session).thenReturn(sessionFlow)
+        sessionManager = SessionManager(sessionLocal, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.test.UnconfinedTestDispatcher()))
 
         mediator = ConversationSocketMediator(
             channelRepository = channelRepository,
             directMessageRepository = directMessageRepository,
-            sessionLocalDataSource = sessionLocal,
+            sessionManager = sessionManager,
             userLocalDataSource = userLocal,
             json = json,
         )
@@ -131,7 +136,7 @@ class ConversationSocketMediatorTest {
 
     @Test
     fun handleEvent_directMessageCreated_updatesDirectMessageRepository() = runTest {
-        `when`(sessionLocal.session).thenReturn(flowOf(Session("token", user = User("my-user-id"))))
+        sessionFlow.value = Session("token", user = User("my-user-id"))
         userDao.users.add(UserEntity(id = "other-user-id", firstName = "Bob", lastName = "Builder"))
 
         val rawJson = json.parseToJsonElement(

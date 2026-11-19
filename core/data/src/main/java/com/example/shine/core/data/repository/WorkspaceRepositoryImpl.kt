@@ -23,8 +23,6 @@ class WorkspaceRepositoryImpl @Inject constructor(
     override val workspaces: Flow<List<Workspace>> = workspaceDao.observeWorkspaces()
         .map { entities -> entities.map { it.toDomain() } }
 
-    override val selectedWorkspaceId: Flow<String?> = local.session.map { it?.workspaceId }
-
     override suspend fun fetchWorkspaces(): Result<List<Workspace>> = suspendRunCatching {
         try {
             val remoteWorkspaces = api.getWorkspaces().map { it.toDomain() }

@@ -36,31 +36,43 @@ import com.example.shine.core.model.Channel
 import com.example.shine.core.model.isSignedIn
 import dagger.hilt.android.EntryPointAccessors
 import androidx.core.net.toUri
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 
 class ChannelsGlanceWidget : GlanceAppWidget() {
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entryPoint = EntryPointAccessors.fromApplication(
             context.applicationContext,
             ChannelsWidgetEntryPoint::class.java,
         )
 
-        val initialSession = entryPoint.sessionLocalDataSource().session.firstOrNull()
-        val initialIsSignedIn = initialSession.isSignedIn
-        val initialChannels = if (initialIsSignedIn) {
-            entryPoint.channelRepository().getRecentChannels(limit = 3)
+        val sessionManager = entryPoint.sessionManager()
+        val channelRepository = entryPoint.channelRepository()
+
+        val initialSession = sessionManager.getSession()
+        val initialWorkspaceId = initialSession?.workspaceId
+        val initialChannels = if (initialSession.isSignedIn && initialWorkspaceId != null) {
+            channelRepository.getRecentChannels(workspaceId = initialWorkspaceId, limit = 3)
         } else {
             emptyList()
         }
 
-        provideContent {
-            val session by entryPoint.sessionLocalDataSource().session.collectAsState(initial = initialSession)
-            val isSignedIn = session.isSignedIn
+        val channelsFlow = sessionManager.workspaceId
+            .flatMapLatest { workspaceId ->
+                if (workspaceId != null) {
+                    channelRepository.getChannelsFlow(workspaceId = workspaceId, limit = 3)
+                } else {
+                    flowOf(emptyList())
+                }
+            }
 
-            val channels by entryPoint.channelRepository()
-                .getChannelsFlow(limit = 3)
-                .collectAsState(initial = initialChannels)
+        provideContent {
+            val session by sessionManager.session.collectAsState(initial = initialSession)
+            val channels by channelsFlow.collectAsState(initial = initialChannels)
+            val isSignedIn = session.isSignedIn
 
             GlanceTheme {
                 WidgetRoot(

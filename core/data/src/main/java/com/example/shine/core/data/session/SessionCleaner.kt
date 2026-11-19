@@ -5,6 +5,7 @@ import com.example.shine.core.common.di.IoDispatcher
 import com.example.shine.core.data.sync.ChannelSyncScheduler
 import com.example.shine.core.database.ShineDatabase
 import com.example.shine.core.database.di.InMemoryDatabase
+import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.model.AuthState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

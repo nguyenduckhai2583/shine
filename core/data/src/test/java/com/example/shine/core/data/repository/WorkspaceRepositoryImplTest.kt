@@ -104,7 +104,6 @@ class WorkspaceRepositoryImplTest {
 
         val session = local.session.first()
         assertEquals("ws-99", session?.workspaceId)
-        assertEquals("ws-99", repository.selectedWorkspaceId.first())
     }
 
     @Test

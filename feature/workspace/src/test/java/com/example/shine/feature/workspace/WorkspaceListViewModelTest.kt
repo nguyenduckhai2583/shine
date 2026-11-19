@@ -110,7 +110,6 @@ class WorkspaceListViewModelTest {
         var shouldFail = false
 
         override val workspaces: Flow<List<Workspace>> = workspacesFlow
-        override val selectedWorkspaceId: Flow<String?> = selectedIdFlow
 
         override suspend fun fetchWorkspaces(): Result<List<Workspace>> {
             if (shouldFail) return Result.failure(AppException(AppErrorEnum.NO_INTERNET))

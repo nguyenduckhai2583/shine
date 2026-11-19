@@ -2,7 +2,7 @@ package com.example.shine.core.network
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.example.shine.core.datastore.SessionLocalDataSource
-import com.example.shine.core.datastore.SessionProvider
+import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.model.Session
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -76,11 +76,11 @@ class AuthInterceptorTest {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(TokenRefreshApi::class.java)
-        val sessionProvider = SessionProvider(local, scope)
+        val sessionManager = SessionManager(local, scope)
         client = OkHttpClient.Builder()
             .addInterceptor(
                 AuthInterceptor(
-                    sessionProvider = sessionProvider,
+                    sessionManager = sessionManager,
                     tokenRefresher = TokenRefresher(
                         api = refreshApi,
                         local = local,
@@ -109,7 +109,6 @@ class AuthInterceptorTest {
         assertEquals(200, call())
         val recorded = server.takeRequest()
         assertEquals("Bearer new", recorded.headers["Authorization"])
-        assertNull(recorded.headers["workspace-id"])
         assertNull(recorded.headers["x-workspace-id"])
         assertEquals(0, refreshCalls.get())
     }
@@ -121,7 +120,6 @@ class AuthInterceptorTest {
         assertEquals(200, call())
         val recorded = server.takeRequest()
         assertEquals("Bearer new", recorded.headers["Authorization"])
-        assertEquals("ws-123", recorded.headers["workspace-id"])
         assertEquals("ws-123", recorded.headers["x-workspace-id"])
     }
 

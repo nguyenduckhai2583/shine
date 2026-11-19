@@ -4,7 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import com.example.shine.core.common.network.NetworkMonitor
 import com.example.shine.core.data.repository.UserRepository
-import com.example.shine.core.data.session.SessionManager
+import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.data.session.SessionPreloader
 import com.example.shine.core.datastore.SessionLocalDataSource
 import com.example.shine.core.model.AuthState

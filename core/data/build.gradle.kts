@@ -18,9 +18,9 @@ android {
 
 dependencies {
     api(projects.core.model)
+    api(projects.core.datastore)
     implementation(projects.core.common)
     implementation(projects.core.database)
-    implementation(projects.core.datastore)
     implementation(projects.core.network)
 
     implementation(libs.androidx.core.ktx)

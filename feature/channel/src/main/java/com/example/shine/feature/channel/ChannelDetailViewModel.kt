@@ -5,6 +5,7 @@ import com.example.shine.core.common.R
 import com.example.shine.core.common.base.BaseViewModel
 import com.example.shine.core.common.ui.UiText
 import com.example.shine.core.data.repository.ChannelRepository
+import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.model.Channel
 import com.example.shine.core.shortcut.AppShortcutManager
 import dagger.assisted.Assisted
@@ -29,6 +30,7 @@ sealed interface ChannelDetailUiState {
 class ChannelDetailViewModel @AssistedInject constructor(
     @Assisted private val channelId: String,
     private val channelRepository: ChannelRepository,
+    private val sessionManager: SessionManager,
     private val shortcutManager: AppShortcutManager,
 ) : BaseViewModel() {
 
@@ -58,7 +60,8 @@ class ChannelDetailViewModel @AssistedInject constructor(
     }
 
     fun load() {
-        execute(task = { channelRepository.getChannel(channelId) })
+        val workspaceId = sessionManager.currentWorkspaceId().orEmpty()
+        execute(task = { channelRepository.getChannel(channelId, workspaceId) })
     }
 
     @AssistedFactory

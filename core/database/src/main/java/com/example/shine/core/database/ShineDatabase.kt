@@ -28,7 +28,7 @@ import com.example.shine.core.database.entity.WorkspaceEntity
         DirectMessageEntity::class,
         ConversationSettingEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class ShineDatabase : RoomDatabase() {

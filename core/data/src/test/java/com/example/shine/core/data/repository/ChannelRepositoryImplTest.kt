@@ -10,6 +10,7 @@ import com.example.shine.core.network.ChatApi
 import com.example.shine.core.network.dto.ChannelDto
 import com.example.shine.core.network.dto.CreateChannelRequestDto
 import com.example.shine.core.network.dto.DirectMessageDto
+import com.example.shine.core.model.Session
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -19,6 +20,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 
@@ -43,22 +45,23 @@ class ChannelRepositoryImplTest {
 
     @Test
     fun getChannels_fetchesFromApi_savesToRoom() = runTest {
-        val dto = ChannelDto(id = "c1", name = "General", position = 1L)
+        val dto = ChannelDto(id = "c1", name = "General")
         api.channelsToReturn = listOf(dto)
 
-        val result = repository.getChannels()
+        val result = repository.getChannels("ws-1")
         assertTrue(result.isSuccess)
 
-        val daoChannels = dao.getChannels()
+        val daoChannels = dao.getChannels("ws-1")
         assertEquals(1, daoChannels.size)
         assertEquals("c1", daoChannels[0].id)
         assertEquals("General", daoChannels[0].name)
+        assertEquals("ws-1", daoChannels[0].workspaceId)
     }
 
     @Test
     fun getChannels_apiFails_returnsFailure() = runTest {
         api.shouldFail = true
-        val result = repository.getChannels()
+        val result = repository.getChannels("ws-1")
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is AppException)
     }
@@ -68,28 +71,29 @@ class ChannelRepositoryImplTest {
         val dto = ChannelDto(id = "c1", name = "General Channel")
         api.conversationToReturn = dto
 
-        val result = repository.getChannel("c1")
+        val result = repository.getChannel("c1", "ws-1")
         assertTrue(result.isSuccess)
 
         val daoChannel = dao.getChannel("c1")
         assertEquals("c1", daoChannel?.id)
         assertEquals("General Channel", daoChannel?.name)
+        assertEquals("ws-1", daoChannel?.workspaceId)
     }
 
     @Test
     fun getChannel_apiFails_returnsFailure() = runTest {
         api.shouldFail = true
-        val result = repository.getChannel("c1")
+        val result = repository.getChannel("c1", "ws-1")
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is AppException)
     }
 
     @Test
     fun createChannel_savesPendingLocally_andSchedulesImmediateSync() = runTest {
-        val result = repository.createChannel("New Channel")
+        val result = repository.createChannel("New Channel", "ws-1")
         assertTrue(result.isSuccess)
 
-        val daoChannels = dao.getChannels()
+        val daoChannels = dao.getChannels("ws-1")
         assertEquals(1, daoChannels.size)
         assertEquals("New Channel", daoChannels[0].name)
         assertEquals(SyncStatus.PENDING, daoChannels[0].syncStatus)
@@ -99,22 +103,22 @@ class ChannelRepositoryImplTest {
 
     @Test
     fun getChannelsFlow_emitsFromRoom() = runTest {
-        val entity = ChannelEntity(localId = "c1", id = "c1", name = "Flow Channel")
+        val entity = ChannelEntity(localId = "c1", id = "c1", workspaceId = "ws-1", name = "Flow Channel")
         dao.upsertChannel(entity)
 
-        val emitted = repository.getChannelsFlow().first()
+        val emitted = repository.getChannelsFlow("ws-1").first()
         assertEquals(1, emitted.size)
         assertEquals("Flow Channel", emitted[0].name)
     }
 
     @Test
     fun getRecentChannels_returnsLatestChannelsLimited() = runTest {
-        dao.upsertChannel(ChannelEntity(localId = "c1", name = "Old", createdAt = 1000L))
-        dao.upsertChannel(ChannelEntity(localId = "c2", name = "Medium", createdAt = 2000L))
-        dao.upsertChannel(ChannelEntity(localId = "c3", name = "Newest", createdAt = 3000L))
-        dao.upsertChannel(ChannelEntity(localId = "c4", name = "Older", createdAt = 500L))
+        dao.upsertChannel(ChannelEntity(localId = "c1", workspaceId = "ws-1", name = "Old", createdAt = 1000L))
+        dao.upsertChannel(ChannelEntity(localId = "c2", workspaceId = "ws-1", name = "Medium", createdAt = 2000L))
+        dao.upsertChannel(ChannelEntity(localId = "c3", workspaceId = "ws-1", name = "Newest", createdAt = 3000L))
+        dao.upsertChannel(ChannelEntity(localId = "c4", workspaceId = "ws-1", name = "Older", createdAt = 500L))
 
-        val recent = repository.getRecentChannels(limit = 3)
+        val recent = repository.getRecentChannels("ws-1", limit = 3)
         assertEquals(3, recent.size)
         assertEquals("Newest", recent[0].name)
         assertEquals("Medium", recent[1].name)
@@ -123,9 +127,9 @@ class ChannelRepositoryImplTest {
 
     @Test
     fun clear_clearsRoom() = runTest {
-        dao.upsertChannel(ChannelEntity(localId = "c1", id = "c1", name = "Test"))
+        dao.upsertChannel(ChannelEntity(localId = "c1", id = "c1", workspaceId = "ws-1", name = "Test"))
         repository.clear()
-        assertTrue(dao.getChannels().isEmpty())
+        assertTrue(dao.getChannels("ws-1").isEmpty())
         verify(syncScheduler).cancelSync()
     }
 
@@ -135,12 +139,12 @@ class ChannelRepositoryImplTest {
         var createdChannelToReturn: ChannelDto? = null
         var shouldFail: Boolean = false
 
-        override suspend fun getChannels(): List<ChannelDto> {
+        override suspend fun getChannels(workspaceId: String?): List<ChannelDto> {
             if (shouldFail) throw AppException(AppErrorEnum.SERVER, "Server error")
             return channelsToReturn
         }
 
-        override suspend fun createChannel(request: CreateChannelRequestDto): ChannelDto {
+        override suspend fun createChannel(request: CreateChannelRequestDto, workspaceId: String?): ChannelDto {
             if (shouldFail) throw AppException(AppErrorEnum.SERVER, "Server error")
             return createdChannelToReturn ?: ChannelDto(id = "new_id", name = request.name)
         }
@@ -157,9 +161,9 @@ class ChannelRepositoryImplTest {
         val channelList = mutableListOf<ChannelEntity>()
         private val _flow = MutableStateFlow<List<ChannelEntity>>(emptyList())
 
-        override fun observeChannels(limit: Int): Flow<List<ChannelEntity>> =
+        override fun observeChannels(workspaceId: String, limit: Int): Flow<List<ChannelEntity>> =
             _flow.map { list ->
-                val sorted = list.sortedWith(
+                val sorted = list.filter { it.workspaceId == workspaceId }.sortedWith(
                     compareByDescending<ChannelEntity> { it.createdAt }
                         .thenByDescending { it.lastActivityAt }
                 )
@@ -168,8 +172,8 @@ class ChannelRepositoryImplTest {
 
         override fun observeChannel(idOrLocalId: String): Flow<ChannelEntity?> = error("Not implemented")
 
-        override suspend fun getChannels(limit: Int): List<ChannelEntity> {
-            val sorted = channelList.sortedWith(
+        override suspend fun getChannels(workspaceId: String, limit: Int): List<ChannelEntity> {
+            val sorted = channelList.filter { it.workspaceId == workspaceId }.sortedWith(
                 compareByDescending<ChannelEntity> { it.createdAt }
                     .thenByDescending { it.lastActivityAt }
             )
@@ -213,8 +217,8 @@ class ChannelRepositoryImplTest {
             _flow.value = channelList.toList()
         }
 
-        override suspend fun clearSyncedChannels(status: SyncStatus) {
-            channelList.removeAll { it.syncStatus == status }
+        override suspend fun clearSyncedChannels(workspaceId: String, status: SyncStatus) {
+            channelList.removeAll { it.workspaceId == workspaceId && it.syncStatus == status }
             _flow.value = channelList.toList()
         }
 
