@@ -27,10 +27,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -39,12 +37,10 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -126,16 +122,13 @@ fun CameraView(
             ProcessCameraProvider.getInstance(context).get()
         }.getOrNull() ?: return@LaunchedEffect
 
+        val hasBackCamera = runCatching { cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) }.getOrDefault(defaultValue = false)
+        val hasFrontCamera = runCatching { cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) }.getOrDefault(defaultValue = false)
+
         val detectedLenses = buildList {
-            if (runCatching { cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) }.getOrDefault(false)) {
-                add(CameraLens.BACK)
-            }
-            if (runCatching { cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) }.getOrDefault(false)) {
-                add(CameraLens.FRONT)
-            }
-            if (isEmpty()) {
-                add(CameraLens.BACK)
-            }
+            if (hasBackCamera) add(CameraLens.BACK)
+            if (hasFrontCamera) add(CameraLens.FRONT)
+            if (isEmpty()) add(CameraLens.BACK)
         }
         onAvailableLensesDetected(detectedLenses)
     }
@@ -162,112 +155,146 @@ fun CameraView(
             )
             boundCamera = camera
         } catch (_: Exception) {
-            val fallbackUseCase = if (uiState.captureMode == CameraCaptureMode.PHOTO) imageCapture else videoCapture
+            val fallbackUseCase =
+                if (uiState.captureMode == CameraCaptureMode.PHOTO) imageCapture else videoCapture
             runCatching {
-                val camera = cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, fallbackUseCase)
+                val camera = cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector,
+                    preview,
+                    fallbackUseCase
+                )
                 boundCamera = camera
             }
         }
     }
 
-    Column(
+    val onShutterClick = {
+        if (uiState.captureMode == CameraCaptureMode.PHOTO) {
+            takePhoto(context, imageCapture) { uri ->
+                onMediaCaptured(CapturedMedia.Photo(uri))
+            }
+        } else if (uiState.isRecording) {
+            activeRecording?.stop()
+            activeRecording = null
+            onRecordingStopped()
+        } else {
+            activeRecording = startVideoRecording(
+                context = context,
+                videoCapture = videoCapture,
+                hasAudioPermission = uiState.hasAudioPermission,
+            ) { uri, durationMs ->
+                onMediaCaptured(CapturedMedia.Video(uri, durationMs))
+            }
+            onRecordingStarted()
+        }
+    }
+
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black),
     ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-        ) {
-            surfaceRequest?.let { request ->
-                CameraXViewfinder(
-                    surfaceRequest = request,
+        val isLandscape = maxWidth > maxHeight
+
+        CameraScaffold(
+            isLandscape = isLandscape,
+            viewfinder = {
+                CameraViewfinder(
+                    surfaceRequest = surfaceRequest,
                     coordinateTransformer = coordinateTransformer,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput(boundCamera) {
-                            detectTransformGestures { _, _, zoom, _ ->
-                                boundCamera?.let { camera ->
-                                    val targetZoom = (currentZoomRatio * zoom).coerceIn(minZoomRatio, maxZoomRatio)
-                                    camera.cameraControl.setZoomRatio(targetZoom)
-                                }
-                            }
-                        }
-                        .pointerInput(boundCamera, surfaceRequest) {
-                            detectTapGestures { offset ->
-                                val req = surfaceRequest ?: return@detectTapGestures
-                                val camera = boundCamera ?: return@detectTapGestures
-                                val surfaceCoords = with(coordinateTransformer) { offset.transform() }
-                                val factory = SurfaceOrientedMeteringPointFactory(
-                                    req.resolution.width.toFloat(),
-                                    req.resolution.height.toFloat(),
+                    boundCamera = boundCamera,
+                    currentZoomRatio = currentZoomRatio,
+                    minZoomRatio = minZoomRatio,
+                    maxZoomRatio = maxZoomRatio,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            },
+            recordingIndicator = {
+                if (uiState.isRecording) {
+                    CameraRecordingIndicator(
+                        durationSeconds = uiState.recordingDurationSeconds,
+                    )
+                }
+            },
+            closeButton = {
+                CameraCloseButton(
+                    onClose = onClose,
+                    enabled = !uiState.isRecording,
+                )
+            },
+            modeSwitch = {
+                if (uiState.allowedModes.size > 1) {
+                    SegmentedModeSwitch(
+                        captureMode = uiState.captureMode,
+                        onModeSelected = onModeSelected,
+                        enabled = !uiState.isRecording,
+                    )
+                }
+            },
+            flipButton = {
+                CameraFlipButton(
+                    onFlipCamera = onFlipCamera,
+                    enabled = !uiState.isRecording,
+                )
+            },
+            shutterButton = {
+                CameraShutterButton(
+                    captureMode = uiState.captureMode,
+                    isRecording = uiState.isRecording,
+                    onClick = onShutterClick,
+                )
+            },
+        )
+    }
+}
+
+@Composable
+private fun CameraViewfinder(
+    surfaceRequest: SurfaceRequest?,
+    coordinateTransformer: MutableCoordinateTransformer,
+    boundCamera: Camera?,
+    currentZoomRatio: Float,
+    minZoomRatio: Float,
+    maxZoomRatio: Float,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier) {
+        surfaceRequest?.let { request ->
+            CameraXViewfinder(
+                surfaceRequest = request,
+                coordinateTransformer = coordinateTransformer,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(boundCamera) {
+                        detectTransformGestures { _, _, zoom, _ ->
+                            boundCamera?.let { camera ->
+                                val targetZoom = (currentZoomRatio * zoom).coerceIn(
+                                    minZoomRatio,
+                                    maxZoomRatio,
                                 )
-                                val point = factory.createPoint(surfaceCoords.x, surfaceCoords.y)
-                                val action = FocusMeteringAction.Builder(
-                                    point,
-                                    FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE,
-                                ).setAutoCancelDuration(3, TimeUnit.SECONDS).build()
-                                camera.cameraControl.startFocusAndMetering(action)
+                                camera.cameraControl.setZoomRatio(targetZoom)
                             }
-                        },
-                )
-            }
-
-            if (uiState.isRecording) {
-                CameraRecordingIndicator(
-                    durationSeconds = uiState.recordingDurationSeconds,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 40.dp),
-                )
-            }
-
-            CameraShutterButton(
-                captureMode = uiState.captureMode,
-                isRecording = uiState.isRecording,
-                onClick = {
-                    if (uiState.captureMode == CameraCaptureMode.PHOTO) {
-                        takePhoto(
-                            context = context,
-                            imageCapture = imageCapture,
-                            onPhotoSaved = { uri ->
-                                onMediaCaptured(CapturedMedia.Photo(uri))
-                            },
-                        )
-                    } else {
-                        if (uiState.isRecording) {
-                            activeRecording?.stop()
-                            activeRecording = null
-                            onRecordingStopped()
-                        } else {
-                            val recording = startVideoRecording(
-                                context = context,
-                                videoCapture = videoCapture,
-                                hasAudioPermission = uiState.hasAudioPermission,
-                                onVideoSaved = { uri, durationMs ->
-                                    onMediaCaptured(CapturedMedia.Video(uri, durationMs))
-                                },
-                            )
-                            activeRecording = recording
-                            onRecordingStarted()
                         }
                     }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 20.dp),
+                    .pointerInput(boundCamera, surfaceRequest) {
+                        detectTapGestures { offset ->
+                            val camera = boundCamera ?: return@detectTapGestures
+                            val surfaceCoords = with(coordinateTransformer) { offset.transform() }
+                            val factory = SurfaceOrientedMeteringPointFactory(
+                                request.resolution.width.toFloat(),
+                                request.resolution.height.toFloat(),
+                            )
+                            val point = factory.createPoint(surfaceCoords.x, surfaceCoords.y)
+                            val action = FocusMeteringAction.Builder(
+                                point,
+                                FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE,
+                            ).setAutoCancelDuration(3, TimeUnit.SECONDS).build()
+                            camera.cameraControl.startFocusAndMetering(action)
+                        }
+                    },
             )
         }
-
-        CameraBottomBar(
-            captureMode = uiState.captureMode,
-            allowedModes = uiState.allowedModes,
-            isRecording = uiState.isRecording,
-            onClose = onClose,
-            onModeSelected = onModeSelected,
-            onFlipCamera = onFlipCamera,
-        )
     }
 }
 
@@ -324,6 +351,7 @@ private fun startVideoRecording(
                     runCatching { videoFile.delete() }
                 }
             }
+
             else -> Unit
         }
     }

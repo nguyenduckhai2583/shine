@@ -14,11 +14,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -118,25 +116,27 @@ fun SegmentedModeSwitch(
                     .offset { IntOffset(x = indicatorOffset.roundToPx(), y = 0) }
                     .size(width = itemWidth, height = itemHeight)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF4A4A4A)),
+                    .background(Color.White),
             )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SegmentItem(
-                    title = "Camera",
+            Row {
+                ModeSwitchItem(
+                    title = "Photo",
                     isSelected = captureMode == CameraCaptureMode.PHOTO,
-                    onClick = { onModeSelected(CameraCaptureMode.PHOTO) },
-                    enabled = enabled,
+                    onClick = {
+                        if (enabled && captureMode != CameraCaptureMode.PHOTO) {
+                            onModeSelected(CameraCaptureMode.PHOTO)
+                        }
+                    },
                     modifier = Modifier.size(width = itemWidth, height = itemHeight),
                 )
-
-                SegmentItem(
+                ModeSwitchItem(
                     title = "Video",
                     isSelected = captureMode == CameraCaptureMode.VIDEO,
-                    onClick = { onModeSelected(CameraCaptureMode.VIDEO) },
-                    enabled = enabled,
+                    onClick = {
+                        if (enabled && captureMode != CameraCaptureMode.VIDEO) {
+                            onModeSelected(CameraCaptureMode.VIDEO)
+                        }
+                    },
                     modifier = Modifier.size(width = itemWidth, height = itemHeight),
                 )
             }
@@ -145,24 +145,21 @@ fun SegmentedModeSwitch(
 }
 
 @Composable
-private fun SegmentItem(
+private fun ModeSwitchItem(
     title: String,
     isSelected: Boolean,
     onClick: () -> Unit,
-    enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) Color(0xFFFFCC00) else Color.White.copy(alpha = 0.6f),
-        animationSpec = tween(durationMillis = 200),
-        label = "segmentContent",
+        targetValue = if (isSelected) Color.Black else Color.White.copy(alpha = 0.7f),
+        label = "contentColor",
     )
 
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .clickable(
-                enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,
@@ -179,53 +176,40 @@ private fun SegmentItem(
 }
 
 @Composable
-fun CameraBottomBar(
-    captureMode: CameraCaptureMode,
-    allowedModes: Set<CameraCaptureMode>,
-    isRecording: Boolean,
+fun CameraCloseButton(
     onClose: () -> Unit,
-    onModeSelected: (CameraCaptureMode) -> Unit,
-    onFlipCamera: () -> Unit,
+    enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 20.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+    IconButton(
+        onClick = onClose,
+        enabled = enabled,
+        modifier = modifier.size(48.dp),
     ) {
-        IconButton(
-            onClick = onClose,
-            enabled = !isRecording,
-            modifier = Modifier.size(48.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Close,
-                contentDescription = "Close",
-                tint = Color.White,
-            )
-        }
+        Icon(
+            imageVector = Icons.Filled.Close,
+            contentDescription = "Close",
+            tint = Color.White,
+        )
+    }
+}
 
-        if (allowedModes.size > 1) {
-            SegmentedModeSwitch(
-                captureMode = captureMode,
-                onModeSelected = onModeSelected,
-                enabled = !isRecording,
-            )
-        }
-
-        IconButton(
-            onClick = onFlipCamera,
-            enabled = !isRecording,
-            modifier = Modifier.size(48.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Cameraswitch,
-                contentDescription = "Switch Camera",
-                tint = Color.White,
-            )
-        }
+@Composable
+fun CameraFlipButton(
+    onFlipCamera: () -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    IconButton(
+        onClick = onFlipCamera,
+        enabled = enabled,
+        modifier = modifier.size(48.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Cameraswitch,
+            contentDescription = "Switch Camera",
+            tint = Color.White,
+        )
     }
 }
 
@@ -249,8 +233,8 @@ fun CameraShutterButton(
     )
 
     val innerColor by animateColorAsState(
-        targetValue = when {
-            captureMode == CameraCaptureMode.VIDEO -> Color(0xFFE53935)
+        targetValue = when (captureMode) {
+            CameraCaptureMode.VIDEO -> Color(0xFFE53935)
             else -> Color.White
         },
         label = "innerColor",

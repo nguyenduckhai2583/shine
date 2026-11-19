@@ -47,6 +47,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.example.shine.R
 import com.example.shine.feature.auth.SignInRoute
 import com.example.shine.feature.auth.SignInViewModel
+import com.example.shine.feature.camera.CameraCaptureMode
 import com.example.shine.feature.camera.CameraRoute
 import com.example.shine.feature.camera.CameraViewModel
 import com.example.shine.feature.camera.CaptureMediaPreviewRoute
@@ -173,12 +174,16 @@ private fun ShineNavDisplay(
     }
 
     val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>()
-    val isTwoPane = calculatePaneScaffoldDirective(currentWindowAdaptiveInfoV2()).maxHorizontalPartitions > 1
+    val isTwoPane =
+        calculatePaneScaffoldDirective(currentWindowAdaptiveInfoV2()).maxHorizontalPartitions > 1
     val detailOnBack: (() -> Unit)? = if (isTwoPane) null else backStack::popBack
 
-    val selectedChannelId = (backStack.lastOrNull { it is ChannelDetail } as? ChannelDetail)?.channelId
-    val selectedDmId = (backStack.lastOrNull { it is DirectMessageDetail } as? DirectMessageDetail)?.dmId
-    val selectedProjectId = (backStack.lastOrNull { it is PlanixDetail } as? PlanixDetail)?.projectId
+    val selectedChannelId =
+        (backStack.lastOrNull { it is ChannelDetail } as? ChannelDetail)?.channelId
+    val selectedDmId =
+        (backStack.lastOrNull { it is DirectMessageDetail } as? DirectMessageDetail)?.dmId
+    val selectedProjectId =
+        (backStack.lastOrNull { it is PlanixDetail } as? PlanixDetail)?.projectId
 
     NavDisplay(
         backStack = backStack,
@@ -239,9 +244,10 @@ private fun ShineNavDisplay(
             entry<ChannelDetail>(
                 metadata = ListDetailSceneStrategy.detailPane(),
             ) { key ->
-                val viewModel = hiltViewModel<ChannelDetailViewModel, ChannelDetailViewModel.Factory>(
-                    creationCallback = { factory -> factory.create(key.channelId) },
-                )
+                val viewModel =
+                    hiltViewModel<ChannelDetailViewModel, ChannelDetailViewModel.Factory>(
+                        creationCallback = { factory -> factory.create(key.channelId) },
+                    )
                 ChannelDetailRoute(
                     viewModel = viewModel,
                     onBack = detailOnBack,
@@ -253,9 +259,10 @@ private fun ShineNavDisplay(
             entry<DirectMessageDetail>(
                 metadata = ListDetailSceneStrategy.detailPane(),
             ) { key ->
-                val viewModel = hiltViewModel<DirectMessageDetailViewModel, DirectMessageDetailViewModel.Factory>(
-                    creationCallback = { factory -> factory.create(key.dmId) },
-                )
+                val viewModel =
+                    hiltViewModel<DirectMessageDetailViewModel, DirectMessageDetailViewModel.Factory>(
+                        creationCallback = { factory -> factory.create(key.dmId) },
+                    )
                 DirectMessageDetailRoute(
                     viewModel = viewModel,
                     onBack = detailOnBack,
@@ -267,9 +274,15 @@ private fun ShineNavDisplay(
             entry<ConversationSettings>(
                 metadata = ListDetailSceneStrategy.detailPane(),
             ) { key ->
-                val viewModel = hiltViewModel<ConversationSettingsViewModel, ConversationSettingsViewModel.Factory>(
-                    creationCallback = { factory -> factory.create(key.conversationId, key.type) },
-                )
+                val viewModel =
+                    hiltViewModel<ConversationSettingsViewModel, ConversationSettingsViewModel.Factory>(
+                        creationCallback = { factory ->
+                            factory.create(
+                                key.conversationId,
+                                key.type
+                            )
+                        },
+                    )
                 ConversationSettingsRoute(
                     viewModel = viewModel,
                     onBack = detailOnBack,
