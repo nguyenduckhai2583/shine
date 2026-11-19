@@ -18,6 +18,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.example.shine.core.designsystem.theme.MultiDevicePreviews
 import com.example.shine.core.designsystem.theme.ShineTheme
+import com.example.shine.core.model.AuthState
 import com.example.shine.core.model.Channel
 import com.example.shine.core.model.DirectMessage
 import com.example.shine.core.model.Workspace
@@ -46,6 +47,12 @@ fun MockListDetailNavDisplay(
 ) {
     val backStack = rememberNavBackStack(*initialKeys.toTypedArray())
     val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>()
+    val navigator = remember(backStack) {
+        AppNavigator(
+            backStack = backStack,
+            authState = { AuthState.Authenticated },
+        )
+    }
 
     val mockChannels = listOf(
         Channel(
@@ -94,14 +101,14 @@ fun MockListDetailNavDisplay(
     }
 
     val isTwoPane = calculatePaneScaffoldDirective(currentWindowAdaptiveInfoV2()).maxHorizontalPartitions > 1
-    val detailOnBack: (() -> Unit)? = if (isTwoPane) null else backStack::popBack
+    val detailOnBack: (() -> Unit)? = if (isTwoPane) null else { { navigator.pop() } }
 
-    val selectedChannelId = (backStack.lastOrNull { it is ChannelDetail } as? ChannelDetail)?.channelId
-    val selectedDmId = (backStack.lastOrNull { it is DirectMessageDetail } as? DirectMessageDetail)?.dmId
+    val selectedChannelId = (navigator.backStack.lastOrNull { it is ChannelDetail } as? ChannelDetail)?.channelId
+    val selectedDmId = (navigator.backStack.lastOrNull { it is DirectMessageDetail } as? DirectMessageDetail)?.dmId
 
     NavDisplay(
-        backStack = backStack,
-        onBack = { backStack.popBack() },
+        backStack = navigator.backStack,
+        onBack = { navigator.pop() },
         sceneStrategies = listOf(listDetailStrategy),
         modifier = modifier.fillMaxSize(),
         entryProvider = entryProvider {
@@ -122,13 +129,13 @@ fun MockListDetailNavDisplay(
                     onSelectTab = { tab ->
                         if (selectedTab != tab) {
                             selectedTab = tab
-                            backStack.popUntil(Home)
+                            navigator.popUntil(Home)
                         }
                     },
                     onPlanixClick = {},
                     onProfileClick = {
-                        backStack.popUntil(Home)
-                        backStack.add(Profile)
+                        navigator.popUntil(Home)
+                        navigator.navigate(Profile)
                     },
                     onSignOut = {},
                     onSelectWorkspace = {},
@@ -137,8 +144,8 @@ fun MockListDetailNavDisplay(
                             uiState = ChannelUiState(channels = mockChannels),
                             selectedChannelId = selectedChannelId,
                             onChannelClick = { channel ->
-                                backStack.popUntil(Home)
-                                backStack.add(ChannelDetail(channel.id))
+                                navigator.popUntil(Home)
+                                navigator.navigate(ChannelDetail(channel.id))
                             },
                             onRefresh = {},
                         )
@@ -148,8 +155,8 @@ fun MockListDetailNavDisplay(
                             uiState = DmsUiState(dms = mockDms),
                             selectedDmId = selectedDmId,
                             onDmClick = { dm ->
-                                backStack.popUntil(Home)
-                                backStack.add(DirectMessageDetail(dm.id))
+                                navigator.popUntil(Home)
+                                navigator.navigate(DirectMessageDetail(dm.id))
                             },
                             onRefresh = {},
                         )

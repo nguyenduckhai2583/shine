@@ -2,21 +2,23 @@ package com.example.shine.ui.navigation
 
 import android.content.Intent
 import android.net.Uri
-import com.example.shine.core.shortcut.AppShortcutManager
 import com.example.shine.core.common.network.NetworkMonitor
-import com.example.shine.core.model.Session
-import com.example.shine.core.model.SignInStatus
-import com.example.shine.core.model.User
-import com.example.shine.core.data.repository.AuthRepository
 import com.example.shine.core.data.repository.UserRepository
+import com.example.shine.core.data.session.SessionManager
+import com.example.shine.core.data.session.SessionPreloader
+import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.model.AuthState
+import com.example.shine.core.model.Session
+import com.example.shine.core.model.User
+import com.example.shine.core.shortcut.AppShortcutManager
 import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
 import com.example.shine.ui.navigation.deeplink.DeepLinkParser
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -29,20 +31,28 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import kotlin.coroutines.resume
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModelTest {
 
     private val sessionFlow = MutableStateFlow<Session?>(null)
-    private val authRepository = FakeAuthRepository(sessionFlow)
+    private lateinit var sessionLocal: SessionLocalDataSource
+    private lateinit var sessionManager: SessionManager
     private val userRepository = FakeUserRepository()
+    private lateinit var sessionPreloader: SessionPreloader
     private val deepLinkParser = DeepLinkParser()
     private val networkMonitor = FakeNetworkMonitor()
 
+    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testScope = CoroutineScope(testDispatcher)
+
     @Before
     fun setUp() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+        Dispatchers.setMain(testDispatcher)
+        sessionLocal = mock(SessionLocalDataSource::class.java)
+        `when`(sessionLocal.session).thenReturn(sessionFlow)
+        sessionManager = SessionManager(sessionLocal, testScope)
+        sessionPreloader = SessionPreloader(userRepository)
     }
 
     @After
@@ -51,7 +61,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun activeSession_fetchesUserProfileAndChatUsersOnLaunch() = runTest {
+    fun activeSession_fetchesUserProfileAndChatUsersOnLaunch() = runTest(testDispatcher) {
         val testSession = Session(
             token = "jwt-token",
             workspaceId = "workspace-1",
@@ -59,9 +69,9 @@ class AppViewModelTest {
         )
         sessionFlow.value = testSession
 
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
 
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+        backgroundScope.launch(testDispatcher) {
             viewModel.authState.collect {}
         }
 
@@ -71,64 +81,12 @@ class AppViewModelTest {
     }
 
     @Test
-    fun activeSession_staysInitializingUntilBothApisComplete() = runTest {
-        val testSession = Session(
-            token = "jwt-token",
-            workspaceId = "workspace-1",
-        )
-        sessionFlow.value = testSession
-
-        var completeProfileCall: (() -> Unit)? = null
-        var completeChatUsersCall: (() -> Unit)? = null
-        val deferredUserRepository = object : UserRepository {
-            override suspend fun getProfile(): Result<Unit> {
-                suspendCancellableCoroutine { cont ->
-                    completeProfileCall = {
-                        cont.resume(Unit)
-                    }
-                }
-                return Result.success(Unit)
-            }
-
-            override suspend fun getChatUsers(workspaceId: String?): Result<Unit> {
-                suspendCancellableCoroutine { cont ->
-                    completeChatUsersCall = {
-                        cont.resume(Unit)
-                    }
-                }
-                return Result.success(Unit)
-            }
-
-            override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()
-
-            override suspend fun clear() {}
-        }
-
-        val viewModel = AppViewModel(authRepository, deferredUserRepository, deepLinkParser, networkMonitor)
-
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.authState.collect {}
-        }
-
-        // Before any completes -> state is still Initializing
-        assertEquals(AuthState.Initializing, viewModel.authState.value)
-
-        // After getProfile completes, but chat users still pending -> state is still Initializing
-        completeProfileCall?.invoke()
-        assertEquals(AuthState.Initializing, viewModel.authState.value)
-
-        // After both complete -> state transitions to Authenticated
-        completeChatUsersCall?.invoke()
-        assertEquals(AuthState.Authenticated, viewModel.authState.value)
-    }
-
-    @Test
-    fun unauthenticated_doesNotFetchUserProfileOrChatUsers() = runTest {
+    fun unauthenticated_doesNotFetchUserProfileOrChatUsers() = runTest(testDispatcher) {
         sessionFlow.value = null
 
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
 
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+        backgroundScope.launch(testDispatcher) {
             viewModel.authState.collect {}
         }
 
@@ -138,13 +96,13 @@ class AppViewModelTest {
     }
 
     @Test
-    fun fetchErrors_areCaughtGracefully() = runTest {
+    fun fetchErrors_areCaughtGracefully() = runTest(testDispatcher) {
         userRepository.shouldFail = true
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
 
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
 
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+        backgroundScope.launch(testDispatcher) {
             viewModel.authState.collect {}
         }
 
@@ -154,12 +112,12 @@ class AppViewModelTest {
     }
 
     @Test
-    fun firstTimeSignIn_fetchesUserProfileAndChatUsersBeforeTransitioningToAuthenticated() = runTest {
+    fun firstTimeSignIn_fetchesUserProfileAndChatUsers() = runTest(testDispatcher) {
         sessionFlow.value = null
 
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
 
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+        backgroundScope.launch(testDispatcher) {
             viewModel.authState.collect {}
         }
 
@@ -176,12 +134,12 @@ class AppViewModelTest {
     }
 
     @Test
-    fun selectWorkspace_fetchesUserProfileAndChatUsersBeforeTransitioningToAuthenticated() = runTest {
+    fun selectWorkspace_fetchesUserProfileAndChatUsersWhenWorkspaceSelected() = runTest(testDispatcher) {
         sessionFlow.value = Session(token = "jwt-token", workspaceId = null)
 
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
 
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+        backgroundScope.launch(testDispatcher) {
             viewModel.authState.collect {}
         }
 
@@ -198,8 +156,38 @@ class AppViewModelTest {
     }
 
     @Test
-    fun handleIntent_profileShortcut_setsPendingDestination() = runTest {
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
+    fun selectWorkspace_doesNotResetSessionPreloader_butLogoutDoes() = runTest(testDispatcher) {
+        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
+
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
+
+        backgroundScope.launch(testDispatcher) {
+            viewModel.authState.collect {}
+        }
+
+        assertEquals(1, userRepository.getProfileCalls)
+
+        // Switching to select workspace does not reset session preloader
+        sessionFlow.value = Session(token = "jwt-token", workspaceId = null)
+        assertEquals(AuthState.SelectWorkspace, viewModel.authState.value)
+
+        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-2")
+        assertEquals(AuthState.Authenticated, viewModel.authState.value)
+        assertEquals(1, userRepository.getProfileCalls) // Still 1, not refetched
+
+        // Logout resets session preloader
+        sessionFlow.value = null
+        assertEquals(AuthState.Unauthenticated, viewModel.authState.value)
+
+        // Re-login fetches again
+        sessionFlow.value = Session(token = "new-jwt-token", workspaceId = "ws-1")
+        assertEquals(AuthState.Authenticated, viewModel.authState.value)
+        assertEquals(2, userRepository.getProfileCalls)
+    }
+
+    @Test
+    fun handleIntent_profileShortcut_setsPendingDestination() = runTest(testDispatcher) {
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
         val intent = mock(Intent::class.java)
         `when`(intent.getStringExtra(AppShortcutManager.EXTRA_SHORTCUT_ACTION)).thenReturn(AppShortcutManager.ACTION_OPEN_PROFILE)
 
@@ -209,8 +197,8 @@ class AppViewModelTest {
     }
 
     @Test
-    fun handleIntent_recentChannelShortcut_setsPendingDestination() = runTest {
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
+    fun handleIntent_recentChannelShortcut_setsPendingDestination() = runTest(testDispatcher) {
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
         val intent = mock(Intent::class.java)
         `when`(intent.getStringExtra(AppShortcutManager.EXTRA_SHORTCUT_ACTION)).thenReturn(AppShortcutManager.ACTION_OPEN_CHANNEL)
         `when`(intent.getStringExtra(AppShortcutManager.EXTRA_CHANNEL_ID)).thenReturn("channel-123")
@@ -221,9 +209,9 @@ class AppViewModelTest {
     }
 
     @Test
-    fun isOffline_tracksNetworkStatus() = runTest {
-        val viewModel = AppViewModel(authRepository, userRepository, deepLinkParser, networkMonitor)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+    fun isOffline_tracksNetworkStatus() = runTest(testDispatcher) {
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
+        backgroundScope.launch(testDispatcher) {
             viewModel.isOffline.collect {}
         }
 
@@ -234,11 +222,6 @@ class AppViewModelTest {
 
         networkMonitor.isOnlineFlow.value = true
         assertFalse(viewModel.isOffline.value)
-    }
-
-    private class FakeAuthRepository(override val session: Flow<Session?>) : AuthRepository {
-        override suspend fun signIn(email: String, password: String): Result<SignInStatus> = throw NotImplementedError()
-        override suspend fun signOut() {}
     }
 
     private class FakeUserRepository : UserRepository {

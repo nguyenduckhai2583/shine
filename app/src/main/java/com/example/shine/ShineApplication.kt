@@ -6,7 +6,7 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraXConfig
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.example.shine.core.data.session.SessionManager
+import com.example.shine.core.data.session.SessionCleaner
 import com.example.shine.core.data.sync.ChannelSyncScheduler
 import com.example.shine.core.network.TokenRefreshScheduler
 import com.example.shine.core.network.socket.SocketLifecycleManager
@@ -18,7 +18,7 @@ import javax.inject.Inject
 class ShineApplication : Application(), CameraXConfig.Provider, Configuration.Provider {
 
     @Inject
-    lateinit var sessionManager: SessionManager
+    lateinit var sessionCleaner: SessionCleaner
 
     @Inject
     lateinit var tokenRefreshScheduler: TokenRefreshScheduler
@@ -42,7 +42,7 @@ class ShineApplication : Application(), CameraXConfig.Provider, Configuration.Pr
 
     override fun onCreate() {
         super.onCreate()
-        sessionManager.start()
+        sessionCleaner.start()
         tokenRefreshScheduler.start()
         socketLifecycleManager.start()
         channelSyncScheduler.scheduleDailySync()

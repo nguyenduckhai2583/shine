@@ -8,7 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import com.example.shine.ui.navigation.AuthState
+import com.example.shine.core.model.AuthState
 import com.example.shine.ui.navigation.AppViewModel
 import com.example.shine.ui.navigation.ShineApp
 import com.example.shine.core.designsystem.theme.ShineTheme
