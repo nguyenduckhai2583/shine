@@ -44,7 +44,6 @@ class ChannelViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<ChannelUiState> = sessionManager.workspaceId
         .filterNotNull()
-        .distinctUntilChanged()
         .flatMapLatest { workspaceId ->
             combine(
                 channelRepository.getChannelsFlow(workspaceId),

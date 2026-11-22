@@ -1,16 +1,14 @@
 package com.example.shine.ui.navigation
 
 import android.content.Intent
-import android.net.Uri
 import androidx.lifecycle.viewModelScope
+import androidx.navigation3.runtime.NavKey
 import com.example.shine.core.common.base.BaseViewModel
 import com.example.shine.core.common.network.NetworkMonitor
 import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.data.session.SessionPreloader
 import com.example.shine.core.model.AuthState
-import com.example.shine.core.shortcut.AppShortcutManager
-import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
-import com.example.shine.ui.navigation.deeplink.DeepLinkParser
+import com.example.shine.ui.navigation.deeplink.AppDeepLinkHandler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,7 +23,7 @@ import javax.inject.Inject
 class AppViewModel @Inject constructor(
     sessionManager: SessionManager,
     private val sessionPreloader: SessionPreloader,
-    private val deepLinkParser: DeepLinkParser,
+    private val deepLinkHandler: AppDeepLinkHandler,
     networkMonitor: NetworkMonitor,
 ) : BaseViewModel() {
 
@@ -39,8 +37,8 @@ class AppViewModel @Inject constructor(
             initialValue = false,
         )
 
-    private val _pendingDestination = MutableStateFlow<DeepLinkDestination?>(null)
-    val pendingDestination: StateFlow<DeepLinkDestination?> = _pendingDestination.asStateFlow()
+    private val _deepLinkBackStack = MutableStateFlow<List<NavKey>?>(null)
+    val deepLinkBackStack: StateFlow<List<NavKey>?> = _deepLinkBackStack.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -55,32 +53,15 @@ class AppViewModel @Inject constructor(
         }
     }
 
-    fun handleDeepLink(uri: Uri?) {
-        val destination = deepLinkParser.parse(uri)
-        if (destination != null) {
-            _pendingDestination.value = destination
-        }
-    }
-
     fun handleIntent(intent: Intent?) {
         if (intent == null) return
-        val shortcutAction = intent.getStringExtra(AppShortcutManager.EXTRA_SHORTCUT_ACTION)
-        val channelId = intent.getStringExtra(AppShortcutManager.EXTRA_CHANNEL_ID)
-
-        when {
-            shortcutAction == AppShortcutManager.ACTION_OPEN_PROFILE -> {
-                _pendingDestination.value = DeepLinkDestination.Profile
-            }
-            !channelId.isNullOrBlank() -> {
-                _pendingDestination.value = DeepLinkDestination.Channel(channelId = channelId)
-            }
-            intent.data != null -> {
-                handleDeepLink(intent.data)
-            }
+        val backStack = deepLinkHandler.handleIntent(intent)
+        if (backStack != null) {
+            _deepLinkBackStack.value = backStack
         }
     }
 
     fun onDeepLinkConsumed() {
-        _pendingDestination.value = null
+        _deepLinkBackStack.value = null
     }
 }

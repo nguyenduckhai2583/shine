@@ -95,6 +95,12 @@ Shine/
   - Giữ toàn bộ `entryProvider { ... }`.
   - Khởi tạo `hiltViewModel()` trực tiếp ngay tại từng `entry<Key> { ... }` rồi truyền vào `Route(viewModel = viewModel, ...)`. Điều này bảo đảm ViewModel được gắn chính xác vào vòng đời của từng `NavEntry` và giải phóng tự động khi entry được pop khỏi backstack.
   - Các feature module hoàn toàn tinh gọn: chỉ cung cấp `Stateless Screen` và `Stateful Route(viewModel)`, không phải bọc thêm các entry provider hay phụ thuộc vào logic điều hướng của app.
+- **Kiến trúc DeepLink (Chuẩn AndroidX Navigation 3):**
+  - Sử dụng `UriDeepLinkMatcher` / `AppDeepLinkMatcher` và `BackStackMatcher<*, NavKey>`.
+  - Đăng ký matcher độc lập qua Dagger Hilt Multibindings `@IntoSet` trong `DeepLinkModule`.
+  - Tự động dựng synthetic back stack với `.withBackStack { matchResult -> listOf(Home, matchResult.key) }`.
+  - Điều phối tập trung qua `AppDeepLinkHandler` (hỗ trợ cả Web URL lẫn App Shortcuts via Intent Extras).
+  - `AppNavigator.setBackStack(...)` phối hợp với `AuthState.Authenticated` để đảm bảo Auth Guard trước khi hiển thị màn hình đích.
 
 ### 4.3. Quản lý Phiên (Session) & Xác thực
 - **SessionLocalDataSource:** Quản lý `Session` (Token, RefreshToken, User, WorkspaceId) lưu trữ bảo mật trong DataStore.
@@ -172,3 +178,24 @@ Shine/
 # Kiểm tra lint
 ./gradlew lintDebug
 ```
+
+---
+
+## 8. Quy trình Phát triển Đa Tác nhân (The 4-Agent Pipeline: SDD + TDD)
+
+Dự án Shine hỗ trợ quy trình phát triển tính năng theo chu trình 4 Agent chuyên biệt (Skill-based):
+
+```mermaid
+flowchart LR
+    PO[1. Yêu cầu tính năng] --> A1[spec-architect<br/>Lên Spec & Contract]
+    A1 -->|Duyệt Spec| A2[tdd-developer<br/>Red-Green Unit Tests]
+    A2 -->|Logic Pass 100%| A3[compose-implementer<br/>Vẽ UI Screen & Nav 3]
+    A3 -->|Hoàn thành code| A4[jetpack-code-reviewer<br/>Soi lỗi & Blocker]
+    A4 -->|Pass Review| Done[Merge Code Hoàn Hảo]
+```
+
+1. **`spec-architect` (SDD):** Thiết kế DTO, Room Entity, MVI `UiState`/`UiAction`, `NavKey`, Test Matrix. *Tuyệt đối không viết code logic.*
+2. **`tdd-developer` (TDD):** Viết Unit Test trước (Red) ➔ Triển khai logic ViewModel/Repository (Green) ➔ Chạy `./gradlew test...` đảm bảo pass 100%.
+3. **`compose-implementer` (UI):** Dựng Stateless Screen, Stateful Route, Material 3, animations, phase deferral, kết nối Navigation 3 vào `ShineApp.kt`. *Không tự ý sửa business logic.*
+4. **`jetpack-code-reviewer` (Audit):** Quét Git Diff, phát hiện vi phạm UDF, recomposition thừa, rò rỉ bộ nhớ, hoặc thiếu test trước khi commit/merge.
+

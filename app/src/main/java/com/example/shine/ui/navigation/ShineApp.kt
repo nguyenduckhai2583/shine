@@ -72,19 +72,18 @@ import com.example.shine.feature.profile.ProfileRoute
 import com.example.shine.feature.profile.ProfileViewModel
 import com.example.shine.feature.workspace.WorkspaceListRoute
 import com.example.shine.feature.workspace.WorkspaceListViewModel
-import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
 
 @Composable
 fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
     val authState by viewModel.authState.collectAsStateWithLifecycle()
-    val pendingDestination by viewModel.pendingDestination.collectAsStateWithLifecycle()
+    val deepLinkBackStack by viewModel.deepLinkBackStack.collectAsStateWithLifecycle()
     val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (authState != AuthState.Initializing) {
             ShineNavDisplay(
                 authState = authState,
-                pendingDestination = pendingDestination,
+                deepLinkBackStack = deepLinkBackStack,
                 onDeepLinkConsumed = viewModel::onDeepLinkConsumed,
             )
         }
@@ -131,17 +130,26 @@ fun ShineApp(viewModel: AppViewModel = hiltViewModel()) {
 @Composable
 private fun ShineNavDisplay(
     authState: AuthState,
-    pendingDestination: DeepLinkDestination?,
+    deepLinkBackStack: List<NavKey>?,
     onDeepLinkConsumed: () -> Unit,
 ) {
-    val initialKey = remember {
-        when (authState) {
-            AuthState.Authenticated -> Home
-            AuthState.SelectWorkspace -> WorkspaceList
-            else -> SignIn
-        }
+    val initialKeys = remember {
+        deepLinkBackStack?.filter { key ->
+            when (authState) {
+                AuthState.Authenticated -> key is AuthenticatedNavKey
+                AuthState.SelectWorkspace -> key is SelectWorkspaceNavKey
+                AuthState.Unauthenticated -> key is UnauthenticatedNavKey
+                AuthState.Initializing -> false
+            }
+        }?.takeIf { it.isNotEmpty() } ?: listOf(
+            when (authState) {
+                AuthState.Authenticated -> Home
+                AuthState.SelectWorkspace -> WorkspaceList
+                else -> SignIn
+            }
+        )
     }
-    val backStack = rememberNavBackStack(initialKey)
+    val backStack = rememberNavBackStack(*initialKeys.toTypedArray())
     val navigator = remember(backStack) {
         AppNavigator(
             backStack = backStack,
@@ -162,24 +170,10 @@ private fun ShineNavDisplay(
         }
     }
 
-    LaunchedEffect(pendingDestination, authState) {
-        if (authState == AuthState.Authenticated && pendingDestination != null) {
-            when (pendingDestination) {
-                is DeepLinkDestination.Channel -> {
-                    val targetKey = ChannelDetail(pendingDestination.channelId)
-                    if (navigator.currentKey != targetKey) {
-                        navigator.popUntil(Home)
-                        navigator.navigate(targetKey)
-                    }
-                    onDeepLinkConsumed()
-                }
-
-                is DeepLinkDestination.Profile -> {
-                    navigator.popUntil(Home)
-                    navigator.navigate(Profile)
-                    onDeepLinkConsumed()
-                }
-            }
+    LaunchedEffect(deepLinkBackStack) {
+        if (!deepLinkBackStack.isNullOrEmpty()) {
+            navigator.setBackStack(deepLinkBackStack)
+            onDeepLinkConsumed()
         }
     }
 

@@ -10,9 +10,7 @@ import com.example.shine.core.datastore.SessionLocalDataSource
 import com.example.shine.core.model.AuthState
 import com.example.shine.core.model.Session
 import com.example.shine.core.model.User
-import com.example.shine.core.shortcut.AppShortcutManager
-import com.example.shine.ui.navigation.deeplink.DeepLinkDestination
-import com.example.shine.ui.navigation.deeplink.DeepLinkParser
+import com.example.shine.ui.navigation.deeplink.AppDeepLinkHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,6 +24,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -40,7 +39,7 @@ class AppViewModelTest {
     private lateinit var sessionManager: SessionManager
     private val userRepository = FakeUserRepository()
     private lateinit var sessionPreloader: SessionPreloader
-    private val deepLinkParser = DeepLinkParser()
+    private val deepLinkHandler = mock(AppDeepLinkHandler::class.java)
     private val networkMonitor = FakeNetworkMonitor()
 
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -69,7 +68,7 @@ class AppViewModelTest {
         )
         sessionFlow.value = testSession
 
-        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
         backgroundScope.launch(testDispatcher) {
             viewModel.authState.collect {}
@@ -84,7 +83,7 @@ class AppViewModelTest {
     fun unauthenticated_doesNotFetchUserProfileOrChatUsers() = runTest(testDispatcher) {
         sessionFlow.value = null
 
-        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
         backgroundScope.launch(testDispatcher) {
             viewModel.authState.collect {}
@@ -100,7 +99,7 @@ class AppViewModelTest {
         userRepository.shouldFail = true
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
 
-        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
         backgroundScope.launch(testDispatcher) {
             viewModel.authState.collect {}
@@ -115,7 +114,7 @@ class AppViewModelTest {
     fun firstTimeSignIn_fetchesUserProfileAndChatUsers() = runTest(testDispatcher) {
         sessionFlow.value = null
 
-        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
         backgroundScope.launch(testDispatcher) {
             viewModel.authState.collect {}
@@ -137,7 +136,7 @@ class AppViewModelTest {
     fun selectWorkspace_fetchesUserProfileAndChatUsersWhenWorkspaceSelected() = runTest(testDispatcher) {
         sessionFlow.value = Session(token = "jwt-token", workspaceId = null)
 
-        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
         backgroundScope.launch(testDispatcher) {
             viewModel.authState.collect {}
@@ -159,7 +158,7 @@ class AppViewModelTest {
     fun selectWorkspace_doesNotResetSessionPreloader_butLogoutDoes() = runTest(testDispatcher) {
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
 
-        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
         backgroundScope.launch(testDispatcher) {
             viewModel.authState.collect {}
@@ -186,31 +185,76 @@ class AppViewModelTest {
     }
 
     @Test
-    fun handleIntent_profileShortcut_setsPendingDestination() = runTest(testDispatcher) {
-        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
+    fun handleIntent_profileShortcut_setsDeepLinkBackStack() = runTest(testDispatcher) {
+        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
         val intent = mock(Intent::class.java)
-        `when`(intent.getStringExtra(AppShortcutManager.EXTRA_SHORTCUT_ACTION)).thenReturn(AppShortcutManager.ACTION_OPEN_PROFILE)
+        `when`(deepLinkHandler.handleIntent(intent)).thenReturn(listOf(Home, Profile))
 
         viewModel.handleIntent(intent)
 
-        assertEquals(DeepLinkDestination.Profile, viewModel.pendingDestination.value)
+        assertEquals(listOf(Home, Profile), viewModel.deepLinkBackStack.value)
     }
 
     @Test
-    fun handleIntent_recentChannelShortcut_setsPendingDestination() = runTest(testDispatcher) {
-        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
+    fun handleIntent_nullIntent_doesNotSetDeepLinkBackStack() = runTest(testDispatcher) {
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
+
+        viewModel.handleIntent(null)
+
+        assertNull(viewModel.deepLinkBackStack.value)
+    }
+
+    @Test
+    fun handleIntent_recentChannelShortcut_setsDeepLinkBackStack() = runTest(testDispatcher) {
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
         val intent = mock(Intent::class.java)
-        `when`(intent.getStringExtra(AppShortcutManager.EXTRA_SHORTCUT_ACTION)).thenReturn(AppShortcutManager.ACTION_OPEN_CHANNEL)
-        `when`(intent.getStringExtra(AppShortcutManager.EXTRA_CHANNEL_ID)).thenReturn("channel-123")
+        `when`(deepLinkHandler.handleIntent(intent)).thenReturn(listOf(Home, ChannelDetail("channel-123")))
 
         viewModel.handleIntent(intent)
 
-        assertEquals(DeepLinkDestination.Channel("channel-123"), viewModel.pendingDestination.value)
+        assertEquals(listOf(Home, ChannelDetail("channel-123")), viewModel.deepLinkBackStack.value)
+    }
+
+    @Test
+    fun handleIntent_channelUriIntent_setsDeepLinkBackStack() = runTest(testDispatcher) {
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
+        val intent = mock(Intent::class.java)
+        `when`(deepLinkHandler.handleIntent(intent)).thenReturn(listOf(Home, ChannelDetail("general")))
+
+        viewModel.handleIntent(intent)
+
+        assertEquals(listOf(Home, ChannelDetail("general")), viewModel.deepLinkBackStack.value)
+    }
+
+    @Test
+    fun handleIntent_unmatchedIntent_doesNotSetDeepLinkBackStack() = runTest(testDispatcher) {
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
+        val intent = mock(Intent::class.java)
+        `when`(deepLinkHandler.handleIntent(intent)).thenReturn(null)
+
+        viewModel.handleIntent(intent)
+
+        assertNull(viewModel.deepLinkBackStack.value)
+    }
+
+    @Test
+    fun onDeepLinkConsumed_clearsDeepLinkBackStack() = runTest(testDispatcher) {
+        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
+        val intent = mock(Intent::class.java)
+        `when`(deepLinkHandler.handleIntent(intent)).thenReturn(listOf(Home, ChannelDetail("general")))
+
+        viewModel.handleIntent(intent)
+        assertEquals(listOf(Home, ChannelDetail("general")), viewModel.deepLinkBackStack.value)
+
+        viewModel.onDeepLinkConsumed()
+        assertNull(viewModel.deepLinkBackStack.value)
     }
 
     @Test
     fun isOffline_tracksNetworkStatus() = runTest(testDispatcher) {
-        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkParser, networkMonitor)
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
         backgroundScope.launch(testDispatcher) {
             viewModel.isOffline.collect {}
         }

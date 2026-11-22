@@ -74,4 +74,44 @@ class AppNavigatorTest {
         navigator.popUntil(Home)
         assertEquals(listOf(Home), navigator.backStack)
     }
+
+    @Test
+    fun setBackStack_respectsAuthRouteGuardsAndReplacesStack() {
+        val stack = mutableStateListOf<NavKey>(Home)
+        val navStack = NavBackStack(stack)
+        val navigator = AppNavigator(navStack, authState = { AuthState.Authenticated })
+
+        // When Authenticated, valid AuthenticatedNavKeys replace the stack
+        navigator.setBackStack(listOf(Home, ChannelDetail("c-1")))
+        assertEquals(listOf(Home, ChannelDetail("c-1")), navigator.backStack)
+
+        // Unauthenticated keys are filtered out by guard
+        navigator.setBackStack(listOf(SignIn, Home, Profile))
+        assertEquals(listOf(Home, Profile), navigator.backStack)
+    }
+
+    @Test
+    fun setBackStack_whenUnauthenticated_ignoresAuthenticatedKeys() {
+        val stack = mutableStateListOf<NavKey>(SignIn)
+        val navStack = NavBackStack(stack)
+        val navigator = AppNavigator(navStack, authState = { AuthState.Unauthenticated })
+
+        // When Unauthenticated, deep link trying to set AuthenticatedNavKeys is rejected
+        navigator.setBackStack(listOf(Home, ChannelDetail("c-1")))
+        assertEquals(listOf(SignIn), navigator.backStack)
+
+        // Allowed unauthenticated keys succeed
+        navigator.setBackStack(listOf(SignIn))
+        assertEquals(listOf(SignIn), navigator.backStack)
+    }
+
+    @Test
+    fun setBackStack_whenSelectWorkspace_ignoresAuthenticatedKeys() {
+        val stack = mutableStateListOf<NavKey>(WorkspaceList)
+        val navStack = NavBackStack(stack)
+        val navigator = AppNavigator(navStack, authState = { AuthState.SelectWorkspace })
+
+        navigator.setBackStack(listOf(Home, ChannelDetail("c-1")))
+        assertEquals(listOf(WorkspaceList), navigator.backStack)
+    }
 }

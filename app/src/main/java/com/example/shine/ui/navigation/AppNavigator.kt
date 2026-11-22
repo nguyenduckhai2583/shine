@@ -18,13 +18,7 @@ class AppNavigator(
      * Navigates to the specified [key] with route protection checks.
      */
     fun navigate(key: NavKey) {
-        val isAllowed = when (authState()) {
-            AuthState.Authenticated -> key is AuthenticatedNavKey
-            AuthState.SelectWorkspace -> key is SelectWorkspaceNavKey
-            AuthState.Unauthenticated -> key is UnauthenticatedNavKey
-            AuthState.Initializing -> false
-        }
-        if (isAllowed) {
+        if (isKeyAllowed(key, authState())) {
             backStack.add(key)
         }
     }
@@ -55,7 +49,26 @@ class AppNavigator(
         }
     }
 
+    /**
+     * Replaces the current backstack with [keys], validating each key with route protection checks.
+     */
+    fun setBackStack(keys: List<NavKey>) {
+        val currentAuth = authState()
+        val validKeys = keys.filter { key -> isKeyAllowed(key, currentAuth) }
+        if (validKeys.isNotEmpty()) {
+            backStack.clear()
+            backStack.addAll(validKeys)
+        }
+    }
+
     fun removeAll(predicate: (NavKey) -> Boolean) {
         backStack.removeAll(predicate)
+    }
+
+    private fun isKeyAllowed(key: NavKey, currentAuth: AuthState): Boolean = when (currentAuth) {
+        AuthState.Authenticated -> key is AuthenticatedNavKey
+        AuthState.SelectWorkspace -> key is SelectWorkspaceNavKey
+        AuthState.Unauthenticated -> key is UnauthenticatedNavKey
+        AuthState.Initializing -> false
     }
 }
