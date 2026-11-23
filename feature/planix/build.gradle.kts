@@ -20,5 +20,6 @@ dependencies {
     implementation(libs.androidx.paging.compose)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
 
+    testImplementation(projects.core.testing)
     testImplementation(libs.androidx.paging.testing)
 }

@@ -1,35 +1,22 @@
 package com.example.shine.feature.planix
 
-import androidx.paging.PagingData
 import app.cash.turbine.test
 import com.example.shine.core.common.ui.UiText
-import com.example.shine.core.data.repository.PlanixRepository
 import com.example.shine.core.model.Project
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
+import com.example.shine.core.testing.repository.FakePlanixRepository
+import com.example.shine.core.testing.rules.MainDispatcherRule
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class PlanixDetailViewModelTest {
 
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val planixRepository = FakePlanixRepository()
-
-    @Before
-    fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
-    @After
-    fun tearDown() = Dispatchers.resetMain()
 
     @Test
     fun uiState_whenProjectFound_emitsSuccess() = runTest {
@@ -65,18 +52,6 @@ class PlanixDetailViewModelTest {
                 (state as PlanixDetailUiState.Error).message,
             )
             cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    private class FakePlanixRepository : PlanixRepository {
-        val projectFlow = MutableStateFlow<Project?>(null)
-
-        override fun getProjectsPagingFlow(searchKey: String?): Flow<PagingData<Project>> {
-            return emptyFlow()
-        }
-
-        override fun getProjectById(id: String): Flow<Project?> {
-            return projectFlow
         }
     }
 }

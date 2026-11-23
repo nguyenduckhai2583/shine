@@ -3,37 +3,40 @@ package com.example.shine.feature.profile
 import android.net.Uri
 import app.cash.turbine.test
 import com.example.shine.core.common.ui.UiText
-import com.example.shine.core.data.repository.AuthRepository
-import com.example.shine.core.data.repository.UserRepository
 import com.example.shine.core.model.Session
-import com.example.shine.core.model.SignInStatus
 import com.example.shine.core.model.User
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
+import com.example.shine.core.testing.repository.FakeAuthRepository
+import com.example.shine.core.testing.repository.FakeUserRepository
+import com.example.shine.core.testing.rules.MainDispatcherRule
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.mockito.Mockito.mock
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModelTest {
 
-    private val authRepository = FakeAuthRepository()
-    private val userRepository = FakeUserRepository()
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
-    @Before
-    fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
-    @After
-    fun tearDown() = Dispatchers.resetMain()
+    private val initialSession = Session(
+        token = "token",
+        refreshToken = "refresh",
+        expireAt = null,
+        user = User(
+            id = "1",
+            email = "jane@example.com",
+            firstName = "Jane",
+            lastName = "Doe",
+            avatarUrl = "https://example.com/avatar.jpg",
+        ),
+        workspaceId = "ws-1",
+    )
+    private val authRepository = FakeAuthRepository(initialSession)
+    private val userRepository = FakeUserRepository().apply {
+        failureException = RuntimeException("Network upload failed")
+    }
 
     @Test
     fun init_observesUserSessionDisplayNameAndAvatar() = runTest {
@@ -86,58 +89,5 @@ class ProfileViewModelTest {
             assertEquals(UploadState.Idle, idleState.uploadState)
             cancelAndIgnoreRemainingEvents()
         }
-    }
-
-    private class FakeAuthRepository : AuthRepository {
-        val sessionFlow = MutableStateFlow(
-            Session(
-                token = "token",
-                refreshToken = "refresh",
-                expireAt = null,
-                user = User(
-                    id = "1",
-                    email = "jane@example.com",
-                    firstName = "Jane",
-                    lastName = "Doe",
-                    avatarUrl = "https://example.com/avatar.jpg",
-                ),
-                workspaceId = "ws-1",
-            )
-        )
-        override val session: Flow<Session?> = sessionFlow
-        override suspend fun signIn(email: String, password: String): Result<SignInStatus> = throw NotImplementedError()
-        override suspend fun signOut() {}
-    }
-
-    private class FakeUserRepository : UserRepository {
-        var lastUpdatedUri: Uri? = null
-        var shouldFail: Boolean = false
-
-        override suspend fun getProfile(): Result<Unit> {
-            if (shouldFail) {
-                return Result.failure(RuntimeException("Network request failed"))
-            }
-            return Result.success(Unit)
-        }
-
-        override suspend fun getChatUsers(workspaceId: String?): Result<Unit> = Result.success(Unit)
-
-        override suspend fun updateAvatar(uri: Uri): Result<User> {
-            lastUpdatedUri = uri
-            if (shouldFail) {
-                return Result.failure(RuntimeException("Network upload failed"))
-            }
-            return Result.success(
-                User(
-                    id = "1",
-                    email = "jane@example.com",
-                    firstName = "Jane",
-                    lastName = "Doe",
-                    avatarUrl = "https://example.com/new_avatar.jpg",
-                )
-            )
-        }
-
-        override suspend fun clear() {}
     }
 }

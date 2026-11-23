@@ -141,27 +141,19 @@ Shine/
 > Dự án duy trì độ phủ Unit Test rất cao. Mọi tính năng mới hoặc thay đổi logic trong ViewModel, Repository, DataSource, Interceptor đều **bắt buộc** phải có Unit Test đi kèm trong `app/src/test`.
 
 ### 6.1. Quy chuẩn Unit Test cho ViewModel
-- Sử dụng **Fake Repository Pattern** (triển khai Interface từ domain) thay vì lạm dụng mockito nếu không cần thiết.
-- Thiết lập Coroutine Test Dispatcher bằng `UnconfinedTestDispatcher()` trong `@Before` và `@After`:
+- Sử dụng **Fake Repository Pattern** từ module `:core:testing` (`com.example.shine.core.testing.repository.Fake*Repository`) thay vì duplicate code fake cục bộ hoặc lạm dụng mockito nếu không cần thiết.
+- Tự động quản lý Coroutine Test Dispatcher bằng `MainDispatcherRule` (`com.example.shine.core.testing.rules.MainDispatcherRule`) thay cho việc viết `@Before`/`@After` thủ công:
   ```kotlin
-  @Before
-  fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
-  @After
-  fun tearDown() = Dispatchers.resetMain()
+  @get:Rule
+  val mainDispatcherRule = MainDispatcherRule()
   ```
 - Kích hoạt thu thập StateFlow trong background scope hoặc sử dụng **Turbine** (`app.cash.turbine.test`) để kiểm tra toàn bộ chuỗi emission theo thời gian:
   ```kotlin
-  // Cách 1: Dùng Turbine (Khuyến nghị cho StateFlow / Cold Flow)
+  // Khuyến nghị dùng Turbine cho StateFlow / Cold Flow
   viewModel.uiState.test {
       val item = awaitItem()
       assertEquals(expected, item)
       cancelAndIgnoreRemainingEvents()
-  }
-
-  // Cách 2: Dùng backgroundScope thủ công
-  backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-      viewModel.uiState.collect {}
   }
   ```
 

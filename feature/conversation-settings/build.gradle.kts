@@ -17,4 +17,6 @@ dependencies {
 
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+
+    testImplementation(projects.core.testing)
 }

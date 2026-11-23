@@ -4,35 +4,33 @@ import android.content.Intent
 import android.net.Uri
 import app.cash.turbine.test
 import com.example.shine.core.common.network.NetworkMonitor
-import com.example.shine.core.data.repository.UserRepository
 import com.example.shine.core.data.session.SessionPreloader
 import com.example.shine.core.datastore.SessionLocalDataSource
 import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.model.AuthState
 import com.example.shine.core.model.Session
 import com.example.shine.core.model.User
+import com.example.shine.core.testing.repository.FakeUserRepository
+import com.example.shine.core.testing.rules.MainDispatcherRule
 import com.example.shine.ui.navigation.deeplink.AppDeepLinkHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModelTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     private val sessionFlow = MutableStateFlow<Session?>(null)
     private lateinit var sessionLocal: SessionLocalDataSource
@@ -42,23 +40,16 @@ class AppViewModelTest {
     private val deepLinkHandler = mock(AppDeepLinkHandler::class.java)
     private val networkMonitor = FakeNetworkMonitor()
 
-    private val testDispatcher = UnconfinedTestDispatcher()
-    private val testScope = CoroutineScope(testDispatcher)
-
     @Before
     fun setUp() {
-        Dispatchers.setMain(testDispatcher)
         sessionLocal = mock(SessionLocalDataSource::class.java)
         `when`(sessionLocal.session).thenReturn(sessionFlow)
-        sessionManager = SessionManager(sessionLocal, testScope)
+        sessionManager = SessionManager(sessionLocal, CoroutineScope(mainDispatcherRule.testDispatcher))
         sessionPreloader = SessionPreloader(userRepository)
     }
 
-    @After
-    fun tearDown() = Dispatchers.resetMain()
-
     @Test
-    fun activeSession_fetchesUserProfileAndChatUsersOnLaunch() = runTest(testDispatcher) {
+    fun activeSession_fetchesUserProfileAndChatUsersOnLaunch() = runTest {
         val testSession = Session(
             token = "jwt-token",
             workspaceId = "workspace-1",
@@ -77,7 +68,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun unauthenticated_doesNotFetchUserProfileOrChatUsers() = runTest(testDispatcher) {
+    fun unauthenticated_doesNotFetchUserProfileOrChatUsers() = runTest {
         sessionFlow.value = null
 
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
@@ -91,7 +82,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun fetchErrors_areCaughtGracefully() = runTest(testDispatcher) {
+    fun fetchErrors_areCaughtGracefully() = runTest {
         userRepository.shouldFail = true
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
 
@@ -106,7 +97,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun firstTimeSignIn_fetchesUserProfileAndChatUsers() = runTest(testDispatcher) {
+    fun firstTimeSignIn_fetchesUserProfileAndChatUsers() = runTest {
         sessionFlow.value = null
 
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
@@ -127,7 +118,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun selectWorkspace_fetchesUserProfileAndChatUsersWhenWorkspaceSelected() = runTest(testDispatcher) {
+    fun selectWorkspace_fetchesUserProfileAndChatUsersWhenWorkspaceSelected() = runTest {
         sessionFlow.value = Session(token = "jwt-token", workspaceId = null)
 
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
@@ -148,7 +139,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun selectWorkspace_doesNotResetSessionPreloader_butLogoutDoes() = runTest(testDispatcher) {
+    fun selectWorkspace_doesNotResetSessionPreloader_butLogoutDoes() = runTest {
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
 
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
@@ -178,7 +169,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun handleIntent_profileShortcut_setsDeepLinkBackStack() = runTest(testDispatcher) {
+    fun handleIntent_profileShortcut_setsDeepLinkBackStack() = runTest {
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
         val intent = mock(Intent::class.java)
@@ -190,7 +181,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun handleIntent_nullIntent_doesNotSetDeepLinkBackStack() = runTest(testDispatcher) {
+    fun handleIntent_nullIntent_doesNotSetDeepLinkBackStack() = runTest {
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
@@ -200,7 +191,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun handleIntent_unhandledIntent_doesNotSetDeepLinkBackStack() = runTest(testDispatcher) {
+    fun handleIntent_unhandledIntent_doesNotSetDeepLinkBackStack() = runTest {
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
         val intent = mock(Intent::class.java)
@@ -212,7 +203,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun handleIntent_webUriChannel_setsChannelDetailBackStack() = runTest(testDispatcher) {
+    fun handleIntent_webUriChannel_setsChannelDetailBackStack() = runTest {
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
         val uri = mock(Uri::class.java)
@@ -227,7 +218,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun onDeepLinkConsumed_clearsDeepLinkBackStack() = runTest(testDispatcher) {
+    fun onDeepLinkConsumed_clearsDeepLinkBackStack() = runTest {
         sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
         val intent = mock(Intent::class.java)
@@ -241,7 +232,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun isOffline_tracksNetworkStatus() = runTest(testDispatcher) {
+    fun isOffline_tracksNetworkStatus() = runTest {
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
         viewModel.isOffline.test {
             assertFalse(awaitItem())
@@ -253,27 +244,6 @@ class AppViewModelTest {
             assertFalse(awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
-    }
-
-    private class FakeUserRepository : UserRepository {
-        var getProfileCalls = 0
-        var getChatUsersCalls = 0
-        var shouldFail = false
-
-        override suspend fun getProfile(): Result<Unit> {
-            getProfileCalls++
-            if (shouldFail) return Result.failure(RuntimeException("Network error"))
-            return Result.success(Unit)
-        }
-
-        override suspend fun getChatUsers(workspaceId: String?): Result<Unit> {
-            getChatUsersCalls++
-            if (shouldFail) return Result.failure(RuntimeException("Network error"))
-            return Result.success(Unit)
-        }
-
-        override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()
-        override suspend fun clear() {}
     }
 
     private class FakeNetworkMonitor : NetworkMonitor {

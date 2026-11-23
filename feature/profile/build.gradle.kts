@@ -18,5 +18,6 @@ dependencies {
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
 
+    testImplementation(projects.core.testing)
     testImplementation(projects.core.model)
 }

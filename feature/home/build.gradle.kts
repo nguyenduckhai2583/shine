@@ -19,4 +19,6 @@ dependencies {
     implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
     implementation(libs.coil.compose)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+
+    testImplementation(projects.core.testing)
 }

@@ -35,6 +35,7 @@ dependencies {
 
     implementation(libs.kotlinx.serialization.json)
 
+    testImplementation(projects.core.testing)
     testImplementation(libs.androidx.paging.testing)
     testImplementation(libs.androidx.datastore.preferences)
     testImplementation(libs.okhttp.mockwebserver)

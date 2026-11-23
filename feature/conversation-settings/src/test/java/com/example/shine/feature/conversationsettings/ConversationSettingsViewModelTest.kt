@@ -2,41 +2,53 @@ package com.example.shine.feature.conversationsettings
 
 import app.cash.turbine.test
 import com.example.shine.core.common.ui.UiText
-import com.example.shine.core.data.repository.ChannelRepository
 import com.example.shine.core.data.repository.ConversationSettingRepository
-import com.example.shine.core.data.repository.DirectMessageRepository
 import com.example.shine.core.model.Channel
 import com.example.shine.core.model.ConversationSetting
 import com.example.shine.core.model.DirectMessage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.example.shine.core.testing.repository.FakeChannelRepository
+import com.example.shine.core.testing.repository.FakeDirectMessageRepository
+import com.example.shine.core.testing.rules.MainDispatcherRule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class ConversationSettingsViewModelTest {
 
-    private val channelRepository = FakeChannelRepository()
-    private val directMessageRepository = FakeDirectMessageRepository()
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    private val channelRepository = FakeChannelRepository(
+        initialChannels = listOf(
+            Channel(
+                id = "channel-1",
+                name = "general",
+                isPrivate = false,
+                isEncrypted = false,
+                isDefault = true,
+                categoryName = null,
+                createdAt = null,
+                lastActivityAt = null,
+            ),
+        ),
+    )
+    private val directMessageRepository = FakeDirectMessageRepository(
+        initialDms = listOf(
+            DirectMessage(
+                id = "dm-1",
+                name = "Alice Smith",
+                time = null,
+                type = "direct",
+            ),
+        ),
+    )
     private val settingRepository = FakeConversationSettingRepository()
-
-    @Before
-    fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
-    @After
-    fun tearDown() = Dispatchers.resetMain()
 
     @Test
     fun loadChannel_success_showsChannelInfo() = runTest {
@@ -103,49 +115,6 @@ class ConversationSettingsViewModelTest {
             assertTrue(awaitItem().isNotificationEnabled)
             cancelAndIgnoreRemainingEvents()
         }
-    }
-
-    private class FakeChannelRepository : ChannelRepository {
-        val channelFlow = MutableStateFlow<Channel?>(
-            Channel(
-                id = "channel-1",
-                name = "general",
-                isPrivate = false,
-                isEncrypted = false,
-                isDefault = true,
-                categoryName = null,
-                createdAt = null,
-                lastActivityAt = null,
-            ),
-        )
-
-        override suspend fun getChannels(workspaceId: String): Result<Unit> = Result.success(Unit)
-        override suspend fun getRecentChannels(workspaceId: String, limit: Int): List<Channel> = emptyList()
-        override suspend fun getChannel(id: String, workspaceId: String): Result<Unit> = Result.success(Unit)
-        override suspend fun createChannel(name: String, workspaceId: String): Result<Unit> = Result.success(Unit)
-        override suspend fun deleteChannel(channelId: String): Result<Unit> = Result.success(Unit)
-        override fun getChannelsFlow(workspaceId: String, limit: Int): Flow<List<Channel>> = emptyFlow()
-        override fun getChannelFlow(id: String): Flow<Channel?> = channelFlow
-        override suspend fun onChannelCreated(channel: Channel, workspaceId: String) {}
-        override suspend fun clear() {}
-    }
-
-    private class FakeDirectMessageRepository : DirectMessageRepository {
-        val dmFlow = MutableStateFlow<DirectMessage?>(
-            DirectMessage(
-                id = "dm-1",
-                name = "Alice Smith",
-                time = null,
-                type = "direct",
-            ),
-        )
-
-        override suspend fun getDirectMessages(): Result<Unit> = Result.success(Unit)
-        override suspend fun getDirectMessage(id: String): Result<Unit> = Result.success(Unit)
-        override fun getDirectMessagesFlow(): Flow<List<DirectMessage>> = emptyFlow()
-        override fun getDirectMessageFlow(id: String): Flow<DirectMessage?> = dmFlow
-        override suspend fun onDirectMessageCreated(message: DirectMessage) {}
-        override suspend fun clear() {}
     }
 
     private class FakeConversationSettingRepository : ConversationSettingRepository {

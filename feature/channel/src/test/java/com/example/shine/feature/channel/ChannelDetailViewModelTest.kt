@@ -1,31 +1,28 @@
 package com.example.shine.feature.channel
 
 import app.cash.turbine.test
-import com.example.shine.core.data.repository.ChannelRepository
 import com.example.shine.core.datastore.SessionLocalDataSource
 import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.model.Channel
 import com.example.shine.core.model.Session
 import com.example.shine.core.shortcut.FakeAppShortcutManager
+import com.example.shine.core.testing.repository.FakeChannelRepository
+import com.example.shine.core.testing.rules.MainDispatcherRule
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.mock
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class ChannelDetailViewModelTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     private val repository = FakeChannelRepository()
     private val shortcutManager = FakeAppShortcutManager()
@@ -36,20 +33,16 @@ class ChannelDetailViewModelTest {
             expireAt = null,
             user = null,
             workspaceId = "ws-1",
-        )
+        ),
     )
     private lateinit var sessionManager: SessionManager
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
         val sessionLocal = mock(SessionLocalDataSource::class.java)
         `when`(sessionLocal.session).thenReturn(sessionFlow)
-        sessionManager = SessionManager(sessionLocal, CoroutineScope(UnconfinedTestDispatcher()))
+        sessionManager = SessionManager(sessionLocal, CoroutineScope(mainDispatcherRule.testDispatcher))
     }
-
-    @After
-    fun tearDown() = Dispatchers.resetMain()
 
     @Test
     fun load_success_showsChannelAndUpdatesShortcut() = runTest {
@@ -92,28 +85,6 @@ class ChannelDetailViewModelTest {
             assertEquals("1", shortcutManager.lastUpdatedChannelId)
             cancelAndIgnoreRemainingEvents()
         }
-    }
-
-    private class FakeChannelRepository : ChannelRepository {
-        var lastId: String? = null
-        var autoUpdateFlowOnGetChannel = true
-        val channelFlow = MutableStateFlow<Channel?>(null)
-
-        override suspend fun getChannels(workspaceId: String): Result<Unit> = Result.success(Unit)
-        override suspend fun getRecentChannels(workspaceId: String, limit: Int): List<Channel> = emptyList()
-        override suspend fun getChannel(id: String, workspaceId: String): Result<Unit> {
-            lastId = id
-            if (autoUpdateFlowOnGetChannel) {
-                channelFlow.value = CHANNEL
-            }
-            return Result.success(Unit)
-        }
-        override suspend fun createChannel(name: String, workspaceId: String): Result<Unit> = Result.success(Unit)
-        override suspend fun deleteChannel(channelId: String): Result<Unit> = Result.success(Unit)
-        override fun getChannelsFlow(workspaceId: String, limit: Int): Flow<List<Channel>> = throw NotImplementedError()
-        override fun getChannelFlow(id: String): Flow<Channel?> = channelFlow
-        override suspend fun onChannelCreated(channel: Channel, workspaceId: String) {}
-        override suspend fun clear() {}
     }
 
     companion object {

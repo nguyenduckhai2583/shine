@@ -1,6 +1,6 @@
 package com.example.shine.core.domain
 
-import com.example.shine.core.data.repository.AuthRepository
+import com.example.shine.core.testing.repository.FakeAuthRepository
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
@@ -26,15 +26,5 @@ class SignOutUseCaseTest {
     fun invoke_delegatesSignOutToAuthRepository() = runTest(testDispatcher) {
         useCase()
         assertTrue(authRepository.signOutCalled)
-    }
-
-    private class FakeAuthRepository : AuthRepository {
-        var signOutCalled = false
-        override val session = kotlinx.coroutines.flow.flowOf(null)
-        override suspend fun signIn(email: String, password: String) =
-            throw UnsupportedOperationException()
-        override suspend fun signOut() {
-            signOutCalled = true
-        }
     }
 }

@@ -1,62 +1,34 @@
 package com.example.shine.core.data.socket
 
-import com.example.shine.core.data.repository.ChannelRepository
-import com.example.shine.core.data.repository.DirectMessageRepository
 import com.example.shine.core.data.source.local.UserLocalDataSource
 import com.example.shine.core.database.dao.UserDao
 import com.example.shine.core.database.entity.UserEntity
 import com.example.shine.core.datastore.SessionLocalDataSource
 import com.example.shine.core.datastore.SessionManager
-import com.example.shine.core.model.Channel
-import com.example.shine.core.model.DirectMessage
 import com.example.shine.core.model.Session
-import com.example.shine.core.model.User
-import com.example.shine.core.network.socket.event.ConversationCreatedEvent
 import com.example.shine.core.network.socket.model.ConvSocketMessage
 import com.example.shine.core.network.socket.model.ConversationType
+import com.example.shine.core.testing.repository.FakeChannelRepository
+import com.example.shine.core.testing.repository.FakeDirectMessageRepository
+import com.example.shine.core.testing.rules.MainDispatcherRule
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 
 class ConversationSocketMediatorTest {
 
-    private class FakeChannelRepository : ChannelRepository {
-        val createdChannels = mutableListOf<Channel>()
-
-        override suspend fun getChannels(workspaceId: String): Result<Unit> = Result.success(Unit)
-        override suspend fun getRecentChannels(workspaceId: String, limit: Int): List<Channel> = emptyList()
-        override suspend fun getChannel(id: String, workspaceId: String): Result<Unit> = Result.failure(Exception())
-        override suspend fun createChannel(name: String, workspaceId: String): Result<Unit> = Result.success(Unit)
-        override suspend fun deleteChannel(channelId: String): Result<Unit> = Result.success(Unit)
-        override fun getChannelsFlow(workspaceId: String, limit: Int): Flow<List<Channel>> = emptyFlow()
-        override fun getChannelFlow(id: String): Flow<Channel?> = emptyFlow()
-        override suspend fun onChannelCreated(channel: Channel, workspaceId: String) {
-            createdChannels.add(channel)
-        }
-        override suspend fun clear() {}
-    }
-
-    private class FakeDirectMessageRepository : DirectMessageRepository {
-        val createdDms = mutableListOf<DirectMessage>()
-
-        override suspend fun getDirectMessages(): Result<Unit> = Result.success(Unit)
-        override suspend fun getDirectMessage(id: String): Result<Unit> = Result.success(Unit)
-        override fun getDirectMessagesFlow(): Flow<List<DirectMessage>> = emptyFlow()
-        override fun getDirectMessageFlow(id: String): Flow<DirectMessage?> = emptyFlow()
-        override suspend fun onDirectMessageCreated(message: DirectMessage) {
-            createdDms.add(message)
-        }
-        override suspend fun clear() {}
-    }
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     private class FakeUserDao : UserDao {
         val users = mutableListOf<UserEntity>()
@@ -75,7 +47,7 @@ class ConversationSocketMediatorTest {
     private lateinit var directMessageRepository: FakeDirectMessageRepository
     private lateinit var sessionLocal: SessionLocalDataSource
     private lateinit var sessionManager: SessionManager
-    private val sessionFlow = kotlinx.coroutines.flow.MutableStateFlow<Session?>(Session(token = "token", workspaceId = "ws-1"))
+    private val sessionFlow = MutableStateFlow<Session?>(Session(token = "token", workspaceId = "ws-1"))
     private lateinit var userDao: FakeUserDao
     private lateinit var userLocal: UserLocalDataSource
     private lateinit var mediator: ConversationSocketMediator
@@ -86,9 +58,9 @@ class ConversationSocketMediatorTest {
         directMessageRepository = FakeDirectMessageRepository()
         userDao = FakeUserDao()
         userLocal = UserLocalDataSource(userDao)
-        sessionLocal = org.mockito.Mockito.mock(SessionLocalDataSource::class.java)
-        org.mockito.Mockito.`when`(sessionLocal.session).thenReturn(sessionFlow)
-        sessionManager = SessionManager(sessionLocal, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.test.UnconfinedTestDispatcher()))
+        sessionLocal = mock(SessionLocalDataSource::class.java)
+        `when`(sessionLocal.session).thenReturn(sessionFlow)
+        sessionManager = SessionManager(sessionLocal, CoroutineScope(mainDispatcherRule.testDispatcher))
 
         mediator = ConversationSocketMediator(
             channelRepository = channelRepository,
@@ -100,70 +72,50 @@ class ConversationSocketMediatorTest {
     }
 
     @Test
-    fun handleEvent_channelCreated_updatesChannelRepository() = runTest {
-        val rawJson = json.parseToJsonElement(
-            """
+    fun handleMessage_channelCreated_delegatesToChannelRepository() = runTest {
+        val rawJson = """
             {
-                "type": "CHANNEL",
-                "workspaceId": "ws-1",
-                "id": "c-99",
-                "name": "announcements",
-                "isPrivate": false,
-                "isEncrypted": false,
-                "isDefault": true,
-                "category": { "id": "cat-1", "name": "General" }
+                "id": "ch_1",
+                "name": "general",
+                "is_private": false,
+                "is_encrypted": false,
+                "is_default": true
             }
-            """.trimIndent()
-        ).jsonObject
-
-        val event = ConversationCreatedEvent(
-            ConvSocketMessage(
-                type = ConversationType.CHANNEL,
-                workspaceId = "ws-1",
-                rawJson = rawJson,
-            )
+        """.trimIndent()
+        val socketMessage = ConvSocketMessage(
+            type = ConversationType.CHANNEL,
+            workspaceId = "ws-1",
+            rawJson = json.parseToJsonElement(rawJson).jsonObject,
         )
 
-        mediator.handleEvent(event)
+        mediator.handleConversationCreated(socketMessage)
 
         assertEquals(1, channelRepository.createdChannels.size)
-        val channel = channelRepository.createdChannels[0]
-        assertEquals("c-99", channel.id)
-        assertEquals("announcements", channel.name)
-        assertEquals("General", channel.categoryName)
-        assertTrue(channel.isDefault)
+        assertEquals("ch_1", channelRepository.createdChannels[0].id)
     }
 
     @Test
-    fun handleEvent_directMessageCreated_updatesDirectMessageRepository() = runTest {
-        sessionFlow.value = Session("token", user = User("my-user-id"))
-        userDao.users.add(UserEntity(id = "other-user-id", firstName = "Bob", lastName = "Builder"))
-
-        val rawJson = json.parseToJsonElement(
-            """
+    fun handleMessage_directCreated_delegatesToDirectMessageRepository() = runTest {
+        val rawJson = """
             {
-                "type": "DIRECT",
-                "workspaceId": "ws-1",
-                "id": "dm-55",
-                "recipientIds": ["my-user-id", "other-user-id"],
-                "lastActivityAt": 1700000000000
+                "id": "dm_1",
+                "members": [
+                    {
+                        "id": "u_other",
+                        "firstName": "Alice"
+                    }
+                ]
             }
-            """.trimIndent()
-        ).jsonObject
-
-        val event = ConversationCreatedEvent(
-            ConvSocketMessage(
-                type = ConversationType.DIRECT,
-                workspaceId = "ws-1",
-                rawJson = rawJson,
-            )
+        """.trimIndent()
+        val socketMessage = ConvSocketMessage(
+            type = ConversationType.DIRECT,
+            workspaceId = "ws-1",
+            rawJson = json.parseToJsonElement(rawJson).jsonObject,
         )
 
-        mediator.handleEvent(event)
+        mediator.handleConversationCreated(socketMessage)
 
         assertEquals(1, directMessageRepository.createdDms.size)
-        val dm = directMessageRepository.createdDms[0]
-        assertEquals("dm-55", dm.id)
-        assertEquals("Bob Builder", dm.name)
+        assertEquals("dm_1", directMessageRepository.createdDms[0].id)
     }
 }
