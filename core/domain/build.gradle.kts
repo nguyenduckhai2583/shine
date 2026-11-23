@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.shine.android.library)
     alias(libs.plugins.shine.hilt)
+    alias(libs.plugins.shine.android.test)
 }
 
 android {
@@ -11,7 +12,4 @@ dependencies {
     implementation(projects.core.common)
     implementation(projects.core.data)
     implementation(projects.core.model)
-
-    testImplementation(libs.mockito.core)
-    testImplementation(libs.kotlinx.coroutines.test)
 }

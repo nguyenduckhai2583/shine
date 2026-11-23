@@ -2,11 +2,12 @@ package com.example.shine.ui.navigation
 
 import android.content.Intent
 import android.net.Uri
+import app.cash.turbine.test
 import com.example.shine.core.common.network.NetworkMonitor
 import com.example.shine.core.data.repository.UserRepository
-import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.data.session.SessionPreloader
 import com.example.shine.core.datastore.SessionLocalDataSource
+import com.example.shine.core.datastore.SessionManager
 import com.example.shine.core.model.AuthState
 import com.example.shine.core.model.Session
 import com.example.shine.core.model.User
@@ -16,7 +17,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -28,8 +28,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.mock
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModelTest {
@@ -55,9 +55,7 @@ class AppViewModelTest {
     }
 
     @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
+    fun tearDown() = Dispatchers.resetMain()
 
     @Test
     fun activeSession_fetchesUserProfileAndChatUsersOnLaunch() = runTest(testDispatcher) {
@@ -70,13 +68,12 @@ class AppViewModelTest {
 
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
-        backgroundScope.launch(testDispatcher) {
-            viewModel.authState.collect {}
+        viewModel.authState.test {
+            assertEquals(AuthState.Authenticated, awaitItem())
+            assertEquals(1, userRepository.getProfileCalls)
+            assertEquals(1, userRepository.getChatUsersCalls)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertEquals(1, userRepository.getProfileCalls)
-        assertEquals(1, userRepository.getChatUsersCalls)
-        assertEquals(AuthState.Authenticated, viewModel.authState.value)
     }
 
     @Test
@@ -85,13 +82,12 @@ class AppViewModelTest {
 
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
-        backgroundScope.launch(testDispatcher) {
-            viewModel.authState.collect {}
+        viewModel.authState.test {
+            assertEquals(AuthState.Unauthenticated, awaitItem())
+            assertEquals(0, userRepository.getProfileCalls)
+            assertEquals(0, userRepository.getChatUsersCalls)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertEquals(0, userRepository.getProfileCalls)
-        assertEquals(0, userRepository.getChatUsersCalls)
-        assertEquals(AuthState.Unauthenticated, viewModel.authState.value)
     }
 
     @Test
@@ -101,13 +97,12 @@ class AppViewModelTest {
 
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
-        backgroundScope.launch(testDispatcher) {
-            viewModel.authState.collect {}
+        viewModel.authState.test {
+            assertEquals(AuthState.Authenticated, awaitItem())
+            assertEquals(1, userRepository.getProfileCalls)
+            assertEquals(1, userRepository.getChatUsersCalls)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertEquals(1, userRepository.getProfileCalls)
-        assertEquals(1, userRepository.getChatUsersCalls)
-        assertEquals(AuthState.Authenticated, viewModel.authState.value)
     }
 
     @Test
@@ -116,20 +111,19 @@ class AppViewModelTest {
 
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
-        backgroundScope.launch(testDispatcher) {
-            viewModel.authState.collect {}
+        viewModel.authState.test {
+            assertEquals(AuthState.Unauthenticated, awaitItem())
+            assertEquals(0, userRepository.getProfileCalls)
+            assertEquals(0, userRepository.getChatUsersCalls)
+
+            // User signs in with single workspace
+            sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
+
+            assertEquals(AuthState.Authenticated, awaitItem())
+            assertEquals(1, userRepository.getProfileCalls)
+            assertEquals(1, userRepository.getChatUsersCalls)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertEquals(0, userRepository.getProfileCalls)
-        assertEquals(0, userRepository.getChatUsersCalls)
-        assertEquals(AuthState.Unauthenticated, viewModel.authState.value)
-
-        // User signs in with single workspace
-        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
-
-        assertEquals(1, userRepository.getProfileCalls)
-        assertEquals(1, userRepository.getChatUsersCalls)
-        assertEquals(AuthState.Authenticated, viewModel.authState.value)
     }
 
     @Test
@@ -138,20 +132,19 @@ class AppViewModelTest {
 
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
-        backgroundScope.launch(testDispatcher) {
-            viewModel.authState.collect {}
+        viewModel.authState.test {
+            assertEquals(AuthState.SelectWorkspace, awaitItem())
+            assertEquals(0, userRepository.getProfileCalls)
+            assertEquals(0, userRepository.getChatUsersCalls)
+
+            // User selects a workspace
+            sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-2")
+
+            assertEquals(AuthState.Authenticated, awaitItem())
+            assertEquals(1, userRepository.getProfileCalls)
+            assertEquals(1, userRepository.getChatUsersCalls)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertEquals(0, userRepository.getProfileCalls)
-        assertEquals(0, userRepository.getChatUsersCalls)
-        assertEquals(AuthState.SelectWorkspace, viewModel.authState.value)
-
-        // User selects a workspace
-        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-2")
-
-        assertEquals(1, userRepository.getProfileCalls)
-        assertEquals(1, userRepository.getChatUsersCalls)
-        assertEquals(AuthState.Authenticated, viewModel.authState.value)
     }
 
     @Test
@@ -160,28 +153,28 @@ class AppViewModelTest {
 
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
-        backgroundScope.launch(testDispatcher) {
-            viewModel.authState.collect {}
+        viewModel.authState.test {
+            assertEquals(AuthState.Authenticated, awaitItem())
+            assertEquals(1, userRepository.getProfileCalls)
+
+            // Switching to select workspace does not reset session preloader
+            sessionFlow.value = Session(token = "jwt-token", workspaceId = null)
+            assertEquals(AuthState.SelectWorkspace, awaitItem())
+
+            sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-2")
+            assertEquals(AuthState.Authenticated, awaitItem())
+            assertEquals(1, userRepository.getProfileCalls) // Still 1, not refetched
+
+            // Logout resets session preloader
+            sessionFlow.value = null
+            assertEquals(AuthState.Unauthenticated, awaitItem())
+
+            // Re-login fetches again
+            sessionFlow.value = Session(token = "new-jwt-token", workspaceId = "ws-1")
+            assertEquals(AuthState.Authenticated, awaitItem())
+            assertEquals(2, userRepository.getProfileCalls)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertEquals(1, userRepository.getProfileCalls)
-
-        // Switching to select workspace does not reset session preloader
-        sessionFlow.value = Session(token = "jwt-token", workspaceId = null)
-        assertEquals(AuthState.SelectWorkspace, viewModel.authState.value)
-
-        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-2")
-        assertEquals(AuthState.Authenticated, viewModel.authState.value)
-        assertEquals(1, userRepository.getProfileCalls) // Still 1, not refetched
-
-        // Logout resets session preloader
-        sessionFlow.value = null
-        assertEquals(AuthState.Unauthenticated, viewModel.authState.value)
-
-        // Re-login fetches again
-        sessionFlow.value = Session(token = "new-jwt-token", workspaceId = "ws-1")
-        assertEquals(AuthState.Authenticated, viewModel.authState.value)
-        assertEquals(2, userRepository.getProfileCalls)
     }
 
     @Test
@@ -198,6 +191,7 @@ class AppViewModelTest {
 
     @Test
     fun handleIntent_nullIntent_doesNotSetDeepLinkBackStack() = runTest(testDispatcher) {
+        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
 
         viewModel.handleIntent(null)
@@ -206,29 +200,8 @@ class AppViewModelTest {
     }
 
     @Test
-    fun handleIntent_recentChannelShortcut_setsDeepLinkBackStack() = runTest(testDispatcher) {
-        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
-        val intent = mock(Intent::class.java)
-        `when`(deepLinkHandler.handleIntent(intent)).thenReturn(listOf(Home, ChannelDetail("channel-123")))
-
-        viewModel.handleIntent(intent)
-
-        assertEquals(listOf(Home, ChannelDetail("channel-123")), viewModel.deepLinkBackStack.value)
-    }
-
-    @Test
-    fun handleIntent_channelUriIntent_setsDeepLinkBackStack() = runTest(testDispatcher) {
-        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
-        val intent = mock(Intent::class.java)
-        `when`(deepLinkHandler.handleIntent(intent)).thenReturn(listOf(Home, ChannelDetail("general")))
-
-        viewModel.handleIntent(intent)
-
-        assertEquals(listOf(Home, ChannelDetail("general")), viewModel.deepLinkBackStack.value)
-    }
-
-    @Test
-    fun handleIntent_unmatchedIntent_doesNotSetDeepLinkBackStack() = runTest(testDispatcher) {
+    fun handleIntent_unhandledIntent_doesNotSetDeepLinkBackStack() = runTest(testDispatcher) {
+        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
         val intent = mock(Intent::class.java)
         `when`(deepLinkHandler.handleIntent(intent)).thenReturn(null)
@@ -236,6 +209,21 @@ class AppViewModelTest {
         viewModel.handleIntent(intent)
 
         assertNull(viewModel.deepLinkBackStack.value)
+    }
+
+    @Test
+    fun handleIntent_webUriChannel_setsChannelDetailBackStack() = runTest(testDispatcher) {
+        sessionFlow.value = Session(token = "jwt-token", workspaceId = "ws-1")
+        val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
+        val uri = mock(Uri::class.java)
+        val intent = mock(Intent::class.java).apply {
+            `when`(data).thenReturn(uri)
+        }
+        `when`(deepLinkHandler.handleIntent(intent)).thenReturn(listOf(Home, ChannelDetail("c1")))
+
+        viewModel.handleIntent(intent)
+
+        assertEquals(listOf(Home, ChannelDetail("c1")), viewModel.deepLinkBackStack.value)
     }
 
     @Test
@@ -255,17 +243,16 @@ class AppViewModelTest {
     @Test
     fun isOffline_tracksNetworkStatus() = runTest(testDispatcher) {
         val viewModel = AppViewModel(sessionManager, sessionPreloader, deepLinkHandler, networkMonitor)
-        backgroundScope.launch(testDispatcher) {
-            viewModel.isOffline.collect {}
+        viewModel.isOffline.test {
+            assertFalse(awaitItem())
+
+            networkMonitor.isOnlineFlow.value = false
+            assertTrue(awaitItem())
+
+            networkMonitor.isOnlineFlow.value = true
+            assertFalse(awaitItem())
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertFalse(viewModel.isOffline.value)
-
-        networkMonitor.isOnlineFlow.value = false
-        assertTrue(viewModel.isOffline.value)
-
-        networkMonitor.isOnlineFlow.value = true
-        assertFalse(viewModel.isOffline.value)
     }
 
     private class FakeUserRepository : UserRepository {
@@ -286,7 +273,6 @@ class AppViewModelTest {
         }
 
         override suspend fun updateAvatar(uri: Uri): Result<User> = throw NotImplementedError()
-
         override suspend fun clear() {}
     }
 

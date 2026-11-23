@@ -1,5 +1,6 @@
 package com.example.shine.feature.channel
 
+import app.cash.turbine.test
 import com.example.shine.core.data.repository.ChannelRepository
 import com.example.shine.core.datastore.SessionLocalDataSource
 import com.example.shine.core.datastore.SessionManager
@@ -11,8 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -22,21 +21,30 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChannelDetailViewModelTest {
 
     private val repository = FakeChannelRepository()
     private val shortcutManager = FakeAppShortcutManager()
+    private val sessionFlow = MutableStateFlow<Session?>(
+        Session(
+            token = "token",
+            refreshToken = "refresh",
+            expireAt = null,
+            user = null,
+            workspaceId = "ws-1",
+        )
+    )
     private lateinit var sessionManager: SessionManager
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         val sessionLocal = mock(SessionLocalDataSource::class.java)
-        `when`(sessionLocal.session).thenReturn(MutableStateFlow(Session("tok", workspaceId = "ws-1")))
+        `when`(sessionLocal.session).thenReturn(sessionFlow)
         sessionManager = SessionManager(sessionLocal, CoroutineScope(UnconfinedTestDispatcher()))
     }
 
@@ -46,14 +54,13 @@ class ChannelDetailViewModelTest {
     @Test
     fun load_success_showsChannelAndUpdatesShortcut() = runTest {
         val viewModel = ChannelDetailViewModel("1", repository, sessionManager, shortcutManager)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            assertEquals("1", repository.lastId)
+            assertEquals(ChannelDetailUiState.Success(CHANNEL), awaitItem())
+            assertEquals("1", shortcutManager.lastUpdatedChannelId)
+            assertEquals("general", shortcutManager.lastUpdatedChannelName)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertEquals("1", repository.lastId)
-        assertEquals(ChannelDetailUiState.Success(CHANNEL), viewModel.uiState.value)
-        assertEquals("1", shortcutManager.lastUpdatedChannelId)
-        assertEquals("general", shortcutManager.lastUpdatedChannelName)
     }
 
     @Test
@@ -62,18 +69,17 @@ class ChannelDetailViewModelTest {
         repository.autoUpdateFlowOnGetChannel = false
 
         val viewModel = ChannelDetailViewModel("1", repository, sessionManager, shortcutManager)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            assertEquals(ChannelDetailUiState.Error(), awaitItem())
+            assertNull(shortcutManager.lastUpdatedChannelId)
+
+            repository.channelFlow.value = CHANNEL
+
+            assertEquals(ChannelDetailUiState.Success(CHANNEL), awaitItem())
+            assertEquals("1", shortcutManager.lastUpdatedChannelId)
+            assertEquals("general", shortcutManager.lastUpdatedChannelName)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertEquals(ChannelDetailUiState.Error(), viewModel.uiState.value)
-        assertNull(shortcutManager.lastUpdatedChannelId)
-
-        repository.channelFlow.value = CHANNEL
-
-        assertEquals(ChannelDetailUiState.Success(CHANNEL), viewModel.uiState.value)
-        assertEquals("1", shortcutManager.lastUpdatedChannelId)
-        assertEquals("general", shortcutManager.lastUpdatedChannelName)
     }
 
     @Test
@@ -81,12 +87,11 @@ class ChannelDetailViewModelTest {
         repository.channelFlow.value = CHANNEL
 
         val viewModel = ChannelDetailViewModel("1", repository, sessionManager, shortcutManager)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            assertEquals(ChannelDetailUiState.Success(CHANNEL), awaitItem())
+            assertEquals("1", shortcutManager.lastUpdatedChannelId)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertEquals(ChannelDetailUiState.Success(CHANNEL), viewModel.uiState.value)
-        assertEquals("1", shortcutManager.lastUpdatedChannelId)
     }
 
     private class FakeChannelRepository : ChannelRepository {
@@ -95,7 +100,7 @@ class ChannelDetailViewModelTest {
         val channelFlow = MutableStateFlow<Channel?>(null)
 
         override suspend fun getChannels(workspaceId: String): Result<Unit> = Result.success(Unit)
-
+        override suspend fun getRecentChannels(workspaceId: String, limit: Int): List<Channel> = emptyList()
         override suspend fun getChannel(id: String, workspaceId: String): Result<Unit> {
             lastId = id
             if (autoUpdateFlowOnGetChannel) {
@@ -103,24 +108,16 @@ class ChannelDetailViewModelTest {
             }
             return Result.success(Unit)
         }
-
-        override fun getChannelFlow(id: String): Flow<Channel?> = channelFlow
-
-        override suspend fun getRecentChannels(workspaceId: String, limit: Int): List<Channel> = emptyList()
-
         override suspend fun createChannel(name: String, workspaceId: String): Result<Unit> = Result.success(Unit)
-
         override suspend fun deleteChannel(channelId: String): Result<Unit> = Result.success(Unit)
-
-        override fun getChannelsFlow(workspaceId: String, limit: Int): Flow<List<Channel>> = emptyFlow()
-
+        override fun getChannelsFlow(workspaceId: String, limit: Int): Flow<List<Channel>> = throw NotImplementedError()
+        override fun getChannelFlow(id: String): Flow<Channel?> = channelFlow
         override suspend fun onChannelCreated(channel: Channel, workspaceId: String) {}
-
         override suspend fun clear() {}
     }
 
-    private companion object {
-        val CHANNEL = Channel(
+    companion object {
+        private val CHANNEL = Channel(
             id = "1",
             name = "general",
             isPrivate = false,

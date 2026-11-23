@@ -21,10 +21,11 @@ fun ProductFlavor.buildTypedConfigField(key: String, rawValue: String) {
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.shine.android.application.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.shine.android.test)
 }
 
 android {
@@ -99,15 +100,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
-        compose = true
         buildConfig = true
         resValues = true
-    }
-    testOptions {
-        unitTests.isReturnDefaultValues = true
-        unitTests.all {
-            it.systemProperty("net.bytebuddy.experimental", "true")
-        }
     }
 }
 
@@ -133,14 +127,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
 
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material.icons.extended)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-
-    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
@@ -162,9 +148,6 @@ dependencies {
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
 
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.mockito.core)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
 }

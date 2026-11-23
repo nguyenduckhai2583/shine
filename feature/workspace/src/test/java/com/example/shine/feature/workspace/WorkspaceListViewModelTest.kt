@@ -1,23 +1,23 @@
 package com.example.shine.feature.workspace
 
+import app.cash.turbine.test
 import com.example.shine.core.common.error.AppErrorEnum
 import com.example.shine.core.common.error.AppException
+import com.example.shine.core.data.repository.AuthRepository
+import com.example.shine.core.data.repository.WorkspaceRepository
+import com.example.shine.core.domain.FakeSignOutUseCase
 import com.example.shine.core.model.Session
 import com.example.shine.core.model.SignInStatus
 import com.example.shine.core.model.Workspace
-import com.example.shine.core.data.repository.AuthRepository
-import com.example.shine.core.data.repository.WorkspaceRepository
+import com.example.shine.core.shortcut.FakeAppShortcutManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
-import com.example.shine.core.shortcut.FakeAppShortcutManager
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import com.example.shine.core.domain.FakeSignOutUseCase
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -43,38 +43,37 @@ class WorkspaceListViewModelTest {
     @Test
     fun init_loadsWorkspacesAndSetsSelected() = runTest {
         val viewModel = WorkspaceListViewModel(workspaceRepository, signOutUseCase, shortcutManager)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertEquals(2, state.workspaces.size)
+            assertEquals("ws-1", state.selectedWorkspaceId)
+            assertFalse(state.isLoading)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        val state = viewModel.uiState.value
-        assertEquals(2, state.workspaces.size)
-        assertEquals("ws-1", state.selectedWorkspaceId)
-        assertFalse(state.isLoading)
     }
 
     @Test
     fun onSelectWorkspace_changesSelectedWorkspaceId() = runTest {
         val viewModel = WorkspaceListViewModel(workspaceRepository, signOutUseCase, shortcutManager)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            awaitItem()
+            viewModel.onSelectWorkspace("ws-2")
+            assertEquals("ws-2", awaitItem().selectedWorkspaceId)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        viewModel.onSelectWorkspace("ws-2")
-        assertEquals("ws-2", viewModel.uiState.value.selectedWorkspaceId)
     }
 
     @Test
     fun confirmSelection_callsRepositorySelectWorkspace() = runTest {
         val viewModel = WorkspaceListViewModel(workspaceRepository, signOutUseCase, shortcutManager)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            awaitItem()
+            viewModel.onSelectWorkspace("ws-2")
+            awaitItem()
+            viewModel.confirmSelection()
+            assertEquals("ws-2", workspaceRepository.lastSelectedId)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        viewModel.onSelectWorkspace("ws-2")
-        viewModel.confirmSelection()
-
-        assertEquals("ws-2", workspaceRepository.lastSelectedId)
     }
 
     @Test
@@ -91,11 +90,11 @@ class WorkspaceListViewModelTest {
     fun loadWorkspaces_failure_setsErrorMessage() = runTest {
         workspaceRepository.shouldFail = true
         val viewModel = WorkspaceListViewModel(workspaceRepository, signOutUseCase, shortcutManager)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertNotNull(state.errorMessage)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertNotNull(viewModel.uiState.value.errorMessage)
     }
 
     private class FakeWorkspaceRepository : WorkspaceRepository {

@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.shine.android.library)
     alias(libs.plugins.shine.android.library.compose)
     alias(libs.plugins.shine.hilt)
+    alias(libs.plugins.shine.android.test)
 }
 
 android {
@@ -18,5 +19,4 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
 
     testImplementation(projects.core.model)
-    testImplementation(libs.mockito.core)
 }

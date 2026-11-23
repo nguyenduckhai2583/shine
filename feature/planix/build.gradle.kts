@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.shine.android.library)
     alias(libs.plugins.shine.android.library.compose)
     alias(libs.plugins.shine.hilt)
+    alias(libs.plugins.shine.android.test)
 }
 
 android {

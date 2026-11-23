@@ -1,6 +1,7 @@
 package com.example.shine.feature.planix
 
 import androidx.paging.PagingData
+import app.cash.turbine.test
 import com.example.shine.core.common.ui.UiText
 import com.example.shine.core.data.repository.PlanixRepository
 import com.example.shine.core.model.Project
@@ -9,7 +10,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -44,13 +44,12 @@ class PlanixDetailViewModelTest {
         planixRepository.projectFlow.value = expectedProject
 
         val viewModel = PlanixDetailViewModel("proj-1", planixRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertTrue(state is PlanixDetailUiState.Success)
+            assertEquals(expectedProject, (state as PlanixDetailUiState.Success).project)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        val state = viewModel.uiState.value
-        assertTrue(state is PlanixDetailUiState.Success)
-        assertEquals(expectedProject, (state as PlanixDetailUiState.Success).project)
     }
 
     @Test
@@ -58,16 +57,15 @@ class PlanixDetailViewModelTest {
         planixRepository.projectFlow.value = null
 
         val viewModel = PlanixDetailViewModel("proj-999", planixRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertTrue(state is PlanixDetailUiState.Error)
+            assertEquals(
+                UiText.Resource(R.string.error_project_not_found),
+                (state as PlanixDetailUiState.Error).message,
+            )
+            cancelAndIgnoreRemainingEvents()
         }
-
-        val state = viewModel.uiState.value
-        assertTrue(state is PlanixDetailUiState.Error)
-        assertEquals(
-            UiText.Resource(R.string.error_project_not_found),
-            (state as PlanixDetailUiState.Error).message,
-        )
     }
 
     private class FakePlanixRepository : PlanixRepository {

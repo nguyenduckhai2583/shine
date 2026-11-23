@@ -1,13 +1,14 @@
 package com.example.shine.feature.planix
 
 import androidx.paging.PagingData
-import com.example.shine.core.model.Project
+import app.cash.turbine.test
 import com.example.shine.core.data.repository.PlanixRepository
+import com.example.shine.core.model.Project
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -31,47 +32,48 @@ class PlanixListViewModelTest {
     @Test
     fun init_initialStateHasEmptySearchQuery() = runTest {
         val viewModel = PlanixListViewModel(planixRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            assertEquals("", awaitItem().searchQuery)
+            cancelAndIgnoreRemainingEvents()
         }
-        assertEquals("", viewModel.uiState.value.searchQuery)
     }
 
     @Test
     fun onSearchQueryChanged_updatesSearchQuery() = runTest {
         val viewModel = PlanixListViewModel(planixRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            awaitItem()
+            viewModel.onSearchQueryChanged("Test")
+            assertEquals("Test", awaitItem().searchQuery)
+            cancelAndIgnoreRemainingEvents()
         }
-        viewModel.onSearchQueryChanged("Test")
-        assertEquals("Test", viewModel.uiState.value.searchQuery)
     }
 
     @Test
     fun projectsPagingFlow_initialLoadQueriesRepositoryWithNull() = runTest {
         val viewModel = PlanixListViewModel(planixRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.projectsPagingFlow.collect {}
+        viewModel.projectsPagingFlow.test {
+            awaitItem()
+            assertEquals(null, planixRepository.lastSearchKey)
+            cancelAndIgnoreRemainingEvents()
         }
-        testScheduler.advanceUntilIdle()
-
-        assertEquals(null, planixRepository.lastSearchKey)
     }
 
     @Test
     fun projectsPagingFlow_debouncesAndQueriesRepositoryWithKeyword() = runTest {
         val viewModel = PlanixListViewModel(planixRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.projectsPagingFlow.collect {}
+        viewModel.projectsPagingFlow.test {
+            awaitItem()
+            assertEquals(null, planixRepository.lastSearchKey)
+
+            viewModel.onSearchQueryChanged("shine")
+            testScheduler.advanceTimeBy(350)
+            testScheduler.runCurrent()
+
+            awaitItem()
+            assertEquals("shine", planixRepository.lastSearchKey)
+            cancelAndIgnoreRemainingEvents()
         }
-        testScheduler.advanceUntilIdle()
-        assertEquals(null, planixRepository.lastSearchKey)
-
-        viewModel.onSearchQueryChanged("shine")
-        testScheduler.advanceTimeBy(350)
-        testScheduler.runCurrent()
-
-        assertEquals("shine", planixRepository.lastSearchKey)
     }
 
     private class FakePlanixRepository : PlanixRepository {
@@ -79,7 +81,7 @@ class PlanixListViewModelTest {
 
         override fun getProjectsPagingFlow(searchKey: String?): Flow<PagingData<Project>> {
             lastSearchKey = searchKey
-            return emptyFlow()
+            return flowOf(PagingData.empty())
         }
 
         override fun getProjectById(id: String): Flow<Project?> {

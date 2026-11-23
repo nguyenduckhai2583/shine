@@ -1,17 +1,17 @@
 package com.example.shine.feature.profile
 
 import android.net.Uri
+import app.cash.turbine.test
+import com.example.shine.core.common.ui.UiText
+import com.example.shine.core.data.repository.AuthRepository
+import com.example.shine.core.data.repository.UserRepository
 import com.example.shine.core.model.Session
 import com.example.shine.core.model.SignInStatus
 import com.example.shine.core.model.User
-import com.example.shine.core.data.repository.AuthRepository
-import com.example.shine.core.data.repository.UserRepository
-import com.example.shine.core.common.ui.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -38,48 +38,54 @@ class ProfileViewModelTest {
     @Test
     fun init_observesUserSessionDisplayNameAndAvatar() = runTest {
         val viewModel = ProfileViewModel(authRepository, userRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertEquals("Jane Doe", state.name)
+            assertEquals("https://example.com/avatar.jpg", state.avatarUrl)
+            assertFalse(state.isLoading)
+            assertEquals(UploadState.Idle, state.uploadState)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        val state = viewModel.uiState.value
-        assertEquals("Jane Doe", state.name)
-        assertEquals("https://example.com/avatar.jpg", state.avatarUrl)
-        assertFalse(state.isLoading)
-        assertEquals(UploadState.Idle, state.uploadState)
     }
 
     @Test
     fun onAvatarSelected_success_updatesAvatarAndClearsUploading() = runTest {
         val viewModel = ProfileViewModel(authRepository, userRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            awaitItem() // initial state
+            val uri = mock(Uri::class.java)
+            viewModel.onAvatarSelected(uri)
+
+            val uploadingState = awaitItem()
+            assertEquals(UploadState.Uploading(uri), uploadingState.uploadState)
+
+            val idleState = awaitItem()
+            assertEquals(UploadState.Idle, idleState.uploadState)
+            assertEquals(uri, userRepository.lastUpdatedUri)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        val uri = mock(Uri::class.java)
-        viewModel.onAvatarSelected(uri)
-
-        val state = viewModel.uiState.value
-        assertEquals(UploadState.Idle, state.uploadState)
-        assertEquals(uri, userRepository.lastUpdatedUri)
     }
 
     @Test
     fun onAvatarSelected_failure_setsErrorMessageAndClearsUploading() = runTest {
         userRepository.shouldFail = true
         val viewModel = ProfileViewModel(authRepository, userRepository)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            awaitItem() // initial state
+            val uri = mock(Uri::class.java)
+            viewModel.onAvatarSelected(uri)
+
+            val uploadingState = awaitItem()
+            assertEquals(UploadState.Uploading(uri), uploadingState.uploadState)
+
+            val errorState = awaitItem()
+            assertEquals(UploadState.Error(UiText.Raw("Network upload failed")), errorState.uploadState)
+
+            viewModel.clearErrorMessage()
+            val idleState = awaitItem()
+            assertEquals(UploadState.Idle, idleState.uploadState)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        val uri = mock(Uri::class.java)
-        viewModel.onAvatarSelected(uri)
-
-        val state = viewModel.uiState.value
-        assertEquals(UploadState.Error(UiText.Raw("Network upload failed")), state.uploadState)
-
-        viewModel.clearErrorMessage()
-        assertEquals(UploadState.Idle, viewModel.uiState.value.uploadState)
     }
 
     private class FakeAuthRepository : AuthRepository {

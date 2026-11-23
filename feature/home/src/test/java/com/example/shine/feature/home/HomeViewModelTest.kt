@@ -1,5 +1,6 @@
 package com.example.shine.feature.home
 
+import app.cash.turbine.test
 import com.example.shine.core.data.repository.AuthRepository
 import com.example.shine.core.data.repository.UserRepository
 import com.example.shine.core.data.repository.WorkspaceRepository
@@ -13,7 +14,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -49,32 +49,31 @@ class HomeViewModelTest {
     @Test
     fun init_observesSessionAndWorkspaces() = runTest {
         val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository, shortcutManager, signOutUseCase)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertEquals("ws-1", state.selectedWorkspaceId)
+            assertEquals("Default Workspace", state.currentWorkspaceName)
+            assertEquals("https://example.com/avatar.jpg", state.avatarUrl)
+            assertEquals("Jane Doe", state.displayName)
+            assertEquals("jane@example.com", state.userEmail)
+            assertEquals(2, state.workspaces.size)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        val state = viewModel.uiState.value
-        assertEquals("ws-1", state.selectedWorkspaceId)
-        assertEquals("Default Workspace", state.currentWorkspaceName)
-        assertEquals("https://example.com/avatar.jpg", state.avatarUrl)
-        assertEquals("Jane Doe", state.displayName)
-        assertEquals("jane@example.com", state.userEmail)
-        assertEquals(2, state.workspaces.size)
     }
 
     @Test
     fun selectWorkspace_updatesWorkspace() = runTest {
         val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository, shortcutManager, signOutUseCase)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            awaitItem()
+            viewModel.selectWorkspace("ws-2")
+
+            assertEquals("ws-2", workspaceRepository.currentSelectedId.value)
+            assertEquals(1, userRepository.getChatUsersCalls)
+            assertEquals("ws-2", userRepository.lastWorkspaceId)
+            assertEquals(1, shortcutManager.removeRecentCalls)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        viewModel.selectWorkspace("ws-2")
-
-        assertEquals("ws-2", workspaceRepository.currentSelectedId.value)
-        assertEquals(1, userRepository.getChatUsersCalls)
-        assertEquals("ws-2", userRepository.lastWorkspaceId)
-        assertEquals(1, shortcutManager.removeRecentCalls)
     }
 
     @Test
@@ -87,24 +86,20 @@ class HomeViewModelTest {
         }
 
         val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository, shortcutManager, signOutUseCase)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            awaitItem()
+            viewModel.selectWorkspace("ws-2")
+
+            assertTrue(chatUsersCalled)
+            assertEquals("ws-1", selectedIdDuringPreload)
+            assertEquals("ws-2", workspaceRepository.currentSelectedId.value)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        viewModel.selectWorkspace("ws-2")
-
-        assertTrue(chatUsersCalled)
-        assertEquals("ws-1", selectedIdDuringPreload)
-        assertEquals("ws-2", workspaceRepository.currentSelectedId.value)
     }
 
     @Test
     fun signOut_invokesAuthRepositorySignOut() = runTest {
         val viewModel = HomeViewModel(authRepository, workspaceRepository, userRepository, shortcutManager, signOutUseCase)
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
-        }
-
         viewModel.signOut()
 
         assertTrue(signOutUseCase.signOutCalled)

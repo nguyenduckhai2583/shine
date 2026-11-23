@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.shine.android.library)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.shine.hilt)
+    alias(libs.plugins.shine.android.test)
 }
 
 android {
@@ -33,6 +34,5 @@ dependencies {
     }
 
     testImplementation(libs.okhttp.mockwebserver)
-    testImplementation(libs.mockito.core)
     testImplementation(libs.androidx.datastore.preferences)
 }

@@ -1,5 +1,6 @@
 package com.example.shine.feature.conversationsettings
 
+import app.cash.turbine.test
 import com.example.shine.core.common.ui.UiText
 import com.example.shine.core.data.repository.ChannelRepository
 import com.example.shine.core.data.repository.ConversationSettingRepository
@@ -12,7 +13,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -48,19 +48,18 @@ class ConversationSettingsViewModelTest {
             conversationSettingRepository = settingRepository,
         )
 
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertEquals("general", state.title)
+            assertEquals(
+                UiText.Resource(R.string.conversation_settings_public_channel),
+                state.subtitle,
+            )
+            assertEquals(ConversationType.CHANNEL, state.type)
+            assertTrue(state.isNotificationEnabled)
+            assertFalse(state.isLoading)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        val state = viewModel.uiState.value
-        assertEquals("general", state.title)
-        assertEquals(
-            UiText.Resource(R.string.conversation_settings_public_channel),
-            state.subtitle,
-        )
-        assertEquals(ConversationType.CHANNEL, state.type)
-        assertTrue(state.isNotificationEnabled)
-        assertFalse(state.isLoading)
     }
 
     @Test
@@ -73,16 +72,15 @@ class ConversationSettingsViewModelTest {
             conversationSettingRepository = settingRepository,
         )
 
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertEquals("Alice Smith", state.title)
+            assertNull(state.subtitle)
+            assertEquals(ConversationType.DM, state.type)
+            assertTrue(state.isNotificationEnabled)
+            assertFalse(state.isLoading)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        val state = viewModel.uiState.value
-        assertEquals("Alice Smith", state.title)
-        assertNull(state.subtitle)
-        assertEquals(ConversationType.DM, state.type)
-        assertTrue(state.isNotificationEnabled)
-        assertFalse(state.isLoading)
     }
 
     @Test
@@ -95,17 +93,16 @@ class ConversationSettingsViewModelTest {
             conversationSettingRepository = settingRepository,
         )
 
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiState.collect {}
+        viewModel.uiState.test {
+            assertTrue(awaitItem().isNotificationEnabled)
+
+            viewModel.setNotificationEnabled(false)
+            assertFalse(awaitItem().isNotificationEnabled)
+
+            viewModel.setNotificationEnabled(true)
+            assertTrue(awaitItem().isNotificationEnabled)
+            cancelAndIgnoreRemainingEvents()
         }
-
-        assertTrue(viewModel.uiState.value.isNotificationEnabled)
-
-        viewModel.setNotificationEnabled(false)
-        assertFalse(viewModel.uiState.value.isNotificationEnabled)
-
-        viewModel.setNotificationEnabled(true)
-        assertTrue(viewModel.uiState.value.isNotificationEnabled)
     }
 
     private class FakeChannelRepository : ChannelRepository {

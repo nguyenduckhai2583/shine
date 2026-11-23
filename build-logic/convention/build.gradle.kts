@@ -27,6 +27,10 @@ gradlePlugin {
             id = "shine.android.library.compose"
             implementationClass = "AndroidLibraryComposeConventionPlugin"
         }
+        register("androidApplicationCompose") {
+            id = "shine.android.application.compose"
+            implementationClass = "AndroidApplicationComposeConventionPlugin"
+        }
 
         register("androidHilt") {
             id = "shine.hilt"
@@ -35,6 +39,10 @@ gradlePlugin {
         register("jvmLibrary") {
             id = "shine.jvm.library"
             implementationClass = "JvmLibraryConventionPlugin"
+        }
+        register("androidTest") {
+            id = "shine.android.test"
+            implementationClass = "AndroidTestConventionPlugin"
         }
     }
 }

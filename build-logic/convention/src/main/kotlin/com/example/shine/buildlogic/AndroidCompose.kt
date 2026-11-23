@@ -1,16 +1,14 @@
 package com.example.shine.buildlogic
 
-import com.android.build.api.dsl.LibraryExtension
+import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.dependencies
 
 internal fun Project.configureAndroidCompose(
-    libraryExtension: LibraryExtension,
+    commonExtension: CommonExtension,
 ) {
-    libraryExtension.apply {
-        buildFeatures {
-            compose = true
-        }
+    commonExtension.apply {
+        buildFeatures.compose = true
     }
 
     dependencies {

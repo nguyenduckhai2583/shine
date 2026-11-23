@@ -27,7 +27,7 @@ Tài liệu này cung cấp toàn bộ hướng dẫn, quy chuẩn kiến trúc,
 | **Local Storage** | Room Database + DataStore Preferences | Room `2.8.5`, DataStore `1.2.1` |
 | **Paging** | AndroidX Paging 3 | Paging Compose `3.3.6`, `RemoteMediator`, `PagingSource` |
 | **Image Loading** | Coil Compose | `io.coil-kt:coil-compose:2.7.0` |
-| **Testing** | JUnit 4, Kotlinx Coroutines Test, Mockito, MockWebServer, Paging Testing | Hỗ trợ Unit Test toàn diện cho ViewModel & Data layers |
+| **Testing** | JUnit 4, Kotlinx Coroutines Test, Turbine, Mockito, MockWebServer, Paging Testing | Hỗ trợ Unit Test toàn diện cho ViewModel & Data layers |
 
 ---
 
@@ -150,8 +150,16 @@ Shine/
   @After
   fun tearDown() = Dispatchers.resetMain()
   ```
-- Kích hoạt thu thập StateFlow trong background scope để kiểm tra emission:
+- Kích hoạt thu thập StateFlow trong background scope hoặc sử dụng **Turbine** (`app.cash.turbine.test`) để kiểm tra toàn bộ chuỗi emission theo thời gian:
   ```kotlin
+  // Cách 1: Dùng Turbine (Khuyến nghị cho StateFlow / Cold Flow)
+  viewModel.uiState.test {
+      val item = awaitItem()
+      assertEquals(expected, item)
+      cancelAndIgnoreRemainingEvents()
+  }
+
+  // Cách 2: Dùng backgroundScope thủ công
   backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
       viewModel.uiState.collect {}
   }
@@ -194,8 +202,9 @@ flowchart LR
     A4 -->|Pass Review| Done[Merge Code Hoàn Hảo]
 ```
 
-1. **`spec-architect` (SDD):** Thiết kế DTO, Room Entity, MVI `UiState`/`UiAction`, `NavKey`, Test Matrix. *Tuyệt đối không viết code logic.*
-2. **`tdd-developer` (TDD):** Viết Unit Test trước (Red) ➔ Triển khai logic ViewModel/Repository (Green) ➔ Chạy `./gradlew test...` đảm bảo pass 100%.
-3. **`compose-implementer` (UI):** Dựng Stateless Screen, Stateful Route, Material 3, animations, phase deferral, kết nối Navigation 3 vào `ShineApp.kt`. *Không tự ý sửa business logic.*
-4. **`jetpack-code-reviewer` (Audit):** Quét Git Diff, phát hiện vi phạm UDF, recomposition thừa, rò rỉ bộ nhớ, hoặc thiếu test trước khi commit/merge.
+1. **[`spec-architect`](file:///Users/sunshine/.android-studio/skills/spec-architect/SKILL.md) (SDD):** Thiết kế DTO, Room Entity, MVI `UiState`/`UiAction`, `NavKey`, Test Matrix. *Tuyệt đối không viết code logic.*
+2. **[`tdd-developer`](file:///Users/sunshine/.android-studio/skills/tdd-developer/SKILL.md) (TDD):** Viết Unit Test trước (Red) với Turbine & Fake Repository ➔ Triển khai logic ViewModel/Repository (Green) ➔ Chạy `./gradlew test...` đảm bảo pass 100%.
+3. **[`compose-implementer`](file:///Users/sunshine/.android-studio/skills/compose-implementer/SKILL.md) (UI):** Dựng Stateless Screen, Stateful Route, Material 3, animations, phase deferral, kết nối Navigation 3 vào `ShineApp.kt`. *Không tự ý sửa business logic.*
+4. **[`jetpack-code-reviewer`](file:///Users/sunshine/.android-studio/skills/jetpack-code-reviewer/SKILL.md) (Audit):** Quét Git Diff, phát hiện vi phạm UDF, recomposition thừa, rò rỉ bộ nhớ, hoặc thiếu test trước khi commit/merge.
+5. **[`ecc`](file:///Users/sunshine/.android-studio/skills/ecc/SKILL.md) (Master Protocol):** Chu trình kỹ thuật 7 bước (`plan -> test -> implement -> review -> verify -> remember -> improve`), quy tắc chia nhỏ task 15 phút, và kiểm định chất lượng 6 bước tự động.
 

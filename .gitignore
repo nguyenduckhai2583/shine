@@ -29,3 +29,6 @@ app/prod/
 app/dev/
 app/*/release/
 
+# AI Agent Skills (Managed Globally in ~/.android-studio/skills)
+skills/
+

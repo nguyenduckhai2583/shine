@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.shine.android.library.compose)
     alias(libs.plugins.shine.hilt)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.shine.android.test)
 }
 
 android {
@@ -28,8 +29,4 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
     implementation(libs.coil.compose)
-
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.mockito.core)
 }

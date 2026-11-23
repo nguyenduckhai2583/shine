@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import app.cash.turbine.test
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -64,6 +65,19 @@ class ChannelViewModelTest {
         assertFalse(state.isLoading)
         assertFalse(state.isRefreshing)
         assertNull(state.userError)
+    }
+
+    @Test
+    fun observeUiState_withTurbine_capturesEmissionsSequence() = runTest {
+        val viewModel = ChannelViewModel(channelRepository, sessionManager)
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertFalse(state.isLoading)
+            assertEquals(1, state.channels.size)
+            assertEquals("general", state.channels[0].name)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     @Test

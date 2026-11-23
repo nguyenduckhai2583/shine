@@ -27,6 +27,7 @@ work = "2.10.0"
 hiltWork = "1.2.0"
 glance = "1.2.0"
 media3 = "1.11.1"
+turbine = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -74,6 +75,7 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
 androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
@@ -98,8 +100,10 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 
-# Convention plugins tự chế
+# Custom Convention plugins
 shine-android-library = { id = "shine.android.library" }
 shine-android-library-compose = { id = "shine.android.library.compose" }
+shine-android-application-compose = { id = "shine.android.application.compose" }
 shine-hilt = { id = "shine.hilt" }
 shine-jvm-library = { id = "shine.jvm.library" }
+shine-android-test = { id = "shine.android.test" }
