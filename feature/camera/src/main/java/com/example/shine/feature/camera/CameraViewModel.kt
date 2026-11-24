@@ -26,14 +26,13 @@ class CameraViewModel @Inject constructor(
 
     private var timerJob: Job? = null
 
-    fun initialize(allowedModes: Set<CameraCaptureMode>, hasAudioPermission: Boolean) {
+    fun initialize(allowedModes: Set<CameraCaptureMode>) {
         _uiState.update {
             val safeModes = allowedModes.ifEmpty { setOf(CameraCaptureMode.PHOTO) }
             val currentMode = if (it.captureMode in safeModes) it.captureMode else safeModes.first()
             it.copy(
                 allowedModes = safeModes,
                 captureMode = currentMode,
-                hasAudioPermission = hasAudioPermission,
             )
         }
     }

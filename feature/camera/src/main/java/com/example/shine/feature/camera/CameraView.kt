@@ -182,7 +182,6 @@ fun CameraView(
             activeRecording = startVideoRecording(
                 context = context,
                 videoCapture = videoCapture,
-                hasAudioPermission = uiState.hasAudioPermission,
             ) { uri, durationMs ->
                 onMediaCaptured(CapturedMedia.Video(uri, durationMs))
             }
@@ -327,7 +326,6 @@ private fun takePhoto(
 private fun startVideoRecording(
     context: Context,
     videoCapture: VideoCapture<Recorder>,
-    hasAudioPermission: Boolean,
     onVideoSaved: (Uri, Long) -> Unit,
 ): Recording {
     val videoFile = CameraMediaUtils.createVideoFile(context)
@@ -336,9 +334,7 @@ private fun startVideoRecording(
 
     val pendingRecording = videoCapture.output
         .prepareRecording(context, outputOptions)
-        .run {
-            if (hasAudioPermission) withAudioEnabled() else this
-        }
+        .withAudioEnabled()
 
     return pendingRecording.start(executor) { recordEvent ->
         when (recordEvent) {

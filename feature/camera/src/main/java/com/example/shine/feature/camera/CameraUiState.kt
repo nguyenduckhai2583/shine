@@ -12,5 +12,4 @@ data class CameraUiState(
     val availableLenses: List<CameraLens> = listOf(CameraLens.BACK),
     val isRecording: Boolean = false,
     val recordingDurationSeconds: Int = 0,
-    val hasAudioPermission: Boolean = true,
 )

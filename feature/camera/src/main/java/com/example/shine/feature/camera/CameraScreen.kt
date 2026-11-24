@@ -1,24 +1,18 @@
 package com.example.shine.feature.camera
 
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.shine.core.common.permission.AppPermission
+import com.example.shine.core.common.permission.PermissionStatus
+import com.example.shine.core.common.permission.rememberPermissionState
 
 @Composable
 fun CameraRoute(
@@ -53,90 +47,72 @@ fun CameraScreen(
     onAvailableLensesDetected: (List<CameraLens>) -> Unit,
     onRecordingStarted: () -> Unit,
     onRecordingStopped: () -> Unit,
-    onInitialize: (Set<CameraCaptureMode>, Boolean) -> Unit,
+    onInitialize: (Set<CameraCaptureMode>) -> Unit,
     onMediaCaptured: (CapturedMedia) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     allowedModes: Set<CameraCaptureMode> = setOf(CameraCaptureMode.PHOTO, CameraCaptureMode.VIDEO),
 ) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    var hasCameraPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-    var hasAudioPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-    var permissionRequested by rememberSaveable { mutableStateOf(false) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions(),
-    ) { permissions ->
-        permissionRequested = true
-        hasCameraPermission = permissions[Manifest.permission.CAMERA] ?: hasCameraPermission
-        hasAudioPermission = permissions[Manifest.permission.RECORD_AUDIO] ?: hasAudioPermission
-    }
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                hasCameraPermission = ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.CAMERA,
-                ) == PackageManager.PERMISSION_GRANTED
-                hasAudioPermission = ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.RECORD_AUDIO,
-                ) == PackageManager.PERMISSION_GRANTED
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+    val appPermission = remember(allowedModes) {
+        if (allowedModes.contains(CameraCaptureMode.VIDEO)) {
+            AppPermission.Video
+        } else {
+            AppPermission.Camera
         }
     }
+    val permissionState = rememberPermissionState(appPermission)
+    val isGranted = permissionState.status == PermissionStatus.Granted
 
-    LaunchedEffect(allowedModes, hasAudioPermission) {
-        onInitialize(allowedModes, hasAudioPermission)
+    LaunchedEffect(allowedModes, isGranted) {
+        if (isGranted) {
+            onInitialize(allowedModes)
+        }
     }
 
     LaunchedEffect(Unit) {
-        val permissionsToRequest = buildList {
-            if (!hasCameraPermission) {
-                add(Manifest.permission.CAMERA)
-            }
-            if (!hasAudioPermission && allowedModes.contains(CameraCaptureMode.VIDEO)) {
-                add(Manifest.permission.RECORD_AUDIO)
-            }
-        }
-        if (permissionsToRequest.isNotEmpty()) {
-            permissionLauncher.launch(permissionsToRequest.toTypedArray())
+        if (!isGranted) {
+            permissionState.request()
         }
     }
 
-    if (!hasCameraPermission) {
-        CameraPermissionDeniedWidget(
-            onClose = onClose,
-            modifier = modifier,
-            showContent = permissionRequested,
-        )
-        return
-    }
+    when (val status = permissionState.status) {
+        PermissionStatus.Idle -> {
+            Box(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+            )
+        }
 
-    CameraView(
-        uiState = uiState,
-        onModeSelected = onModeSelected,
-        onFlipCamera = onFlipCamera,
-        onAvailableLensesDetected = onAvailableLensesDetected,
-        onRecordingStarted = onRecordingStarted,
-        onRecordingStopped = onRecordingStopped,
-        onMediaCaptured = onMediaCaptured,
-        onClose = onClose,
-        modifier = modifier,
-    )
+        PermissionStatus.Granted -> {
+            CameraView(
+                uiState = uiState,
+                onModeSelected = onModeSelected,
+                onFlipCamera = onFlipCamera,
+                onAvailableLensesDetected = onAvailableLensesDetected,
+                onRecordingStarted = onRecordingStarted,
+                onRecordingStopped = onRecordingStopped,
+                onMediaCaptured = onMediaCaptured,
+                onClose = onClose,
+                modifier = modifier,
+            )
+        }
+
+        PermissionStatus.Denied,
+        PermissionStatus.PermanentDenied -> {
+            val isPermanent = status == PermissionStatus.PermanentDenied
+            CameraPermissionDeniedWidget(
+                onClose = onClose,
+                modifier = modifier,
+                isPermanent = isPermanent,
+                onAction = {
+                    if (isPermanent) {
+                        permissionState.openSettings()
+                    } else {
+                        permissionState.request()
+                    }
+                },
+            )
+        }
+    }
 }

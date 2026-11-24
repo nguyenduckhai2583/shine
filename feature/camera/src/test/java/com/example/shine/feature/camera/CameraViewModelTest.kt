@@ -38,27 +38,23 @@ class CameraViewModelTest {
         assertEquals(CameraLens.BACK, state.currentLens)
         assertFalse(state.isRecording)
         assertEquals(0, state.recordingDurationSeconds)
-        assertTrue(state.hasAudioPermission)
     }
 
     @Test
-    fun initialize_setsAllowedModesAndAudioPermission() = runTest(testDispatcher) {
+    fun initialize_setsAllowedModes() = runTest(testDispatcher) {
         viewModel.initialize(
             allowedModes = setOf(CameraCaptureMode.VIDEO),
-            hasAudioPermission = false,
         )
 
         val state = viewModel.uiState.value
         assertEquals(CameraCaptureMode.VIDEO, state.captureMode)
         assertEquals(setOf(CameraCaptureMode.VIDEO), state.allowedModes)
-        assertFalse(state.hasAudioPermission)
     }
 
     @Test
     fun onModeSelected_updatesCaptureMode_whenAllowed() = runTest(testDispatcher) {
         viewModel.initialize(
             allowedModes = setOf(CameraCaptureMode.PHOTO, CameraCaptureMode.VIDEO),
-            hasAudioPermission = true,
         )
 
         viewModel.onModeSelected(CameraCaptureMode.VIDEO)
