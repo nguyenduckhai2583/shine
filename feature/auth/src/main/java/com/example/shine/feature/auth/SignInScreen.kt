@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextObfuscationMode
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -23,19 +25,20 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,6 +71,18 @@ fun SignInScreen(
     modifier: Modifier = Modifier,
 ) {
     val focusManager = LocalFocusManager.current
+    val emailState = rememberTextFieldState()
+    val passwordState = rememberTextFieldState()
+
+    LaunchedEffect(emailState) {
+        snapshotFlow { emailState.text.toString() }
+            .collect { onEmailChange(it) }
+    }
+
+    LaunchedEffect(passwordState) {
+        snapshotFlow { passwordState.text.toString() }
+            .collect { onPasswordChange(it) }
+    }
 
     Scaffold(modifier = modifier) { innerPadding ->
         Box(
@@ -94,31 +109,30 @@ fun SignInScreen(
                 Spacer(Modifier.height(8.dp))
 
                 OutlinedTextField(
-                    value = uiState.email,
-                    onValueChange = onEmailChange,
+                    state = emailState,
                     label = { Text("Email") },
-                    singleLine = true,
+                    lineLimits = TextFieldLineLimits.SingleLine,
                     enabled = !uiState.isLoading,
+                    isError = uiState.errorMessage != null,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
                         imeAction = ImeAction.Next,
                     ),
-                    keyboardActions = KeyboardActions(
-                        onNext = { focusManager.moveFocus(FocusDirection.Down) },
-                    ),
+                    onKeyboardAction = {
+                        focusManager.moveFocus(FocusDirection.Down)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                OutlinedTextField(
-                    value = uiState.password,
-                    onValueChange = onPasswordChange,
+                OutlinedSecureTextField(
+                    state = passwordState,
                     label = { Text("Password") },
-                    singleLine = true,
                     enabled = !uiState.isLoading,
-                    visualTransformation = if (uiState.isPasswordVisible) {
-                        VisualTransformation.None
+                    isError = uiState.errorMessage != null,
+                    textObfuscationMode = if (uiState.isPasswordVisible) {
+                        TextObfuscationMode.Visible
                     } else {
-                        PasswordVisualTransformation()
+                        TextObfuscationMode.Hidden
                     },
                     trailingIcon = {
                         IconButton(onClick = onTogglePasswordVisibility) {
@@ -140,12 +154,10 @@ fun SignInScreen(
                         keyboardType = KeyboardType.Password,
                         imeAction = ImeAction.Done,
                     ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            focusManager.clearFocus()
-                            onSignIn()
-                        },
-                    ),
+                    onKeyboardAction = {
+                        focusManager.clearFocus()
+                        onSignIn()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 )
 

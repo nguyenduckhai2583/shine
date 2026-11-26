@@ -4,6 +4,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.byValue
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.AlertDialog
@@ -14,11 +19,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -27,7 +32,10 @@ fun CreateChannelDialog(
     onCreateChannel: (name: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var channelName by rememberSaveable { mutableStateOf("") }
+    val channelNameState = rememberTextFieldState()
+    val isCreateEnabled by remember {
+        derivedStateOf { channelNameState.text.isNotBlank() }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -46,10 +54,7 @@ fun CreateChannelDialog(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
-                    value = channelName,
-                    onValueChange = { input ->
-                        channelName = input.replace(' ', '-').lowercase()
-                    },
+                    state = channelNameState,
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Channel name") },
                     placeholder = { Text("e.g. plan-launch") },
@@ -59,14 +64,25 @@ fun CreateChannelDialog(
                             contentDescription = null,
                         )
                     },
-                    singleLine = true,
+                    inputTransformation = InputTransformation.byValue { _, proposed ->
+                        proposed.toString().replace(' ', '-').lowercase()
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done,
+                    ),
+                    onKeyboardAction = {
+                        if (isCreateEnabled) {
+                            onCreateChannel(channelNameState.text.toString().trim())
+                        }
+                    },
+                    lineLimits = TextFieldLineLimits.SingleLine,
                 )
             }
         },
         confirmButton = {
             Button(
-                onClick = { onCreateChannel(channelName.trim()) },
-                enabled = channelName.isNotBlank(),
+                onClick = { onCreateChannel(channelNameState.text.toString().trim()) },
+                enabled = isCreateEnabled,
             ) {
                 Text("Create")
             }
