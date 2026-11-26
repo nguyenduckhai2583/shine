@@ -1,0 +1,14 @@
+<resources>
+    <string name="clear_search">Clear search</string>
+    <string name="media_picker_title_photo">Select Photo</string>
+    <string name="media_picker_title_video">Select Video</string>
+    <string name="media_picker_title_all">Select Media</string>
+    <string name="media_picker_open_camera">Open Camera</string>
+    <string name="media_picker_camera_desc_photo">Take a new photo with camera</string>
+    <string name="media_picker_camera_desc_video">Record a video with camera</string>
+    <string name="media_picker_camera_desc_all">Capture photos or record videos</string>
+    <string name="media_picker_choose_gallery">Choose from Gallery</string>
+    <string name="media_picker_gallery_desc_photo">Select a photo from device gallery</string>
+    <string name="media_picker_gallery_desc_video">Select a video from device gallery</string>
+    <string name="media_picker_gallery_desc_all">Select media from device gallery</string>
+</resources>

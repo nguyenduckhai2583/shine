@@ -46,7 +46,8 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.result.ResultEffect
 import coil.compose.AsyncImage
-import com.example.shine.core.designsystem.component.ImagePickerBottomSheet
+import com.example.shine.core.designsystem.component.MediaPickerBottomSheet
+import com.example.shine.core.designsystem.component.MediaPickerType
 import com.example.shine.core.designsystem.component.ShineTopAppBar
 import com.example.shine.core.designsystem.theme.MultiDevicePreviews
 import com.example.shine.core.designsystem.theme.ShineTheme
@@ -230,12 +231,12 @@ fun ProfileScreen(
         }
     }
 
-    // Reusable Image Picker BottomSheet (Camera + Gallery)
-    ImagePickerBottomSheet(
+    MediaPickerBottomSheet(
         visible = showImagePicker,
         onDismissRequest = { showImagePicker = false },
-        onImagePicked = onAvatarSelected,
+        onMediaPicked = onAvatarSelected,
         onOpenCamera = onOpenCamera,
+        mediaType = MediaPickerType.IMAGE_ONLY,
         title = "Profile Photo",
     )
 }

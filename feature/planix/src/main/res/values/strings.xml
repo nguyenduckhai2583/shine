@@ -1,7 +1,6 @@
 <resources>
     <string name="planix_projects">Planix Projects</string>
     <string name="search_projects">Search projects…</string>
-    <string name="clear_search">Clear search</string>
     <string name="no_projects_found">No projects found</string>
     <string name="project_details">Project Details</string>
     <string name="error_project_not_found">Project not found</string>
