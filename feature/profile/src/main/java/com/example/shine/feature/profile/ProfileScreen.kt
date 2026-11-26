@@ -91,10 +91,10 @@ fun ProfileScreen(
     val selectedAvatarUri = (uiState.uploadState as? UploadState.Uploading)?.selectedUri
 
     val context = LocalContext.current
-    LaunchedEffect(uiState.uploadState) {
-        val upload = uiState.uploadState
-        if (upload is UploadState.Error) {
-            snackbarHostState.showSnackbar(upload.message.asString(context))
+    val uploadError = uiState.uploadState as? UploadState.Error
+    uploadError?.let { error ->
+        LaunchedEffect(error) {
+            snackbarHostState.showSnackbar(error.message.asString(context))
             onDismissError()
         }
     }

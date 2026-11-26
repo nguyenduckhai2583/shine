@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -41,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,21 +68,22 @@ fun ChannelsRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    var showCreateBottomSheet by remember { mutableStateOf(false) }
+    var showCreateDialog by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(uiState.userError) {
-        uiState.userError?.let {
-            snackbarHostState.showSnackbar(it.asString(context))
+    uiState.userError?.let { error ->
+        LaunchedEffect(error) {
+            snackbarHostState.showSnackbar(error.asString(context))
             viewModel.clearError()
         }
     }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showCreateBottomSheet = true },
+                onClick = { showCreateDialog = true },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             ) {
@@ -97,16 +100,15 @@ fun ChannelsRoute(
             onChannelClick = onChannelClick,
             onRefresh = viewModel::refresh,
             onDeleteChannel = viewModel::deleteFailedChannel,
-            snackbarHostState = snackbarHostState,
             modifier = Modifier.padding(innerPadding),
         )
 
-        if (showCreateBottomSheet) {
+        if (showCreateDialog) {
             CreateChannelDialog(
-                onDismiss = { showCreateBottomSheet = false },
+                onDismiss = { showCreateDialog = false },
                 onCreateChannel = { name ->
                     viewModel.createChannel(name)
-                    showCreateBottomSheet = false
+                    showCreateDialog = false
                 },
             )
         }
@@ -121,7 +123,6 @@ fun ChannelsContent(
     modifier: Modifier = Modifier,
     selectedChannelId: String? = null,
     onDeleteChannel: (String) -> Unit = {},
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     var errorChannelToHandle by remember { mutableStateOf<Channel?>(null) }
 
@@ -197,15 +198,6 @@ fun ChannelsContent(
                     }
                 }
             }
-        }
-
-        if (!uiState.isLoading) {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 88.dp),
-            )
         }
 
         errorChannelToHandle?.let { channel ->

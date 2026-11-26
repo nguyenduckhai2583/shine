@@ -1,6 +1,7 @@
 package com.example.shine.feature.dm
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -50,22 +52,26 @@ fun DmsRoute(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
-    LaunchedEffect(uiState.userError) {
-        val error = uiState.userError
-        if (error != null) {
+    uiState.userError?.let { error ->
+        LaunchedEffect(error) {
             snackbarHostState.showSnackbar(error.asString(context))
             viewModel.clearUserError()
         }
     }
 
-    DmsContent(
-        uiState = uiState,
-        selectedDmId = selectedDmId,
-        onDmClick = onDmClick,
-        onRefresh = viewModel::refresh,
-        snackbarHostState = snackbarHostState,
-        modifier = modifier,
-    )
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { innerPadding ->
+        DmsContent(
+            uiState = uiState,
+            selectedDmId = selectedDmId,
+            onDmClick = onDmClick,
+            onRefresh = viewModel::refresh,
+            modifier = Modifier.padding(innerPadding),
+        )
+    }
 }
 
 @Composable
@@ -75,7 +81,6 @@ fun DmsContent(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     selectedDmId: String? = null,
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     Box(
         modifier = modifier.fillMaxSize(),
@@ -125,10 +130,6 @@ fun DmsContent(
                 }
             }
         }
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
     }
 }
 
