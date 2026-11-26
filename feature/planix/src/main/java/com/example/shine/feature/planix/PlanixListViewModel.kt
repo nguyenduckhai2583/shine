@@ -4,25 +4,17 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.shine.core.common.base.BaseViewModel
-import com.example.shine.core.model.Project
 import com.example.shine.core.data.repository.PlanixRepository
+import com.example.shine.core.model.Project
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
-
-data class PlanixListUiState(
-    val searchQuery: String = "",
-)
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -31,14 +23,6 @@ class PlanixListViewModel @Inject constructor(
 ) : BaseViewModel() {
 
     private val searchQuery = MutableStateFlow("")
-
-    val uiState: StateFlow<PlanixListUiState> = searchQuery
-        .map { PlanixListUiState(it) }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = PlanixListUiState(),
-        )
 
     val projectsPagingFlow: Flow<PagingData<Project>> = searchQuery
         .debounce { query -> if (query.isEmpty()) 0.milliseconds else 300L.milliseconds }

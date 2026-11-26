@@ -12,26 +12,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
@@ -40,6 +34,7 @@ import androidx.paging.compose.itemKey
 import com.example.shine.core.common.error.AppException
 import com.example.shine.core.common.ui.UiText
 import com.example.shine.core.common.ui.toUiText
+import com.example.shine.core.designsystem.component.SearchTextField
 import com.example.shine.core.designsystem.component.ShineTopAppBar
 import com.example.shine.core.designsystem.theme.MultiDevicePreviews
 import com.example.shine.core.designsystem.theme.ShineTheme
@@ -55,10 +50,8 @@ fun PlanixListRoute(
     selectedProjectId: String? = null,
     onProjectClick: (Project) -> Unit = {},
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val projects = viewModel.projectsPagingFlow.collectAsLazyPagingItems()
     PlanixListScreen(
-        uiState = uiState,
         projects = projects,
         onBack = onBack,
         selectedProjectId = selectedProjectId,
@@ -70,7 +63,6 @@ fun PlanixListRoute(
 
 @Composable
 fun PlanixListScreen(
-    uiState: PlanixListUiState,
     projects: LazyPagingItems<Project>,
     onBack: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
@@ -94,25 +86,12 @@ fun PlanixListScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            OutlinedTextField(
-                value = uiState.searchQuery,
-                onValueChange = onSearchQueryChange,
+            SearchTextField(
+                onQueryChange = onSearchQueryChange,
+                placeholder = stringResource(R.string.search_projects),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text(stringResource(R.string.search_projects)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (uiState.searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { onSearchQueryChange("") }) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(R.string.clear_search),
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
             )
 
             val refreshLoadState = projects.loadState.refresh
@@ -282,7 +261,6 @@ private fun PlanixListScreenPreview() {
         ).collectAsLazyPagingItems()
 
         PlanixListScreen(
-            uiState = PlanixListUiState(),
             projects = fakeProjects,
             onBack = {},
             onSearchQueryChange = {},

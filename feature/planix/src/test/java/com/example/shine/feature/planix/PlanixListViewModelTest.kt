@@ -18,26 +18,6 @@ class PlanixListViewModelTest {
     private val planixRepository = FakePlanixRepository()
 
     @Test
-    fun init_initialStateHasEmptySearchQuery() = runTest {
-        val viewModel = PlanixListViewModel(planixRepository)
-        viewModel.uiState.test {
-            assertEquals("", awaitItem().searchQuery)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun onSearchQueryChanged_updatesSearchQuery() = runTest {
-        val viewModel = PlanixListViewModel(planixRepository)
-        viewModel.uiState.test {
-            awaitItem()
-            viewModel.onSearchQueryChanged("Test")
-            assertEquals("Test", awaitItem().searchQuery)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
     fun projectsPagingFlow_initialLoadQueriesRepositoryWithNull() = runTest {
         val viewModel = PlanixListViewModel(planixRepository)
         viewModel.projectsPagingFlow.test {
@@ -54,12 +34,48 @@ class PlanixListViewModelTest {
             awaitItem()
             assertEquals(null, planixRepository.lastSearchKey)
 
-            viewModel.onSearchQueryChanged("shine")
+            viewModel.onSearchQueryChanged("  shine  ")
             testScheduler.advanceTimeBy(350)
             testScheduler.runCurrent()
 
             awaitItem()
             assertEquals("shine", planixRepository.lastSearchKey)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun projectsPagingFlow_clearingQueryImmediatelyQueriesRepositoryWithNull() = runTest {
+        val viewModel = PlanixListViewModel(planixRepository)
+        viewModel.projectsPagingFlow.test {
+            awaitItem()
+
+            viewModel.onSearchQueryChanged("shine")
+            testScheduler.advanceTimeBy(350)
+            testScheduler.runCurrent()
+            awaitItem()
+            assertEquals("shine", planixRepository.lastSearchKey)
+
+            viewModel.onSearchQueryChanged("")
+            testScheduler.runCurrent()
+            awaitItem()
+            assertEquals(null, planixRepository.lastSearchKey)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun projectsPagingFlow_blankQueryQueriesRepositoryWithNull() = runTest {
+        val viewModel = PlanixListViewModel(planixRepository)
+        viewModel.projectsPagingFlow.test {
+            awaitItem()
+
+            viewModel.onSearchQueryChanged("   ")
+            testScheduler.advanceTimeBy(350)
+            testScheduler.runCurrent()
+
+            awaitItem()
+            assertEquals(null, planixRepository.lastSearchKey)
             cancelAndIgnoreRemainingEvents()
         }
     }
