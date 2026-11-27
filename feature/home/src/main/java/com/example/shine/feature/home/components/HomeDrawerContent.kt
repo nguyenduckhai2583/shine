@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,11 +36,15 @@ import com.example.shine.feature.home.HomeUiState
 @Composable
 fun HomeDrawerContent(
     uiState: HomeUiState,
+    drawerState: DrawerState,
     onSelectWorkspace: (String) -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ModalDrawerSheet(modifier = modifier) {
+    ModalDrawerSheet(
+        drawerState = drawerState,
+        modifier = modifier,
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

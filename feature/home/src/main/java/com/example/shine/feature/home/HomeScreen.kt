@@ -2,6 +2,7 @@ package com.example.shine.feature.home
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -10,6 +11,8 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -19,10 +22,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,6 +38,7 @@ import com.example.shine.core.designsystem.theme.ShineTheme
 import com.example.shine.core.model.Workspace
 import com.example.shine.feature.home.components.HomeDrawerContent
 import com.example.shine.feature.home.components.SettingsContent
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeRoute(
@@ -76,20 +82,24 @@ fun HomeScreen(
     dmsContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     onProfileClick: () -> Unit = {},
-    state: HomeScreenState = rememberHomeScreenState(),
+    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     ModalNavigationDrawer(
-        drawerState = state.drawerState,
+        drawerState = drawerState,
+        gesturesEnabled = !uiState.isSwitchingWorkspace,
         modifier = modifier,
         drawerContent = {
             HomeDrawerContent(
                 uiState = uiState,
+                drawerState = drawerState,
                 onSelectWorkspace = { workspaceId ->
-                    state.closeDrawer()
+                    coroutineScope.launch { drawerState.close() }
                     onSelectWorkspace(workspaceId)
                 },
                 onSignOut = {
-                    state.closeDrawer()
+                    coroutineScope.launch { drawerState.close() }
                     onSignOut()
                 },
             )
@@ -122,14 +132,16 @@ fun HomeScreen(
                     HomeTopAppBar(
                         selectedTab = selectedTab,
                         uiState = uiState,
-                        onOpenDrawer = state::openDrawer,
+                        isDrawerEnabled = !uiState.isSwitchingWorkspace,
+                        onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
                     )
                 },
             ) { innerPadding ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding),
+                        .padding(innerPadding)
+                        .consumeWindowInsets(innerPadding),
                 ) {
                     if (uiState.isSwitchingWorkspace) {
                         Box(
@@ -163,11 +175,15 @@ fun HomeScreen(
 private fun HomeTopAppBar(
     selectedTab: HomeTab,
     uiState: HomeUiState,
+    isDrawerEnabled: Boolean,
     onOpenDrawer: () -> Unit,
 ) {
     TopAppBar(
         navigationIcon = {
-            IconButton(onClick = onOpenDrawer) {
+            IconButton(
+                onClick = onOpenDrawer,
+                enabled = isDrawerEnabled,
+            ) {
                 Icon(Icons.Filled.Menu, contentDescription = "Open workspaces drawer")
             }
         },
